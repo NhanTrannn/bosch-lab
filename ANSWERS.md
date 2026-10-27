@@ -260,6 +260,179 @@ x = 4: four
 
 **Liên hệ đề thi:** Đề hay gài `default` ở giữa hoặc đầu. Biểu thức `switch` phải là kiểu nguyên (không dùng được string/float trong C).
 
+### 11_string_array_pointer — Chuỗi: mảng char và con trỏ tới string literal
+
+**Câu hỏi:** sizeof và strlen của a, b, p khác nhau thế nào? sizeof("ab\0cd") và strlen của nó? sizeof('A') trong C bằng mấy? d in ra gì?
+
+**Output mong đợi:**
+
+```text
+a: sizeof = 6, strlen = 5
+b: sizeof = 10, strlen = 5
+p: sizeof = 8, strlen = 5
+c: sizeof = 5 (strlen(c) la UB vi khong co '\0')
+"ab\0cd": sizeof = 6, strlen = 2
+sizeof('A') = 4, sizeof(char) = 1
+trong f: sizeof(s) = 8, strlen(s) = 5
+a sau khi sua = Bosch
+d = abcdefg
+strcmp: 1 1 1
+a == "Bosch" ? 0, strcmp = 0
+```
+
+**Giải thích:**
+
+- `a` là mảng 6 byte (5 ký tự + `'\0'`), `b` là mảng 10 byte (phần dư là `'\0'`), `p` chỉ là con trỏ → 8 byte trên x86_64. `strlen` luôn đếm tới `'\0'` đầu tiên → 5.
+- `"ab\0cd"` có 5 ký tự + `'\0'` tự thêm → sizeof 6, nhưng strlen dừng ở `\0` giữa chuỗi → 2.
+- Trong **C**, `'A'` có kiểu `int` → 4. Trong **C++** `'A'` là `char` → 1.
+- Tham số `char s[]` thực chất là `char *` → 8.
+- `strncpy` không thêm `'\0'` khi nguồn dài hơn n → phải tự đặt `d[7] = '\0'` → còn 7 ký tự.
+- `a == "Bosch"` so sánh **địa chỉ**, không so nội dung → 0. So nội dung phải dùng `strcmp` (trả 0 khi bằng).
+
+**Liên hệ đề thi:** Phân biệt `char s[] = "..."` (sửa được, nằm trên stack) và `char *s = "..."` (literal ở .rodata, sửa → segfault). Câu hỏi "sizeof vs strlen" gần như luôn có.
+
+### 12_precedence — Độ ưu tiên toán tử và short-circuit
+
+**Câu hỏi:** Giá trị từng dòng? Sau dòng || và && thì i, k bằng bao nhiêu? arr[1] cuối cùng bằng mấy?
+
+**Output mong đợi:**
+
+```text
+a & 4 == 4   -> 0
+(a & 4) == 4 -> 1
+1 << 2 + 1   -> 8
+10 - 2 - 3   -> 5
+2 * 3 % 4    -> 2
+v = 10, w = 21, y = 21, arr[1] = 22
+?: long nhau -> 1
+(1, 2, 3)    -> 3
+j = 1, i = 2
+m = 0, k = 1
+!5 = 0, !!5 = 1, ~5 = -6, -5 >> 1 = -3
+```
+
+**Giải thích:**
+
+- `a & 4 == 4` = `a & (4 == 4)` = `6 & 1` = 0. Đây là bẫy kinh điển khi kiểm tra bit — luôn viết `(a & MASK) == MASK`.
+- `1 << 2 + 1` = `1 << 3` = 8 vì `+` ưu tiên hơn `<<`.
+- `*p++` lấy arr[0] = 10 rồi p trỏ arr[1]. `++*p` tăng arr[1] lên 21. `(*p)++` trả 21 rồi arr[1] thành 22.
+- Toán tử phẩy tính lần lượt và lấy giá trị cuối → 3.
+- `i++ || i++`: vế trái trả 0 (i thành 1) → phải tính vế phải, trả 1 (i thành 2) → j = 1.
+- `k++ && k++`: vế trái trả 0 → **dừng**, vế phải không chạy → k = 1.
+- `~5` = -6 (bù 1: ~x = -x - 1). `-5 >> 1` với số âm là implementation-defined, gcc dịch số học → -3 (làm tròn xuống, khác `-5 / 2 = -2`).
+
+**Liên hệ đề thi:** Thứ tự ưu tiên cần nhớ (cao → thấp): `() [] -> .` › đơn ngôi `! ~ ++ -- * & sizeof` › `* / %` › `+ -` › `<< >>` › `< <= > >=` › `== !=` › `&` › `^` › `|` › `&&` › `||` › `?:` › gán › `,`.
+
+### 13_function_pointer — Con trỏ hàm, mảng con trỏ hàm và callback (qsort)
+
+**Câu hỏi:** Ba dòng đầu in gì? fp(1, 2) và (*fp)(1, 2) có khác nhau không? Mảng sau qsort có thứ tự nào?
+
+**Output mong đợi:**
+
+```text
+7 + 3 = 10
+7 - 3 = 4
+7 * 3 = 21
+fp(1, 2) = 3, (*fp)(1, 2) = 3, fp == add ? 1
+sizeof(fp) = 8
+5 4 3 2 1 
+25 16 9 4 1 
+```
+
+**Giải thích:**
+
+- `ops` là mảng 3 con trỏ hàm kiểu `int (*)(int, int)`; `ops[i](7, 3)` gọi hàm thứ i.
+- `fp(1, 2)` và `(*fp)(1, 2)` hoàn toàn tương đương; `add` và `&add` cũng cùng giá trị.
+- Comparator của qsort trả âm/0/dương. `(a < b) - (a > b)` cho thứ tự giảm dần và không bị tràn số như `b - a`.
+- `apply` nhận callback `int (*fn)(int)` → bình phương từng phần tử.
+
+**Liên hệ đề thi:** Đọc khai báo: `int (*fp)(int)` con trỏ tới hàm; `int *fp(int)` là HÀM trả về `int*`; `int (*arr[3])(void)` mảng 3 con trỏ hàm; `void (*signal(int, void (*)(int)))(int)` là prototype thật của `signal`. Dùng `typedef` cho dễ đọc.
+
+### 14_integer_promotion — Integer promotion: char/short tự lên int
+
+**Câu hỏi:** a + b bằng bao nhiêu, còn c? sc == uc? Dòng ~x == 0xF0 in "bang" hay "khac"? sizeof(a + b)?
+
+**Output mong đợi:**
+
+```text
+a + b = 260
+c = a + b -> 4
+sizeof(a) = 1, sizeof(a + b) = 4, sizeof(+a) = 4
+sc == uc ? 0  (sc -> -1, uc -> 255)
+khac: ~x = 0xFFFFFFF0
+hi << 1 = 256, (uint8_t)(hi << 1) = 0
+un-- tu 0 = 4294967295
+int sum = 60000, short sum = -5536
+```
+
+**Giải thích:**
+
+- `a + b`: cả hai lên `int` rồi mới cộng → 260, không bị tràn. Chỉ khi gán về `unsigned char` mới cắt: 260 mod 256 = 4.
+- `sc == uc`: -1 lên int vẫn là -1, 255 lên int là 255 → khác nhau, dù cùng bit pattern `0xFF`.
+- `~x`: x = 0x0F lên int 0x0000000F, đảo bit → 0xFFFFFFF0 ≠ 0xF0. Phải viết `(uint8_t)~x`.
+- `hi << 1` tính trên int → 256; cắt về uint8_t → 0.
+- Số không dấu tràn được định nghĩa rõ (modulo 2ⁿ) → 0 - 1 = 4294967295. Số có dấu tràn là UB.
+- 60000 không vừa `short` → chuyển đổi implementation-defined, gcc lấy modulo → 60000 - 65536 = -5536.
+
+**Liên hệ đề thi:** Bẫy thật trong code driver: `uint16_t a = 0xFFFF; a * a` → nâng lên **int có dấu** rồi tràn → UB. Quy tắc: kiểu nhỏ hơn int → int; trộn có dấu/không dấu cùng hạng → không dấu.
+
+### 15_float — Số thực: so sánh, làm tròn, chia nguyên
+
+**Câu hỏi:** 0.1 + 0.2 == 0.3? f == 0.1? x, y, z bằng mấy? (int)-3.99? 16777217.0f in ra gì?
+
+**Output mong đợi:**
+
+```text
+0.1 + 0.2 == 0.3 ? 0
+0.1 + 0.2 = 0.30000000000000004
+|d - 0.3| < 1e-9 ? 1
+f == 0.1 ? 0, f == 0.1f ? 1
+x = 3, y = 3.0, z = 3.5
+(int)3.99 = 3, (int)-3.99 = -3
+16777217.0f = 16777216.0
+inf = inf, nan == nan ? 0, inf > 1e308 ? 1
+sizeof: float = 4, double = 8, long double = 16
+```
+
+**Giải thích:**
+
+- 0.1, 0.2, 0.3 không biểu diễn chính xác trong nhị phân → tổng lệch một chút. So sánh số thực bằng `fabs(a - b) < eps`.
+- `f == 0.1`: f được nâng lên double, nhưng giá trị float của 0.1 khác giá trị double của 0.1 → 0.
+- `7 / 2` là chia **nguyên** → 3, gán vào double vẫn là 3.0. Chỉ cần một toán hạng là số thực → 3.5.
+- Ép sang int cắt về phía 0: -3.99 → -3 (không phải -4).
+- float có 24 bit mantissa → số nguyên lớn hơn 2²⁴ = 16777216 không còn chính xác.
+- NaN không bằng chính nó → kiểm tra NaN bằng `x != x` hoặc `isnan`.
+
+**Liên hệ đề thi:** Trong embedded thường tránh float (chậm nếu không có FPU) → dùng fixed-point. Không dùng `==` với số thực, không dùng float làm biến đếm vòng lặp.
+
+### 16_scope_storage — Phạm vi biến (scope), che tên (shadowing) và static trong vòng lặp
+
+**Câu hỏi:** Mỗi dòng x= in số mấy? Ba lần gọi f() in gì? Vòng for cuối in s, t thế nào?
+
+**Output mong đợi:**
+
+```text
+x = 1
+x = 3 (khoi trong)
+x = 1 (extern)
+x = 2
+f: n = 1, m = 1
+f: n = 2, m = 1
+f: n = 3, m = 1
+s = 11, t = 11
+s = 12, t = 11
+s = 13, t = 11
+```
+
+**Giải thích:**
+
+- Dòng đầu chạy trước khi khai báo `int x = 2` → dùng biến toàn cục = 1.
+- Trong khối, `x = 3` che x của main. `extern int x` trong khối lồng lấy lại biến toàn cục.
+- `static int n` khởi tạo bằng 0 đúng một lần và giữ giá trị giữa các lần gọi; `m` là biến auto, mỗi lần gọi khởi tạo lại.
+- `static int s = 10` trong thân vòng for cũng chỉ khởi tạo một lần → 11, 12, 13; `t` luôn là 11.
+
+**Liên hệ đề thi:** 4 storage class: `auto` (mặc định, stack), `static`, `extern`, `register`. Phân biệt **scope** (nhìn thấy ở đâu) và **lifetime** (sống bao lâu): static local có scope là khối nhưng lifetime là cả chương trình.
+
 ## 02-cpp
 
 ### 01_ctor_dtor_order — Thứ tự constructor / destructor ⚠️ không cố định
@@ -500,6 +673,203 @@ error: invalid conversion from 'int' to 'const char*'
 
 **Liên hệ đề thi:** Phân biệt: **overload** (cùng scope, khác tham số, compile-time), **override** (virtual, cùng chữ ký, runtime), **hiding** (lớp con trùng tên che lớp cha).
 
+### 10_virtual_default_arg — Tham số mặc định của hàm virtual và gọi virtual qua hàm thường
+
+**Câu hỏi:** Mỗi dòng in "Base::f" hay "Derived::f", và x bằng 1 hay 2?
+
+**Output mong đợi:**
+
+```text
+1: Derived::f x=1
+2: Derived::f x=1
+3: Derived::f x=2
+4: Base::f x=1
+5: Derived::f x=1
+6: Base::f x=1
+7: Derived::f x=5
+```
+
+**Giải thích:**
+
+- 1, 2: gọi qua `Base*`/`Base&` → hàm của Derived (dynamic binding), nhưng tham số mặc định lấy theo kiểu tĩnh `Base` → x = 1.
+- 3: gọi qua `Derived` → kiểu tĩnh là Derived → x = 2.
+- 4: `pb->Base::f()` gọi có tên lớp → tắt cơ chế virtual, gọi thẳng Base::f.
+- 5: trong `run()`, `f()` là `this->f()` với `this` kiểu `Base*` → Derived::f, x = 1.
+- 6: `b` là object Base thật (bị slicing) → Base::f.
+- 7: truyền tham số rõ ràng → không dính bẫy.
+
+**Liên hệ đề thi:** "Virtual function dùng default argument của lớp nào?" — của kiểu tĩnh (static type). Effective C++: không bao giờ định nghĩa lại tham số mặc định của hàm virtual được kế thừa.
+
+### 11_exception_raii — Exception, stack unwinding và RAII
+
+**Câu hỏi:** Thứ tự các dòng +/− ? catch nào bắt được? Bắt bằng giá trị in what() ra gì? ~Bad có chạy không?
+
+**Output mong đợi:**
+
+```text
++main
++L1
++L2
+-L2
+-L1
+-main
+main bat: loi o level2
+bat bang gia tri: std::exception
+int 42
++member
+-member
+constructor cua Bad nem loi
+```
+
+**Giải thích:**
+
+- Exception đi ngược lên stack: huỷ L2, catch `logic_error` ở level1 không khớp (`runtime_error` không phải con của `logic_error`) → huỷ L1 → huỷ `main` guard **trước** khi vào khối catch.
+- Dòng "level1 ket thuc binh thuong" không in vì exception không bị bắt ở level1.
+- Bắt `std::exception` bằng giá trị → copy phần Base (slicing) → `what()` của std::exception trả `"std::exception"` (libstdc++).
+- catch được thử theo thứ tự viết, không có chuyển đổi kiểu (int không khớp double).
+- Constructor của Bad ném → object chưa "sống" nên `~Bad` không chạy, nhưng member đã tạo xong (`member`) được huỷ.
+
+**Liên hệ đề thi:** RAII = Resource Acquisition Is Initialization: lấy tài nguyên trong constructor, trả trong destructor → không rò rỉ kể cả khi có exception. Không ném exception ra khỏi destructor (mặc định destructor là `noexcept`).
+
+### 12_diamond — Đa kế thừa, diamond và virtual inheritance
+
+**Câu hỏi:** D d; in thứ tự constructor nào? A được tạo mấy lần? Với VD thì sao? Thứ tự E (khai báo C trước B)?
+
+**Output mong đợi:**
+
+```text
+D : A B A C D
+d.B::x = 1, d.C::x = 2
+VD: A VB VC VD
+vd.VB::x = 7, vd.VC::x = 7
+E : A C A B E
+sizeof: A=4 D=8 VD=24
+```
+
+**Giải thích:**
+
+- D kế thừa B rồi C, mỗi đứa có một A riêng → A được tạo 2 lần, D chứa 2 bản `x`.
+- Kế thừa `virtual A` → VB và VC dùng chung một A, constructor của A được gọi **trước tiên** bởi lớp cuối cùng VD.
+- E viết initializer `B(), C()` nhưng khai báo `: C, B` → thứ tự thật là C rồi B (gcc cảnh báo -Wreorder).
+- sizeof(VD) = 24: phần VB và phần VC mỗi phần có một vptr (8 + 8) — vtable chứa offset tới phần A dùng chung — cộng A (4) và padding.
+
+**Liên hệ đề thi:** Thứ tự khởi tạo: virtual base → base theo thứ tự khai báo → member theo thứ tự khai báo → thân constructor. Huỷ theo thứ tự ngược lại.
+
+### 13_static_member — static member, static local và singleton
+
+**Câu hỏi:** Các dòng "tao/copy/huy" theo thứ tự nào? make() có gọi copy không? Logger() in mấy lần? sizeof(Counter)?
+
+**Output mong đợi:**
+
+```text
+alive=0 created=0
+tao #1
+copy #1 -> #2
+copy #1 -> #3
+alive=3 created=3
+huy #3
+tao #4
+alive=3 created=4
+huy #4
+huy #2
+huy #1
+alive=0 created=4
+Logger()
+n = 2, cung 1 object? 1
+sizeof(Counter) = 4
+```
+
+**Giải thích:**
+
+- `Counter b = a` → copy #2. `by_value(a)` → copy vào tham số #3; tham số bị huỷ khi hàm kết thúc (huy #3).
+- `make()` trả về prvalue → C++17 bảo đảm copy elision, chỉ có "tao #4", không copy.
+- Cuối khối: huỷ ngược thứ tự tạo: c(#4), b(#2), a(#1).
+- `static Logger inst` chỉ khởi tạo ở lần gọi đầu → "Logger()" in một lần; mọi lần gọi trả cùng object.
+- sizeof chỉ tính member không static → 4.
+
+**Liên hệ đề thi:** static member function không có `this` nên không truy cập được member thường và không thể là virtual/const. Meyers singleton (static local) thread-safe từ C++11.
+
+### 14_move_noexcept — std::move, const và noexcept khi vector cấp phát lại
+
+**Câu hỏi:** Khi vector tăng capacity, phần tử cũ được copy hay move với A và B? std::move(ca) gọi gì? s sau khi bị move còn gì?
+
+**Output mong đợi:**
+
+```text
+A, tang capacity: copy copy 
+B, tang capacity: move move 
+push_back(lvalue): copy | push_back(std::move): move | emplace_back(): 
+A x = std::move(ca): copy 
+s = [], t = [hello]
+```
+
+**Giải thích:**
+
+- Phần tử thứ 3 vượt capacity 2 → vector cấp phát vùng mới và chuyển 2 phần tử cũ sang. A có move constructor **không** noexcept → vector dùng `std::move_if_noexcept` và chọn copy. B có `noexcept` → move.
+- Phần tử mới tạo bằng `emplace_back()` được dựng tại chỗ → không in gì.
+- `std::move(ca)` cho kiểu `const A&&` → không khớp `A(A&&)` → chọn `A(const A&)` → copy.
+- String sau khi bị move ở trạng thái "hợp lệ nhưng không xác định"; libstdc++ để rỗng, nhưng không được dựa vào điều đó.
+
+**Liên hệ đề thi:** Luôn đánh dấu move constructor/move assignment là `noexcept`. `std::move` = `static_cast<T&&>`. Không viết `return std::move(local)` vì chặn NRVO.
+
+### 15_sizeof_class — sizeof của class: class rỗng, vptr, padding, static
+
+**Câu hỏi:** sizeof của từng struct trên x86_64? Hai object Empty có cùng địa chỉ không?
+
+**Output mong đợi:**
+
+```text
+Empty        = 1
+OneInt       = 4
+WithFunc     = 4
+WithVirtual  = 8
+IntVirtual   = 16
+DerivedEmpty = 4
+TwoEmpty     = 2
+CDC          = 24
+DCC          = 16
+&e1 != &e2 ? 1
+```
+
+**Giải thích:**
+
+- Class rỗng = 1 byte để hai object khác nhau có địa chỉ khác nhau.
+- Hàm thành viên và static không chiếm chỗ trong object.
+- Có virtual → thêm vptr 8 byte. `IntVirtual` = vptr 8 + int 4 + padding 4 = 16. Thêm bao nhiêu hàm virtual nữa thì sizeof vẫn vậy (chỉ vtable dài ra).
+- Empty Base Optimization: lớp cơ sở rỗng không tốn byte → DerivedEmpty = 4. Nhưng hai **member** rỗng thì mỗi cái 1 byte → 2.
+- `char, double, char` → 1 + 7 pad + 8 + 1 + 7 pad = 24; sắp lại `double, char, char` → 16.
+
+**Liên hệ đề thi:** "sizeof class rỗng trong C++" = 1 (trong C, struct rỗng là extension của gcc với sizeof 0). vtable: một bảng mỗi class, vptr: một con trỏ mỗi object.
+
+### 16_templates — Template: suy luận kiểu, specialization, overload với hàm thường
+
+**Câu hỏi:** Mỗi lời gọi maxv chọn bản nào: hàm thường, template, hay bản specialization? Box<int>::count và Box<double>::count bằng mấy? Fact<5>::v?
+
+**Output mong đợi:**
+
+```text
+non-template 2
+template     2.5
+template     4
+specialized  abd
+template     b
+non-template 2
+Box<int>::count = 2, Box<double>::count = 1
+Fact<5>::v = 120
+```
+
+**Giải thích:**
+
+- `maxv(1, 2)`: hàm thường và template khớp như nhau → ưu tiên hàm thường.
+- `maxv(1.5, 2.5)`: chỉ template khớp chính xác (T = double).
+- `maxv<int>(3, 4)`: chỉ định template tường minh → bắt buộc dùng template.
+- `maxv("abc", "abd")`: T suy ra `const char*` → dùng bản specialization (so nội dung bằng strcmp, không so địa chỉ).
+- `maxv(1, 2.5)`: template không suy ra được T (int hay double?) → bị loại; hàm thường nhận được nhờ chuyển 2.5 → 2.
+- Box<int> và Box<double> là hai class khác nhau → static riêng.
+- Fact tính lúc biên dịch: 5! = 120.
+
+**Liên hệ đề thi:** Template phải đặt định nghĩa trong header (vì được sinh code lúc dùng). Specialization toàn phần dùng `template <>`; class template có partial specialization, function template thì không.
+
 ## 03-process
 
 ### 01_fork_count — fork() ba lần ⚠️ không cố định
@@ -640,6 +1010,67 @@ user@ubuntu:~/bosch-lab$ Con 8101: sau,   PPID = 1      <- hoặc PID của "sys
 
 **Liên hệ đề thi:** Zombie: con chết, cha còn sống nhưng không wait. Orphan: cha chết, con còn sống. Orphan không có hại; zombie tích tụ thì có hại.
 
+### 07_fork_cow — Biến sau fork(): copy-on-write
+
+**Câu hỏi:** Cha in g, local, heap bằng mấy sau khi con đã tăng cả ba? Địa chỉ &g ở cha và con có giống nhau không?
+
+**Output mong đợi:**
+
+```text
+con: g=11 local=21 heap=31 | &g=0x5870e837b010 heap=0x587110e802a0
+cha: g=10 local=20 heap=30 | &g=0x5870e837b010 heap=0x587110e802a0
+```
+
+**Giải thích:**
+
+- Con sửa bản sao của nó; cha vẫn thấy giá trị cũ 10/20/30.
+- Địa chỉ in ra **giống hệt** vì đó là địa chỉ ảo — con có bảng trang riêng trỏ tới trang vật lý riêng. Số địa chỉ cụ thể khác nhau mỗi lần chạy (ASLR), nhưng cha và con luôn bằng nhau.
+- Copy-on-write: sau fork, hai tiến trình dùng chung trang vật lý ở chế độ chỉ đọc; khi một bên ghi, kernel mới copy trang đó. Nhờ vậy fork rất nhanh.
+
+**Liên hệ đề thi:** Con kế thừa: bản sao bộ nhớ, fd đang mở, signal handler, cwd, biến môi trường. Con KHÔNG kế thừa: PID, signal đang pending, lock của file (fcntl), timer (alarm), các thread khác.
+
+### 08_fork_fd_offset — File descriptor sau fork(): dùng chung offset
+
+**Câu hỏi:** File 1 chứa gì (cha và con dùng chung fd mở TRƯỚC fork)? File 2 chứa gì (mỗi bên tự open SAU fork)?
+
+**Output mong đợi:**
+
+```text
+/tmp/bosch_offset1.txt (8 byte):
+con
+cha
+/tmp/bosch_offset2.txt (9 byte):
+cha
+XXXX
+```
+
+**Giải thích:**
+
+- File 1: fd được nhân bản nhưng cùng trỏ một open file description → offset chung. Con ghi 4 byte, offset thành 4, cha ghi tiếp từ 4 → "con\ncha\n".
+- File 2: mỗi bên `open` riêng → offset riêng bắt đầu từ 0. Cha ghi đè "cha\n" lên 4 byte đầu của "XXXXXXXX\n".
+
+**Liên hệ đề thi:** Ba tầng: bảng fd (riêng mỗi tiến trình) → open file table (offset, cờ; dùng chung sau fork/dup) → inode. `dup2(fd, 1)` là cách shell làm redirect.
+
+### 09_exec_buffer — exec() thay thế chương trình: PID giữ nguyên, buffer stdio mất
+
+**Câu hỏi:** Dòng "chua xuong dong..." có xuất hiện không? PID sau exec có đổi không? Dòng "khong bao gio in" có in không?
+
+**Output mong đợi:**
+
+```text
+PID truoc exec = 10144
+PID sau exec  = 10144
+```
+
+**Giải thích:**
+
+- Dòng đầu có `\n` và stdout là terminal (line-buffered) → đã flush trước exec.
+- "chua xuong dong..." còn nằm trong buffer của stdio (bộ nhớ user space) → exec xoá toàn bộ bộ nhớ cũ → mất.
+- `$$` trong `sh -c` là PID của sh = PID cũ, vì exec không tạo tiến trình mới. Số PID cụ thể khác mỗi lần chạy.
+- exec thành công không bao giờ trả về → hai dòng cuối không chạy.
+
+**Liên hệ đề thi:** fork tạo tiến trình mới (bản sao), exec thay ruột tiến trình hiện tại. Shell chạy lệnh = fork + exec ở con + wait ở cha. `vfork`/`posix_spawn` tối ưu cho trường hợp exec ngay sau fork.
+
 ## 04-signal
 
 ### 01_sigint_handler — Bắt Ctrl+C bằng sigaction
@@ -723,6 +1154,50 @@ Killed                                 <- kill -KILL: chết ngay, shell in "Kil
 - SIGKILL do kernel xử lý trực tiếp, chương trình không có cơ hội dọn dẹp.
 
 **Liên hệ đề thi:** Thuộc số hiệu trên Linux x86: HUP 1, INT 2, QUIT 3, ABRT 6, KILL 9, USR1 10, SEGV 11, USR2 12, PIPE 13, ALRM 14, TERM 15, CHLD 17, CONT 18, STOP 19, TSTP 20.
+
+### 04_alarm_pause — alarm, pause và hành động mặc định của SIGALRM
+
+**Câu hỏi:** alarm(0) trả về mấy? pause() trả về gì và errno là gì? Dòng cuối "khong in" có xuất hiện không, và shell báo gì?
+
+**Output mong đợi:**
+
+```text
+alarm(0) tra ve 10
+alarm(1) roi pause()...
+  [handler] SIGALRM
+pause() = -1, errno = Interrupted system call
+alarm(1) lan nua, lan nay KHONG bat SIGALRM
+Alarm clock
+```
+
+**Giải thích:**
+
+- `alarm(0)` huỷ hẹn giờ đang có và trả số giây còn lại (10).
+- Sau 1 giây, SIGALRM tới → handler chạy → pause() trả -1 với `errno = EINTR`.
+- Lần hai không bắt SIGALRM → hành động mặc định là **kết thúc** tiến trình. Shell in "Alarm clock" và `echo $?` = 142 (128 + 14). "khong in" không xuất hiện.
+
+**Liên hệ đề thi:** Hành động mặc định: Term (SIGINT, SIGTERM, SIGALRM, SIGPIPE, SIGUSR1/2, SIGHUP, SIGKILL), Core (SIGSEGV, SIGABRT, SIGFPE, SIGQUIT), Ign (SIGCHLD), Stop (SIGSTOP, SIGTSTP), Cont (SIGCONT). Mã thoát khi chết vì signal n là 128 + n.
+
+### 05_sigprocmask — Chặn signal (sigprocmask), signal đang chờ và việc signal không xếp hàng
+
+**Câu hỏi:** Gửi SIGUSR1 3 lần khi đang chặn → bỏ chặn thì handler chạy mấy lần? Còn với signal real-time SIGRTMIN?
+
+**Output mong đợi:**
+
+```text
+dang chan: SIGUSR1 pending? 1, SIGRTMIN pending? 1
+truoc khi bo chan: usr1 = 0, rt = 0
+sau khi bo chan:   usr1 = 1, rt = 3
+```
+
+**Giải thích:**
+
+- Khi bị chặn, signal không được giao mà chuyển sang pending → handler chưa chạy (0, 0).
+- Signal chuẩn chỉ có một bit pending → 3 lần raise gộp thành 1.
+- Signal real-time được xếp hàng → giao đủ 3 lần, và mang theo dữ liệu được (`sigqueue`).
+- Signal đang pending được giao ngay khi `sigprocmask(SIG_UNBLOCK)` trả về.
+
+**Liên hệ đề thi:** Phân biệt **chặn** (block: hoãn lại, vẫn pending) và **bỏ qua** (ignore: vứt bỏ). SIGKILL và SIGSTOP không thể chặn, bỏ qua hay bắt. Trong thread dùng `pthread_sigmask`.
 
 ## 05-thread
 
@@ -857,6 +1332,51 @@ so nhan CPU = 8        <- tuỳ máy
 - Một `std::thread` còn **joinable** mà bị huỷ → gọi `std::terminate()` → chương trình abort.
 
 **Liên hệ đề thi:** `unique_lock` linh hoạt hơn `lock_guard` (unlock giữa chừng, dùng với `condition_variable`). C++20 có `std::jthread` tự join khi huỷ.
+
+### 07_thread_arg_bug — Truyền &i vào thread và lấy kết quả qua pthread_join ⚠️ không cố định
+
+**Câu hỏi:** Phần "SAI" in id nào? Phần "DUNG" in gì và tổng bằng bao nhiêu?
+
+**Output mong đợi:**
+
+```text
+  SAI: thread nhan id = 2
+  SAI: thread nhan id = 3
+  SAI: thread nhan id = 4
+  SAI: thread nhan id = 2
+  DUNG: thread 0 tra ve 0
+  DUNG: thread 1 tra ve 1
+  DUNG: thread 2 tra ve 4
+  DUNG: thread 3 tra ve 9
+tong = 14
+```
+
+**Giải thích:**
+
+- Phần SAI: các thread đọc `*arg` vào lúc nào đó **sau** khi được tạo; lúc đó main có thể đã tăng i, thậm chí đã ra khỏi vòng lặp (giá trị 4, hoặc ô nhớ đã bị vòng lặp sau dùng lại). Mỗi lần chạy một kiểu, thứ tự dòng cũng thay đổi.
+- Phần DUNG: id được truyền **theo giá trị** trong chính con trỏ → mỗi thread có bản riêng. Kết quả lấy qua `pthread_join(t, &ret)` theo thứ tự join → cố định: 0 + 1 + 4 + 9 = 14.
+
+**Liên hệ đề thi:** Lỗi truyền `&i` vào thread hay xuất hiện trong câu "tìm bug". Thread trả về con trỏ tới biến local của nó là sai (stack đã bị huỷ) — trả malloc hoặc giá trị ép kiểu.
+
+### 08_thread_local — Thread chia sẻ gì, riêng gì: global, thread-local, PID/TID
+
+**Câu hỏi:** Mỗi thread in mine và shared bằng mấy? Cuối cùng main thấy mine, shared bằng mấy? PID của thread có bằng PID của main không?
+
+**Output mong đợi:**
+
+```text
+thread 0: mine = 3, shared = 3, getpid()==main? 1, tid==pid? 0
+thread 1: mine = 3, shared = 6, getpid()==main? 1, tid==pid? 0
+main: mine = 0, shared = 6, tid==pid? 1
+```
+
+**Giải thích:**
+
+- `shared` là biến toàn cục dùng chung → cộng dồn 3 rồi 6.
+- `mine` là `_Thread_local` → mỗi thread một bản bắt đầu từ 0; bản của main không bị đụng tới → 0.
+- `getpid()` giống nhau ở mọi thread (TGID). TID của thread phụ khác PID; chỉ thread chính có TID = PID.
+
+**Liên hệ đề thi:** Thread chia sẻ: code, data, heap, fd, signal handler, cwd, PID. Riêng: stack, thanh ghi/PC, TID, signal mask, errno (errno là thread-local). Trên Linux cả process và thread đều tạo bằng `clone()` với các cờ chia sẻ khác nhau.
 
 ## 06-ipc
 
@@ -994,6 +1514,49 @@ Client nhan: pong
 - `socketpair(AF_UNIX, ...)` tạo sẵn một cặp socket đã nối, tiện cho cha–con.
 
 **Liên hệ đề thi:** `SOCK_STREAM` (TCP-like, tin cậy, có thứ tự, dạng luồng byte) vs `SOCK_DGRAM` (UDP-like, giữ ranh giới message). UNIX socket còn truyền được file descriptor (SCM_RIGHTS).
+
+### 07_mqueue — POSIX message queue và độ ưu tiên
+
+**Câu hỏi:** Con gửi 3 tin với độ ưu tiên 1, 5, 3. Cha nhận theo thứ tự nào? mq_curmsgs trước khi nhận bằng mấy?
+
+**Output mong đợi:**
+
+```text
+so tin dang cho: 3
+nhan "cao" (prio 5)
+nhan "vua" (prio 3)
+nhan "thap" (prio 1)
+```
+
+**Giải thích:**
+
+- Con đã thoát nhưng 3 tin vẫn còn trong queue vì queue là object của kernel, không phụ thuộc tiến trình gửi.
+- `mq_receive` luôn lấy tin có ưu tiên cao nhất → 5, 3, 1.
+- Mỗi lần receive lấy đúng một tin nguyên vẹn (giữ ranh giới tin), khác pipe là luồng byte liên tục.
+
+**Liên hệ đề thi:** POSIX mq (`mq_open`, tên bắt đầu bằng `/`, link với `-lrt` trên glibc cũ) và System V mq (`msgget`, `msgsnd`, `msgrcv`, chọn tin theo `mtype`). Xem bằng `ls /dev/mqueue` và `ipcs -q`.
+
+### 08_sigpipe — Ghi vào pipe không còn đầu đọc: SIGPIPE và EPIPE
+
+**Câu hỏi:** Khi bỏ qua SIGPIPE, write trả về gì? Khi để mặc định, tiến trình con kết thúc thế nào? Dung lượng pipe mặc định trên Linux?
+
+**Output mong đợi:**
+
+```text
+dung luong pipe = 65536 byte
+bo qua SIGPIPE: write = -1, errno = Broken pipe
+con bi kill boi signal 13 (Broken pipe)
+read lan 1 = 2, read lan 2 = 0 (EOF)
+```
+
+**Giải thích:**
+
+- Pipe trên Linux mặc định 64 KiB; đầy thì write chặn (hoặc trả EAGAIN nếu O_NONBLOCK).
+- Đầu đọc đã đóng: với SIGPIPE bị bỏ qua, write trả -1/EPIPE.
+- Con đặt lại SIG_DFL → nhận SIGPIPE (13) và chết ngay trong write, dòng "khong in" không chạy.
+- Đọc sau khi mọi đầu ghi đã đóng: lấy hết dữ liệu còn lại (2 byte), lần sau trả 0 = EOF.
+
+**Liên hệ đề thi:** Server mạng thường `signal(SIGPIPE, SIG_IGN)` hoặc dùng `send(..., MSG_NOSIGNAL)` để không chết khi client ngắt kết nối. Luôn đóng đầu pipe không dùng sau fork.
 
 ## 07-kernel-module
 

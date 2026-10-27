@@ -2,6 +2,7 @@
 #   make                               build tất cả vào build/
 #   make run T=03-process/01_fork_count  build rồi chạy một bài
 #   make clean
+#   make web                           mở giao diện web ở http://localhost:8000
 # Cố ý KHÔNG dùng -O2: các bài UB/volatile/race cho kết quả dễ quan sát hơn (xem README).
 
 CC       := gcc
@@ -54,4 +55,7 @@ endif
 clean:
 	rm -rf build
 
-.PHONY: all run clean
+web:
+	python3 web/backend/server.py
+
+.PHONY: all run clean web

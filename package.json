@@ -1,0 +1,12 @@
+{
+  "name": "bosch-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lab ôn assessment C++ & Linux System: bài lab, lý thuyết, trắc nghiệm (giao diện web)",
+  "scripts": {
+    "start": "python3 web/backend/server.py",
+    "build": "make",
+    "clean": "make clean",
+    "lab": "sh -c 'make run T=\"$0\"'"
+  }
+}
