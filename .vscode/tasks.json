@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build all",
+      "type": "shell",
+      "command": "make",
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Build current file",
+      "type": "shell",
+      "command": "make build/${relativeFileDirname}/${fileBasenameNoExtension}",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Build & run current file",
+      "type": "shell",
+      "command": "make run T=${relativeFileDirname}/${fileBasenameNoExtension}",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}
