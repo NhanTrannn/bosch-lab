@@ -10,6 +10,7 @@
 function route() {
   const hsh = decodeURIComponent(location.hash.slice(1));
   if (hsh.startsWith("theory/") && TOPICS.length) return showTopic(hsh.slice(7));
+  if (hsh === "theory" && TOPICS.length) return showTheoryIndex();
   if (hsh === "quiz" && TOPICS.length) return showQuiz();
   if (!hsh || hsh === "home" || hsh === "theory" || hsh === "quiz") return showHome();
   const id = hsh.replace(/^lab\//, "");

@@ -9,11 +9,56 @@ function qStats(qs) {
   return { done, wrong, total: qs.length };
 }
 
-function showTopic(id) {
-  const t = TOPICS.find(x => x.id === id) || TOPICS[0];
+// Topics opened at least once, so the index can show what is left to read
+const readStore = () => (store.__read ||= {});
+
+// Theory index: every topic grouped like the quiz page, open any of them in any order
+function showTheoryIndex() {
   mode = "theory";
-  if (!t) { setHash("theory"); renderNav(); $("#main").replaceChildren(h("div", { class: "narrow" }, theoryBanner())); return; }
+  currentTopic = null;
+  setHash("theory");
+  renderNav();
+  if (!TOPICS.length) { $("#main").replaceChildren(h("div", { class: "narrow" }, theoryBanner())); return; }
+  const nRead = TOPICS.filter(t => readStore()[t.id]).length;
+  const sections = t => (t.theory.match(/^### /gm) || []).length;
+  const card = t => {
+    const st = qStats(t.questions), read = readStore()[t.id];
+    return h("div", { class: "card topic-card", style: hueStyle(topicHue(t)), role: "button", tabindex: "0",
+      onclick: () => showTopic(t.id),
+      onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showTopic(t.id); } } },
+      h("div", { class: "eyebrow" }, `${sections(t)} sections · ${t.questions.length} questions`),
+      h("div", { class: "t" }, t.title),
+      h("div", { class: "bar" }, h("div", { style: `width:${st.total ? 100 * st.done / st.total : 0}%` })),
+      h("div", { class: "foot" },
+        h("span", { class: read ? "read-chip" : "muted" }, read ? "✓ read" : "not read yet"),
+        h("button", { class: "small", style: "margin-left:auto", title: "Quiz this topic",
+          onclick: e => { e.stopPropagation(); startQuiz({ topics: [t.id], count: "all", filter: "all" }); } }, "✍️ Quiz")));
+  };
+  const section = g => {
+    const left = g.topics.find(t => !readStore()[t.id]);
+    return h("section", { class: "quiz-group", style: hueStyle(topicHue(g.topics[0])) },
+      h("div", { class: "group-head" },
+        h("span", { class: "sw" }),
+        h("h3", {}, g.name),
+        h("span", { class: "muted" }, `${g.topics.filter(t => readStore()[t.id]).length}/${g.topics.length} read`),
+        h("span", { class: "sp", style: "flex:1" }),
+        left ? h("button", { class: "small", onclick: () => showTopic(left.id) }, "Next unread →") : null),
+      h("div", { class: "topic-cards" }, g.topics.map(card)));
+  };
+  $("#main").replaceChildren(h("div", { class: "setup" },
+    h("div", { class: "eyebrow" }, `${TOPICS.length} topics · ${nRead} read`),
+    h("div", { class: "title-row" }, h("h2", {}, "Theory")),
+    h("p", { class: "muted", style: "margin:4px 0 14px" }, "Pick any topic to read; topics are grouped like the quiz. Each topic page has a table of contents and a quiz button."),
+    topicGroups().map(section)));
+  $("#main").scrollTop = 0;
+}
+
+function showTopic(id) {
+  const t = TOPICS.find(x => x.id === id);
+  if (!t) return showTheoryIndex();
+  mode = "theory";
   currentTopic = t;
+  if (!readStore()[t.id]) { readStore()[t.id] = true; saveStore(); }
   setHash("theory/" + t.id);
   renderNav();
   const st = qStats(t.questions), idx = TOPICS.indexOf(t);
@@ -24,7 +69,9 @@ function showTopic(id) {
     heads.map(el => h("a", { href: "#", onclick: e => { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); } }, el.textContent)));
   $("#main").replaceChildren(h("div", { class: "page theory", style: hueStyle(topicHue(t)) },
     h("div", { class: "topic-hero" },
-      h("div", { class: "eyebrow" }, `Theory · topic ${idx + 1}/${TOPICS.length}`),
+      h("div", { class: "row", style: "margin-bottom:8px" },
+        h("button", { class: "small", onclick: showTheoryIndex }, "← All topics"),
+        h("span", { class: "eyebrow" }, `Theory · ${t.group} · topic ${idx + 1}/${TOPICS.length}`)),
       h("h2", {}, t.title),
       h("div", { class: "row", style: "margin-top:12px" },
         h("button", { class: "primary", onclick: () => startQuiz({ topics: [t.id], count: "all", filter: "all" }) }, `▶ Take the ${t.questions.length}-question quiz`),

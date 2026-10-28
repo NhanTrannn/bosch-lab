@@ -39,7 +39,7 @@ function showHome() {
   const topicTile = t => {
     const st = qStats(t.questions), pct = st.total ? 100 * st.done / st.total : 0;
     return h("div", { class: "card tile", style: hueStyle(topicHue(t)) },
-      h("div", { class: "eyebrow" }, `Topic ${TOPICS.indexOf(t) + 1}`),
+      h("div", { class: "eyebrow" }, t.group),
       h("div", { class: "t" }, t.title),
       h("div", { class: "bar" }, h("div", { style: `width:${pct}%` })),
       h("div", { class: "muted" }, `${st.done}/${st.total} questions` + (st.wrong ? ` · ${st.wrong} wrong` : st.done === st.total && st.total ? " · done ✓" : "")),

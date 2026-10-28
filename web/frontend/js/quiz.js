@@ -36,7 +36,7 @@ function renderQuizSetup() {
     return h("div", { class: "card topic-card", style: hueStyle(topicHue(t)), role: "button", tabindex: "0",
       onclick: () => go({ topics: [t.id] }),
       onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go({ topics: [t.id] }); } } },
-      h("div", { class: "eyebrow" }, `Topic ${TOPICS.indexOf(t) + 1} · ${t.questions.length} questions`),
+      h("div", { class: "eyebrow" }, `${t.questions.length} questions`),
       h("div", { class: "t" }, t.title),
       h("div", { class: "bar" }, h("div", { style: `width:${pct}%` })),
       h("div", { class: "foot" },
@@ -51,8 +51,23 @@ function renderQuizSetup() {
       h("span", { class: "sp", style: "flex:1" }),
       h("button", { class: "small", onclick: () => go({ topics: allIds }) }, `🔀 Mix all topics (${totalQ})`),
       allWrong ? h("button", { class: "small", onclick: () => go({ topics: allIds, filter: "wrong" }) }, `↻ Review ${allWrong} wrong`) : null),
-    h("p", { class: "muted", style: "margin:4px 0 14px" }, "Click a topic to answer all of its questions (questions and options are shuffled). Shortcuts: 1–4 or A–D to pick, Enter for the next question, Esc to exit."),
-    h("div", { class: "topic-cards" }, TOPICS.map(card))));
+    h("p", { class: "muted", style: "margin:4px 0 14px" }, "Click a topic to answer all of its questions, or mix a whole group (questions and options are shuffled). Shortcuts: 1–4 or A–D to pick, Enter for the next question, Esc to exit."),
+    topicGroups().map(g => groupSection(g, card))));
+}
+
+// One group (C, C++, Linux, …): heading with mix / review-wrong buttons, then its topic cards
+function groupSection(g, card) {
+  const ids = g.topics.map(t => t.id), qs = g.topics.flatMap(t => t.questions), st = qStats(qs);
+  const go = over => startQuiz({ topics: ids, count: "all", filter: "all", exam: false, ...over });
+  return h("section", { class: "quiz-group", style: hueStyle(topicHue(g.topics[0])) },
+    h("div", { class: "group-head" },
+      h("span", { class: "sw" }),
+      h("h3", {}, g.name),
+      h("span", { class: "muted" }, `${g.topics.length} topic${g.topics.length > 1 ? "s" : ""} · ${st.done}/${st.total} done`),
+      h("span", { class: "sp", style: "flex:1" }),
+      g.topics.length > 1 ? h("button", { class: "small", onclick: () => go({}) }, `🔀 Mix ${g.name} (${st.total})`) : null,
+      st.wrong ? h("button", { class: "small wrong-chip", onclick: () => go({ filter: "wrong" }) }, `↻ ${st.wrong} wrong`) : null),
+    h("div", { class: "topic-cards" }, g.topics.map(card)));
 }
 
 function startQuiz(over) {

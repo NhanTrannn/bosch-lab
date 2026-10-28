@@ -8,8 +8,14 @@ function counts() {
   return { total: ids.length, done: ids.filter(id => st(id).mark).length, right: ids.filter(id => st(id).mark === "right").length, wrong: ids.filter(id => st(id).mark === "wrong").length };
 }
 const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140, "10-alp": 95 };
-const TOPIC_HUES = [215, 265, 300, 170, 35, 345, 140, 195, 20];
-const topicHue = t => TOPIC_HUES[Math.max(0, TOPICS.indexOf(t)) % TOPIC_HUES.length];
+// Topics come from the server already sorted by group (see THEORY_GROUPS in web/backend/config.py)
+const GROUP_HUES = { "C": 215, "C++": 265, "Linux": 170, "Advanced Linux (ALP)": 95, "Build, debug & kernel": 20 };
+const topicHue = t => GROUP_HUES[t.group] ?? 300;
+function topicGroups() {
+  const groups = new Map();
+  for (const t of TOPICS) { const g = t.group || "Other"; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(t); }
+  return [...groups].map(([name, topics]) => ({ name, topics }));
+}
 const hueStyle = hue => `--h:${hue}`;
 const ICONS = {
   home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -46,7 +52,7 @@ function renderNav() {
 function switchMode(k) {
   if (k === "home") showHome();
   else if (k === "lab") go(current?.id || LABS[0].id);
-  else if (k === "theory") showTopic(currentTopic?.id || TOPICS[0]?.id);
+  else if (k === "theory") showTheoryIndex();
   else showQuiz();
 }
 function renderTopicNav() {
@@ -54,8 +60,9 @@ function renderTopicNav() {
   $("#bar").style.width = (all.length ? 100 * stats.done / all.length : 0) + "%";
   $("#stats").textContent = TOPICS.length ? `${stats.done}/${all.length} questions done · ${stats.wrong} wrong` : "Quizzes not loaded";
   $("#filters").replaceChildren();
-  $("#nav").replaceChildren(h("div", { class: "group" }, h("h2", {}, mode === "quiz" ? "Quiz a whole topic" : "Theory topics"),
-    TOPICS.map(t => {
+  $("#nav").replaceChildren(...topicGroups().map(g => h("div", { class: "group", style: hueStyle(topicHue(g.topics[0])) },
+    h("h2", {}, h("span", { class: "sw" }), `${g.name} · ${g.topics.reduce((n, t) => n + t.questions.length, 0)} questions`),
+    g.topics.map(t => {
       const st = qStats(t.questions);
       const dot = !st.done ? "" : st.wrong ? "wrong" : st.done === st.total ? "right" : "pred";
       const active = mode === "theory" && currentTopic?.id === t.id;
@@ -64,7 +71,7 @@ function renderTopicNav() {
         h("span", { class: "dot " + dot }),
         h("span", { class: "nm" }, t.title, h("small", {}, `${st.done}/${st.total} questions` + (st.wrong ? ` · ${st.wrong} wrong` : "")),
           h("div", { class: "minibar" }, h("div", { style: `width:${st.total ? 100 * st.done / st.total : 0}%` }))));
-    })));
+    }))));
 }
 function renderLabNav() {
   const c = counts();

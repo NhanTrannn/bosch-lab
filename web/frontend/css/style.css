@@ -209,6 +209,12 @@ kbd { font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; 
 
 /* ---------- quiz */
 .setup h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; }
+.quiz-group { margin-top: 22px; }
+.quiz-group .group-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid hsl(var(--h) 70% 58% / .35); }
+.quiz-group .group-head h3 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: hsl(var(--h) 60% 45%); }
+.quiz-group .group-head .sw { width: 10px; height: 10px; border-radius: 3px; background: hsl(var(--h) 70% 58%); }
+.topic-card .read-chip { color: var(--ok); font-weight: 600; font-size: 13px; }
+.quiz-group .group-head .wrong-chip { color: var(--bad); border-color: currentColor; }
 .topic-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .topic-cards > .card { margin: 0; }
 .topic-card { padding: 14px 16px; cursor: pointer; border-top: 4px solid hsl(var(--h) 70% 58%); display: flex; flex-direction: column; gap: 6px; transition: transform .12s, box-shadow .12s; }

@@ -2,7 +2,9 @@
 import hashlib
 import re
 
-from config import ROOT
+from config import OTHER_GROUP, ROOT, THEORY_GROUPS
+
+GROUP_OF = {stem: name for name, stems in THEORY_GROUPS for stem in stems}
 
 
 def parse_quiz(stem, text):
@@ -46,5 +48,10 @@ def parse_theory():
         theory = re.sub(r"^# .+\n+", "", theory, count=1)
         theory = re.sub(r"^## Theory\n+", "", theory.strip(), count=1)
         topics.append({"id": path.stem, "title": m.group(1).strip() if m else path.stem,
+                       "group": GROUP_OF.get(path.stem, OTHER_GROUP),
                        "theory": theory, "questions": parse_quiz(path.stem, quiz)})
+    # Group order first, then the order listed in THEORY_GROUPS; unlisted files keep their file order
+    rank = {stem: i for i, (_, stems) in enumerate(THEORY_GROUPS) for stem in stems}
+    pos = {stem: i for _, stems in THEORY_GROUPS for i, stem in enumerate(stems)}
+    topics.sort(key=lambda t: (rank.get(t["id"], len(THEORY_GROUPS)), pos.get(t["id"], 0)))
     return topics
