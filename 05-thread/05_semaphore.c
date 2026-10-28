@@ -1,9 +1,9 @@
 /*
- * Bài: Semaphore giới hạn 2 thread cùng lúc
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Giá trị "toi da cung luc" là bao nhiêu? Thứ tự vào/ra có cố định không?
- * Ý chính: Counting semaphore khởi tạo = 2: sem_wait giảm (chặn nếu đang 0), sem_post tăng. Dùng để giới hạn số thread dùng một tài nguyên.
- * Thử thêm: Khởi tạo sem_init(&sem, 0, 1) (binary semaphore) và so sánh với mutex.
+ * Lab: A semaphore that limits threads to 2 at a time
+ * Topic: Thread
+ * Predict before running: What is the "max at the same time" value? Is the enter/leave order fixed?
+ * Key idea: A counting semaphore initialized to 2: sem_wait decrements (blocks at 0), sem_post increments. Used to limit how many threads use a resource.
+ * Try next: Initialize with sem_init(&sem, 0, 1) (a binary semaphore) and compare it with a mutex.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -24,14 +24,14 @@ static void *worker(void *arg)
     inside++;
     if (inside > max_inside)
         max_inside = inside;
-    printf("T%d vao (dang trong: %d)\n", id, inside);
+    printf("T%d enters (inside: %d)\n", id, inside);
     pthread_mutex_unlock(&m);
 
     usleep(200000);
 
     pthread_mutex_lock(&m);
     inside--;
-    printf("T%d ra\n", id);
+    printf("T%d leaves\n", id);
     pthread_mutex_unlock(&m);
 
     sem_post(&sem);
@@ -46,7 +46,7 @@ int main(void)
         pthread_create(&t[i], NULL, worker, (void *)i);
     for (int i = 0; i < 5; i++)
         pthread_join(t[i], NULL);
-    printf("So thread toi da cung luc = %d\n", max_inside);
+    printf("Max threads at the same time = %d\n", max_inside);
     sem_destroy(&sem);
     return 0;
 }

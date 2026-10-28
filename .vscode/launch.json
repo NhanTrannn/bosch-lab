@@ -20,7 +20,7 @@
           "ignoreFailures": true
         },
         {
-          "description": "Khi fork: tiếp tục debug tiến trình cha",
+          "description": "On fork: keep debugging the parent process",
           "text": "-gdb-set follow-fork-mode parent",
           "ignoreFailures": true
         }

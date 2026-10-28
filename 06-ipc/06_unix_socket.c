@@ -1,9 +1,9 @@
 /*
- * Bài: UNIX domain socket: server/client bằng fork
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Hai dòng in ra theo thứ tự nào? Vì sao bind/listen phải làm TRƯỚC fork?
- * Ý chính: Server: socket → bind → listen → accept. Client: socket → connect. AF_UNIX dùng đường dẫn file làm địa chỉ, chỉ trong 1 máy.
- * Thử thêm: Chạy lại ngay mà bỏ dòng unlink(SOCK_PATH) ở đầu main: bind báo lỗi gì?
+ * Lab: UNIX domain socket: a server/client pair using fork
+ * Topic: IPC
+ * Predict before running: In what order are the two lines printed? Why must bind/listen happen BEFORE fork?
+ * Key idea: Server: socket → bind → listen → accept. Client: socket → connect. AF_UNIX uses a file path as the address and only works within one machine.
+ * Try next: Run it again right away without the unlink(SOCK_PATH) at the start of main: what error does bind report?
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -35,7 +35,7 @@ int main(void)
         write(c, "ping", 4);
         char buf[64] = {0};
         read(c, buf, sizeof(buf) - 1);
-        printf("Client nhan: %s\n", buf);
+        printf("Client got: %s\n", buf);
         close(c);
         return 0;
     }
@@ -43,7 +43,7 @@ int main(void)
     int conn = accept(srv, NULL, NULL);
     char buf[64] = {0};
     read(conn, buf, sizeof(buf) - 1);
-    printf("Server nhan: %s\n", buf);
+    printf("Server got: %s\n", buf);
     fflush(stdout);
     write(conn, "pong", 4);
     close(conn);

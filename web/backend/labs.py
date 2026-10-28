@@ -1,20 +1,20 @@
-"""Danh sách bài lab: đọc comment đầu file nguồn và đáp án trong ANSWERS.md."""
+"""Lab list: reads the header comment of each source file and the answers in ANSWERS.md."""
 import re
 
 from config import DIRS, EXTRA_FILES, HELPERS, READONLY, ROOT, SHELL_LAB
 
 HEADER_KEYS = {
-    "Bài": "title",
-    "Chủ đề": "topic",
-    "Dự đoán trước khi chạy": "predict",
-    "Ý chính": "idea",
-    "Thử thêm": "try",
-    "Cảnh báo biên dịch cố ý": "warn_build",
+    "Lab": "title",
+    "Topic": "topic",
+    "Predict before running": "predict",
+    "Key idea": "idea",
+    "Try next": "try",
+    "Intentional compiler warning": "warn_build",
 }
 
 
 def parse_header(text):
-    """Đọc comment đầu file: Bài / Chủ đề / Dự đoán... và dòng cảnh báo '!!!'."""
+    """Read the header comment: Lab / Topic / Predict... and the '!!!' warning line."""
     m = re.match(r"\s*/\*(.*?)\*/", text, re.S)
     meta = {}
     if not m:
@@ -35,7 +35,7 @@ def parse_header(text):
 
 
 def parse_answers():
-    """ANSWERS.md → ({dir: {tên bài: (tiêu đề, markdown)}}, {dir: markdown cả phần})."""
+    """ANSWERS.md -> ({dir: {lab name: (title, markdown)}}, {dir: markdown of the whole section})."""
     path = ROOT / "ANSWERS.md"
     sections, whole = {}, {}
     if not path.exists():
@@ -64,12 +64,12 @@ def parse_answers():
 
 
 def expected_output(md):
-    m = re.search(r"\*\*Output mong đợi:\*\*\s*```[^\n]*\n(.*?)\n```", md, re.S)
+    m = re.search(r"\*\*Expected output:\*\*\s*```[^\n]*\n(.*?)\n```", md, re.S)
     return m.group(1) if m else None
 
 
 def question(md):
-    m = re.search(r"\*\*Câu hỏi:\*\*\s*(.+)", md)
+    m = re.search(r"\*\*Question:\*\*\s*(.+)", md)
     return m.group(1).strip() if m else None
 
 
@@ -85,11 +85,11 @@ def discover():
         key = name if name in sec else re.sub(r"_(reader|writer)$", "", name)
         title, md = sec.get(key, ("", ""))
         if kind == "shell":
-            title, md = "20 bài lệnh shell", whole.get(d, "")
+            title, md = "20 shell command drills", whole.get(d, "")
         labs.append({
             "id": lab_id, "dir": d, "name": name, "kind": kind, "files": files,
             "title": meta.get("title") or re.sub(r"\s*⚠️.*", "", title) or name,
-            "unstable": "không cố định" in title,
+            "unstable": "nondeterministic" in title,
             "meta": meta, "answer": md,
             "question": question(md) or meta.get("predict"),
             "expected": expected_output(md),

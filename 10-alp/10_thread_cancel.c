@@ -1,9 +1,9 @@
 /*
- * Bài: Huỷ thread: deferred cancellation, cancellation point, vùng không huỷ được, cleanup handler (ALP 4.2, 4.3.1)
- * Chủ đề: ALP chương 4
- * Dự đoán trước khi chạy: Thread A bị huỷ trong lúc sleep: cleanup handler có chạy không, join nhận được gì? Thread B tắt cancel trong lúc "chuyển tiền": bị huỷ ở đâu, dòng "chuyen xong" có in ra không? pthread_cleanup_pop(1) khi không bị huỷ thì sao?
- * Ý chính: Mặc định thread là deferred (synchronous) cancelable: yêu cầu huỷ chỉ có hiệu lực ở cancellation point (sleep, read, pthread_join, pthread_testcancel...). PTHREAD_CANCEL_DISABLE tạo vùng găng không bị huỷ; yêu cầu được giữ lại tới khi bật lại. Khi bị huỷ, cleanup handler (pthread_cleanup_push/pop) chạy để giải phóng tài nguyên. Thread bị huỷ trả về PTHREAD_CANCELED.
- * Thử thêm: Đổi thread A sang PTHREAD_CANCEL_ASYNCHRONOUS và thay sleep bằng vòng lặp bận. Bỏ pthread_testcancel ở thread B.
+ * Lab: Thread cancellation: deferred cancellation, cancellation points, uncancelable sections, cleanup handlers (ALP 4.2, 4.3.1)
+ * Topic: ALP chapter 4
+ * Predict before running: Thread A is cancelled while sleeping: does its cleanup handler run, and what does join return? Thread B disables cancellation during a "money transfer": where is it cancelled, and is "transfer done" printed? What does pthread_cleanup_pop(1) do when the thread is not cancelled?
+ * Key idea: Threads are deferred (synchronously) cancelable by default: a cancellation request only takes effect at a cancellation point (sleep, read, pthread_join, pthread_testcancel...). PTHREAD_CANCEL_DISABLE creates an uncancelable critical section; the request is kept until cancellation is re-enabled. On cancellation, cleanup handlers (pthread_cleanup_push/pop) run to release resources. A cancelled thread returns PTHREAD_CANCELED.
+ * Try next: Switch thread A to PTHREAD_CANCEL_ASYNCHRONOUS and replace the sleep with a busy loop. Remove the pthread_testcancel in thread B.
  */
 #define _GNU_SOURCE
 #include <pthread.h>
@@ -26,8 +26,8 @@ static void *thread_a(void *arg)
     void *temp_buffer = malloc(1024);
     pthread_cleanup_push(deallocate_buffer, temp_buffer);
     a_ready = 1;
-    for (int i = 0; i < 100; ++i) usleep(100000);   /* usleep là cancellation point */
-    printf("  [A] khong bao gio toi day\n");
+    for (int i = 0; i < 100; ++i) usleep(100000);   /* usleep is a cancellation point */
+    printf("  [A] never reached\n");
     pthread_cleanup_pop(1);
     return NULL;
 }
@@ -37,15 +37,15 @@ static void *thread_b(void *arg)
     (void)arg;
     int old_state;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
-    printf("  [B] bat dau chuyen tien (cancel bi tat)\n");
+    printf("  [B] transfer started (cancellation disabled)\n");
     fflush(stdout);
     b_ready = 1;
-    usleep(300000);   /* là cancellation point, nhưng đang tắt cancel */
-    printf("  [B] chuyen xong\n");
+    usleep(300000);   /* a cancellation point, but cancellation is disabled */
+    printf("  [B] transfer done\n");
     fflush(stdout);
     pthread_setcancelstate(old_state, NULL);
     pthread_testcancel();
-    printf("  [B] khong bao gio toi day\n");
+    printf("  [B] never reached\n");
     return NULL;
 }
 
@@ -54,7 +54,7 @@ static void *thread_c(void *arg)
     (void)arg;
     void *buf = malloc(16);
     pthread_cleanup_push(deallocate_buffer, buf);
-    printf("  [C] chay xong binh thuong, pop(1) van goi handler:\n");
+    printf("  [C] finished normally, pop(1) still runs the handler:\n");
     fflush(stdout);
     pthread_cleanup_pop(1);
     return (void *)42;
@@ -71,7 +71,7 @@ int main(void)
     usleep(50000);
     pthread_cancel(a);
     pthread_join(a, &ret);
-    printf("  join A: %s\n", ret == PTHREAD_CANCELED ? "PTHREAD_CANCELED" : "gia tri khac");
+    printf("  join A: %s\n", ret == PTHREAD_CANCELED ? "PTHREAD_CANCELED" : "another value");
 
     printf("Thread B:\n");
     fflush(stdout);
@@ -80,7 +80,7 @@ int main(void)
     printf("  [main] pthread_cancel(B) = %d\n", pthread_cancel(b));
     fflush(stdout);
     pthread_join(b, &ret);
-    printf("  join B: %s\n", ret == PTHREAD_CANCELED ? "PTHREAD_CANCELED" : "gia tri khac");
+    printf("  join B: %s\n", ret == PTHREAD_CANCELED ? "PTHREAD_CANCELED" : "another value");
 
     printf("Thread C:\n");
     fflush(stdout);

@@ -1,7 +1,7 @@
-// Tô màu code C/C++/shell và markdown tối giản (đủ cho ANSWERS.md, 09-theory).
+// Syntax highlighting for C/C++/shell and a minimal markdown renderer (enough for ANSWERS.md, 09-theory).
 "use strict";
 
-// ---------- tô màu code
+// ---------- code highlighting
 const KW = new Set(("auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while bool true false nullptr class public private protected virtual override final template typename namespace using new delete this operator friend explicit noexcept constexpr try catch throw std size_t uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t pid_t ssize_t mutable static_cast dynamic_cast reinterpret_cast const_cast decltype NULL").split(" "));
 function highlight(code, lang) {
   if (lang === "sh" || lang === "make") {
@@ -26,7 +26,7 @@ function highlight(code, lang) {
 }
 const langOf = f => f.endsWith(".md") ? "md" : f.endsWith("Makefile") ? "make" : "c";
 
-// ---------- markdown tối giản (đủ cho ANSWERS.md / drills.md)
+// ---------- minimal markdown (enough for ANSWERS.md / drills.md)
 function inline(s) {
   return s.split(/(`[^`]*`)/).map((part, i) => {
     if (i % 2) return `<code>${esc(part.slice(1, -1))}</code>`;

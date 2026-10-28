@@ -1,9 +1,9 @@
 /*
- * Bài: Sửa race bằng pthread_mutex
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: counter giờ bằng bao nhiêu? Chạy chậm hơn hay nhanh hơn bài 01?
- * Ý chính: Mutex đảm bảo tại một thời điểm chỉ một thread vào vùng găng (critical section). Đổi lại là chi phí lock/unlock.
- * Thử thêm: Đo thời gian bằng time ./build/05-thread/02_mutex_fix; sau đó chuyển lock ra ngoài vòng for và đo lại.
+ * Lab: Fixing the race with pthread_mutex
+ * Topic: Thread
+ * Predict before running: What is counter now? Is it slower or faster than lab 01?
+ * Key idea: A mutex ensures only one thread at a time is inside the critical section. The price is the lock/unlock overhead.
+ * Try next: Time it with time ./build/05-thread/02_mutex_fix; then move the lock outside the for loop and time it again.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -31,7 +31,7 @@ int main(void)
     pthread_create(&t2, NULL, worker, NULL);
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
-    printf("counter = %ld (mong doi %d)\n", counter, 2 * N);
+    printf("counter = %ld (expected %d)\n", counter, 2 * N);
     pthread_mutex_destroy(&lock);
     return 0;
 }

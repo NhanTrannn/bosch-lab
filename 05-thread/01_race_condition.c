@@ -1,9 +1,9 @@
 /*
- * Bài: Race condition với counter++
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Giá trị counter in ra có bằng 2000000 không? Chạy 3 lần có giống nhau không?
- * Ý chính: counter++ gồm 3 bước đọc – cộng – ghi, không nguyên tử. Hai thread xen kẽ nhau làm mất bớt lần tăng.
- * Thử thêm: Giảm N xuống 1000 và chạy lại vài lần — vì sao lúc này hay ra đúng?
+ * Lab: A race condition with counter++
+ * Topic: Thread
+ * Predict before running: Does the printed counter equal 2000000? Is it the same over 3 runs?
+ * Key idea: counter++ is three steps — read, add, write — and is not atomic. Two interleaving threads lose some increments.
+ * Try next: Lower N to 1000 and run it a few times — why is it usually correct now?
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -27,6 +27,6 @@ int main(void)
     pthread_create(&t2, NULL, worker, NULL);
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
-    printf("counter = %ld (mong doi %d)\n", counter, 2 * N);
+    printf("counter = %ld (expected %d)\n", counter, 2 * N);
     return 0;
 }

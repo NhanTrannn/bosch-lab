@@ -1,9 +1,9 @@
 /*
- * Bài: Name hiding và using Base::f
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Các lời gọi trên d và x in gì? Nếu bỏ comment d.f(1) thì có biên dịch được không?
- * Ý chính: Khai báo f trong lớp con CHE TẤT CẢ các overload f của lớp cha (kể cả khác tham số). using Base::f; đưa chúng trở lại.
- * Thử thêm: Thêm virtual cho Base::f(int) và override nó trong Fixed; gọi qua Base* xem kết quả.
+ * Lab: Name hiding and using Base::f
+ * Topic: C++
+ * Predict before running: What do the calls on d and x print? If you uncomment d.f(1), does it compile?
+ * Key idea: Declaring f in a derived class HIDES ALL of the base class's f overloads (even with different parameters). using Base::f; brings them back.
+ * Try next: Make Base::f(int) virtual and override it in Fixed; call it through a Base* and look at the result.
  */
 #include <iostream>
 using namespace std;

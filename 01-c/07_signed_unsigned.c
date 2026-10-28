@@ -1,10 +1,10 @@
 /*
- * Bài: Bẫy signed/unsigned và chia nguyên
- * Chủ đề: C
- * Dự đoán trước khi chạy: Dòng A in nhánh nào? Giá trị B, C, D, E, F, G, H?
- * Ý chính: Khi so sánh/tính giữa int và unsigned int, int bị chuyển sang unsigned (usual arithmetic conversions). Chia nguyên làm tròn về 0.
- * Thử thêm: Viết vòng for (unsigned i = 5; i >= 0; i--) và dự đoán nó dừng khi nào (đừng quên Ctrl+C).
- * Cảnh báo biên dịch cố ý: -Wsign-compare ở dòng A và C (đó là bẫy cần thấy).
+ * Lab: signed/unsigned traps and integer division
+ * Topic: C
+ * Predict before running: Which branch does line A print? What are the values B, C, D, E, F, G, H?
+ * Key idea: When an int meets an unsigned int in a comparison/calculation, the int is converted to unsigned (the usual arithmetic conversions). Integer division truncates toward zero.
+ * Try next: Write the loop for (unsigned i = 5; i >= 0; i--) and predict when it stops (remember Ctrl+C).
+ * Intentional compiler warning: -Wsign-compare on lines A and C (the trap you are meant to see).
  */
 #include <stdio.h>
 #include <string.h>

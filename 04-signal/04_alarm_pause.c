@@ -1,9 +1,9 @@
 /*
- * Bài: alarm, pause và hành động mặc định của SIGALRM
- * Chủ đề: Signal
- * Dự đoán trước khi chạy: alarm(0) trả về mấy? pause() trả về gì và errno là gì? Dòng cuối "khong in" có xuất hiện không, và shell báo gì?
- * Ý chính: alarm(n) hẹn gửi SIGALRM sau n giây (mỗi tiến trình chỉ có một hẹn giờ, gọi lại sẽ thay thế và trả về số giây còn lại). pause() ngủ tới khi có signal được xử lý, luôn trả -1/EINTR. Không bắt SIGALRM → hành động mặc định là kết thúc tiến trình ("Alarm clock").
- * Thử thêm: Dùng sigaction với SA_RESTART và read() từ stdin thay cho pause() — read có bị ngắt không?
+ * Lab: alarm, pause and the default action of SIGALRM
+ * Topic: Signal
+ * Predict before running: What does alarm(0) return? What do pause() and errno return? Does the last line "not printed" appear, and what does the shell report?
+ * Key idea: alarm(n) schedules SIGALRM after n seconds (one timer per process; calling it again replaces it and returns the seconds left). pause() sleeps until a signal is handled and always returns -1/EINTR. If SIGALRM is not caught, its default action terminates the process ("Alarm clock").
+ * Try next: Use sigaction with SA_RESTART and read() from stdin instead of pause() — is read interrupted?
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -22,19 +22,19 @@ static void on_alarm(int sig)
 int main(void)
 {
     alarm(10);
-    unsigned left = alarm(0); /* huỷ hẹn giờ cũ */
-    printf("alarm(0) tra ve %u\n", left);
+    unsigned left = alarm(0); /* cancel the old timer */
+    printf("alarm(0) returns %u\n", left);
 
     signal(SIGALRM, on_alarm);
-    printf("alarm(1) roi pause()...\n");
+    printf("alarm(1), then pause()...\n");
     alarm(1);
     int r = pause();
     printf("pause() = %d, errno = %s\n", r, strerror(errno));
 
     signal(SIGALRM, SIG_DFL);
-    printf("alarm(1) lan nua, lan nay KHONG bat SIGALRM\n");
+    printf("alarm(1) again, this time WITHOUT catching SIGALRM\n");
     alarm(1);
     pause();
-    printf("khong in\n");
+    printf("not printed\n");
     return 0;
 }

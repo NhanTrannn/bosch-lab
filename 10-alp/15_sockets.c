@@ -1,9 +1,9 @@
 /*
- * Bài: Socket: socketpair, Internet-domain socket qua 127.0.0.1 (server: socket/bind/listen/accept, client: connect), byte order (ALP 5.5)
- * Chủ đề: ALP chương 5
- * Dự đoán trước khi chạy: socketpair cho giao tiếp một chiều hay hai chiều? htons(80) trên máy x86 bằng bao nhiêu (hex)? Server bind port 0 thì được port nào? read trả về 0 khi nào?
- * Ý chính: socket(domain, type, 0): domain PF_LOCAL/PF_UNIX (cùng máy, địa chỉ là đường dẫn file) hoặc PF_INET (mạng, IP + port); type SOCK_STREAM (kết nối, tin cậy, như TCP) hoặc SOCK_DGRAM (gói tin, như UDP). Server: socket → bind → listen → accept (trả về socket MỚI cho từng client). Client: socket → connect. Port và IP phải đổi sang network byte order (big-endian) bằng htons/htonl. socketpair tạo cặp socket nối sẵn, hai chiều, chỉ dùng được với PF_LOCAL.
- * Thử thêm: Trong lúc server chờ, ở Terminal 2 chạy ss -tlnp. Đổi SOCK_STREAM thành SOCK_DGRAM với socketpair.
+ * Lab: Sockets: socketpair, an Internet-domain socket over 127.0.0.1 (server: socket/bind/listen/accept, client: connect), byte order (ALP 5.5)
+ * Topic: ALP chapter 5
+ * Predict before running: Is a socketpair one-way or two-way? What is htons(80) on an x86 machine (in hex)? Which port does a server get when it binds port 0? When does read return 0?
+ * Key idea: socket(domain, type, 0): domain PF_LOCAL/PF_UNIX (same machine, the address is a file path) or PF_INET (network, IP + port); type SOCK_STREAM (connected, reliable, like TCP) or SOCK_DGRAM (datagrams, like UDP). Server: socket → bind → listen → accept (returns a NEW socket for each client). Client: socket → connect. Ports and IPs must be converted to network byte order (big-endian) with htons/htonl. socketpair creates a pre-connected, two-way pair and only works with PF_LOCAL.
+ * Try next: While the server waits, run ss -tlnp in Terminal 2. Change SOCK_STREAM to SOCK_DGRAM in socketpair.
  */
 #define _GNU_SOURCE
 #include <arpa/inet.h>
@@ -26,7 +26,7 @@ int main(void)
         close(sv[0]);
         ssize_t n = read(sv[1], buf, sizeof buf - 1);
         buf[n] = '\0';
-        printf("  [con] nhan \"%s\", tra loi pong\n", buf);
+        printf("  [child] got \"%s\", replying pong\n", buf);
         fflush(stdout);
         write(sv[1], "pong", 4);
         close(sv[1]);
@@ -36,9 +36,9 @@ int main(void)
     write(sv[0], "ping", 4);
     ssize_t n = read(sv[0], buf, sizeof buf - 1);
     buf[n] = '\0';
-    printf("  [cha] nhan \"%s\" qua cung socket (hai chieu)\n", buf);
+    printf("  [parent] got \"%s\" on the same socket (two-way)\n", buf);
     n = read(sv[0], buf, sizeof buf);
-    printf("  [cha] read sau khi con dong socket = %zd (EOF)\n", n);
+    printf("  [parent] read after the child closed its socket = %zd (EOF)\n", n);
     close(sv[0]);
     wait(NULL);
 
@@ -47,13 +47,13 @@ int main(void)
     memset(&addr, 0, sizeof addr);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = htons(0);   /* 0: kernel tự chọn port trống */
+    addr.sin_port = htons(0);   /* 0: the kernel picks a free port */
     bind(server, (struct sockaddr *)&addr, sizeof addr);
     listen(server, 5);
     socklen_t len = sizeof addr;
     getsockname(server, (struct sockaddr *)&addr, &len);
     int port = ntohs(addr.sin_port);
-    printf("server lang nghe tai %s, port > 1023 ? %d\n", inet_ntoa(addr.sin_addr), port > 1023);
+    printf("server listening on %s, port > 1023 ? %d\n", inet_ntoa(addr.sin_addr), port > 1023);
     fflush(stdout);
 
     if (fork() == 0) {
@@ -63,14 +63,14 @@ int main(void)
         write(client, "GET /\n", 6);
         ssize_t m = read(client, buf, sizeof buf - 1);
         buf[m] = '\0';
-        printf("  [client] nhan: %s", buf);
+        printf("  [client] got: %s", buf);
         close(client);
         _exit(0);
     }
     int conn = accept(server, NULL, NULL);
     n = read(conn, buf, sizeof buf - 1);
     buf[n] = '\0';
-    printf("  [server] accept tra ve socket moi (khac socket lang nghe ? %d), nhan: %s", conn != server, buf);
+    printf("  [server] accept returned a new socket (different from the listening one ? %d), got: %s", conn != server, buf);
     fflush(stdout);
     write(conn, "HTTP/1.0 200 OK\n", 16);
     close(conn);

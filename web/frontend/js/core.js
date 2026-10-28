@@ -1,4 +1,4 @@
-// Tiện ích dùng chung (h, esc, api), lưu tiến độ trong localStorage, biến trạng thái toàn cục.
+// Shared helpers (h, esc, api), progress stored in localStorage, global state.
 "use strict";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -18,7 +18,7 @@ const api = async (path, body) => {
   return res.json();
 };
 
-// ---------- trạng thái lưu trong trình duyệt (dự đoán, đúng/sai)
+// ---------- state saved in the browser (predictions, right/wrong)
 const STORE_KEY = "bosch-lab:v1";
 let store = {};
 try { store = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { store = {}; }

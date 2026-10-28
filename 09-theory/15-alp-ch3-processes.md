@@ -1,73 +1,73 @@
-# ALP ch.3: Process
+# ALP ch.3: Processes
 
-## Lý thuyết
+## Theory
 
-Theo *Advanced Linux Programming*, chương 3 "Processes". Lab: `10-alp/02`, `07`, `08`, xem thêm `03-process/*`, `04-signal/*`. Chủ đề "Process, bộ nhớ ảo và lập lịch" và "Signal và IPC" ở trên có phần tổng quan.
+Follows *Advanced Linux Programming*, chapter 3 "Processes". Labs: `10-alp/02`, `07`, `08`; see also `03-process/*`, `04-signal/*`. The "Processes, virtual memory and scheduling" and "Signals and IPC" topics above give an overview.
 
-### Xem process (3.1)
-- Mỗi process có **PID** duy nhất (kiểu `pid_t`, `<sys/types.h>`) và **PPID** (PID của cha). `getpid()`, `getppid()`.
-- `ps` (mặc định chỉ process của terminal hiện tại), `ps -e -o pid,ppid,command` (mọi process, chọn cột), `ps aux`, `ps -ef`. Process gốc là `init` (PID 1).
-- `kill PID` gửi **SIGTERM** (mặc định); `kill -KILL PID` / `kill -9 PID` gửi SIGKILL. Từ C: `kill(pid, sig)` (`<signal.h>`).
+### Looking at processes (3.1)
+- Each process has a unique **PID** (type `pid_t`, `<sys/types.h>`) and a **PPID** (its parent's PID). `getpid()`, `getppid()`.
+- `ps` (only the current terminal's processes by default), `ps -e -o pid,ppid,command` (all processes, chosen columns), `ps aux`, `ps -ef`. The root process is `init` (PID 1).
+- `kill PID` sends **SIGTERM** (the default); `kill -KILL PID` / `kill -9 PID` sends SIGKILL. From C: `kill(pid, sig)` (`<signal.h>`).
 
-### Tạo process (3.2)
-- **`system("lệnh")`** (`<stdlib.h>`): chạy lệnh qua `/bin/sh -c`, chờ xong, trả về wait status (127 nếu shell không chạy được lệnh). Tiện nhưng **sách khuyên tránh**: phụ thuộc shell của hệ thống, chậm, và nguy hiểm khi chuỗi lệnh có input của người dùng (setuid program + system = lỗ hổng).
-- **`fork()`**: tạo bản sao của process. Trả về **PID con trong cha**, **0 trong con**, -1 nếu lỗi. Con kế thừa bộ nhớ (copy-on-write), fd đang mở, môi trường, signal handler; khác PID, PPID, signal đang chờ, thời gian CPU.
-- **Họ exec**: thay chương trình đang chạy bằng chương trình mới (cùng PID). Thành công thì **không bao giờ return**.
-  - `p` (`execvp`, `execlp`): tìm chương trình theo `PATH`; không có `p` thì phải ghi đường dẫn đầy đủ.
-  - `v` (`execv`, `execvp`): argv là mảng kết thúc bằng NULL.
-  - `l` (`execl`, `execlp`, `execle`): đối số liệt kê trực tiếp, kết thúc bằng `NULL`.
-  - `e` (`execve`, `execle`): truyền thêm mảng môi trường `"TEN=giatri"`.
-  - Phần tử đầu của argv nên là tên chương trình.
-- **Mẫu fork + exec** (listing 3.4 `spawn`): con gọi `execvp(program, arg_list)`; nếu exec trả về (lỗi) thì in lỗi và `abort()`.
-- **Lập lịch**: Linux lập lịch độc lập cho cha và con, không đảm bảo ai chạy trước. **Niceness** từ -20 (ưu tiên cao nhất) tới 19, mặc định 0. `nice -n 10 prog`, `renice -n 10 -p PID`, hàm `nice(incr)`. Chỉ root mới giảm niceness (tăng ưu tiên).
+### Creating processes (3.2)
+- **`system("command")`** (`<stdlib.h>`): runs the command via `/bin/sh -c`, waits for it, returns the wait status (127 if the shell could not run the command). Convenient, but **the book advises against it**: it depends on the system shell, it is slow, and it is dangerous when the command string contains user input (a setuid program + system = a security hole).
+- **`fork()`**: creates a copy of the process. Returns **the child's PID in the parent**, **0 in the child**, -1 on error. The child inherits memory (copy-on-write), open fds, the environment and signal handlers; its PID, PPID, pending signals and CPU times differ.
+- **The exec family** replaces the running program with a new one (same PID). On success it **never returns**.
+  - `p` (`execvp`, `execlp`): searches `PATH` for the program; without `p` you need the full path.
+  - `v` (`execv`, `execvp`): argv is a NULL-terminated array.
+  - `l` (`execl`, `execlp`, `execle`): arguments listed directly, ending with `NULL`.
+  - `e` (`execve`, `execle`): also passes an array of environment strings.
+  - The first argv element should be the program name.
+- **fork + exec pattern** (listing 3.4 `spawn`): the child calls `execvp(program, arg_list)`; if exec returns (an error), it prints the error and calls `abort()`.
+- **Scheduling**: Linux schedules parent and child independently; there is no guarantee which runs first. **Niceness** ranges from -20 (highest priority) to 19, default 0. `nice -n 10 prog`, `renice -n 10 -p PID`, the function `nice(incr)`. Only root can lower niceness (raise priority).
 
-### Signal (3.3)
-- Signal là thông báo **bất đồng bộ** gửi tới process. Khi nhận, process làm một trong: hành động mặc định (kết thúc, bỏ qua, dừng, core dump), bỏ qua, hoặc gọi **handler**.
-- Signal hay gặp: `SIGINT` (Ctrl+C), `SIGTERM` (yêu cầu kết thúc, mặc định của kill), `SIGKILL` (giết ngay, **không bắt, không bỏ qua được**), `SIGSTOP` (dừng, cũng không bắt được), `SIGHUP` (mất terminal, hay dùng để yêu cầu đọc lại cấu hình), `SIGUSR1`/`SIGUSR2` (tự định nghĩa), `SIGSEGV` (truy cập bộ nhớ sai), `SIGBUS` (truy cập bộ nhớ không hợp lệ, ví dụ vượt cuối file đã mmap), `SIGFPE` (lỗi số học, ví dụ chia nguyên cho 0), `SIGABRT` (abort), `SIGCHLD` (con kết thúc), `SIGPIPE` (ghi vào pipe không còn đầu đọc), `SIGALRM` (alarm).
-- **`sigaction(sig, &new, &old)`**: cài hành vi. `struct sigaction` có `sa_handler` (hàm `void handler(int)`, hoặc `SIG_DFL` = mặc định, `SIG_IGN` = bỏ qua), `sa_mask` (signal bị chặn trong lúc chạy handler), `sa_flags` (`SA_RESTART`, `SA_SIGINFO`...). Sách khuyên dùng sigaction thay vì `signal()` (hành vi khác nhau giữa các hệ).
-- Handler phải **làm thật ít việc** và return nhanh, vì nó ngắt chương trình ở điểm bất kỳ (kể cả giữa một lời gọi thư viện). Không gọi hàm không async-signal-safe như printf, malloc trong handler. Thường chỉ ghi lại rằng signal đã đến.
-- Biến dùng chung giữa handler và chương trình nên có kiểu **`sig_atomic_t`** (gán được trong một lệnh, không bị ngắt giữa chừng), khai báo `volatile`. Ví dụ listing 3.5 đếm số lần nhận SIGUSR1.
+### Signals (3.3)
+- A signal is an **asynchronous** message sent to a process. On receipt the process does one of: the default action (terminate, ignore, stop, core dump), ignore it, or call a **handler**.
+- Common signals: `SIGINT` (Ctrl+C), `SIGTERM` (please terminate, the default of kill), `SIGKILL` (kill immediately, **cannot be caught or ignored**), `SIGSTOP` (stop, also uncatchable), `SIGHUP` (terminal lost, often used to ask for a config reload), `SIGUSR1`/`SIGUSR2` (user-defined), `SIGSEGV` (invalid memory access), `SIGBUS` (invalid memory access, e.g. past the end of an mmap'ed file), `SIGFPE` (arithmetic error, e.g. integer division by zero), `SIGABRT` (abort), `SIGCHLD` (a child ended), `SIGPIPE` (write to a pipe with no reader), `SIGALRM` (alarm).
+- **`sigaction(sig, &new, &old)`** sets the behavior. `struct sigaction` has `sa_handler` (a `void handler(int)` function, or `SIG_DFL` = default, `SIG_IGN` = ignore), `sa_mask` (signals blocked while the handler runs) and `sa_flags` (`SA_RESTART`, `SA_SIGINFO`...). The book recommends sigaction over `signal()` (whose behavior differs between systems).
+- A handler must **do very little** and return quickly, because it interrupts the program at an arbitrary point (even inside a library call). Do not call functions that are not async-signal-safe, such as printf or malloc, in a handler. Usually it just records that the signal arrived.
+- A variable shared between a handler and the program should have type **`sig_atomic_t`** (assigned in a single instruction, cannot be interrupted halfway) and be `volatile`. Listing 3.5 counts SIGUSR1 deliveries this way.
 
-### Kết thúc process (3.4)
-- Kết thúc bình thường: return từ main hoặc gọi `exit(code)` (chạy các hàm `atexit`, flush stdio). `_exit` kết thúc ngay, không flush.
-- Kết thúc bất thường do signal: SIGINT, SIGTERM, SIGKILL, SIGABRT (từ `abort()`), SIGSEGV...
-- **Exit code** chỉ 8 bit; dùng 0–127. Bị signal giết thì shell báo 128 + số signal.
-- **`wait(&status)`**: chặn tới khi **một con bất kỳ** kết thúc, trả về PID con đó. **`waitpid(pid, &status, options)`**: chờ con cụ thể (`-1` = bất kỳ); `WNOHANG` = không chặn (trả về 0 nếu chưa có con nào xong). `wait3`/`wait4`: trả thêm thống kê tài nguyên (`struct rusage`).
-- Macro đọc status: `WIFEXITED(s)` + `WEXITSTATUS(s)` (thoát bình thường và exit code), `WIFSIGNALED(s)` + `WTERMSIG(s)` (bị signal giết, signal nào), `WIFSTOPPED`, `WCOREDUMP`.
-- **Zombie**: con đã kết thúc nhưng cha chưa wait → vẫn giữ entry trong bảng process để cha lấy được exit status; `ps` hiện trạng thái `Z` / `<defunct>`. Không giết được zombie bằng kill (nó đã chết rồi); cha wait thì nó biến mất. Cha chết trước thì con (kể cả zombie) được **init** nhận nuôi và init sẽ dọn.
-- **Dọn con bất đồng bộ** (listing 3.7): cài handler cho **SIGCHLD** và gọi `wait` trong handler (lưu status vào biến `sig_atomic_t`). Nhờ vậy cha không phải chặn chờ mà vẫn không để lại zombie. Nhiều con chết gần nhau có thể chỉ sinh một SIGCHLD → nên lặp `waitpid(-1, &s, WNOHANG)` tới khi trả về ≤ 0.
+### Process termination (3.4)
+- Normal termination: return from main or call `exit(code)` (runs `atexit` functions, flushes stdio). `_exit` ends immediately without flushing.
+- Abnormal termination by a signal: SIGINT, SIGTERM, SIGKILL, SIGABRT (from `abort()`), SIGSEGV...
+- The **exit code** is only 8 bits; use 0–127. When killed by a signal the shell reports 128 + the signal number.
+- **`wait(&status)`**: blocks until **any** child ends and returns its PID. **`waitpid(pid, &status, options)`**: waits for a specific child (`-1` = any); `WNOHANG` = do not block (returns 0 if no child has finished). `wait3`/`wait4`: also return resource usage (`struct rusage`).
+- Status macros: `WIFEXITED(s)` + `WEXITSTATUS(s)` (exited normally, and its exit code), `WIFSIGNALED(s)` + `WTERMSIG(s)` (killed by a signal, and which one), `WIFSTOPPED`, `WCOREDUMP`.
+- **Zombie**: a child that has ended but has not been waited for → it keeps its entry in the process table so the parent can collect the exit status; `ps` shows state `Z` / `<defunct>`. A zombie cannot be killed (it is already dead); once the parent waits, it disappears. If the parent dies first, its children (including zombies) are adopted by **init**, which reaps them.
+- **Cleaning up children asynchronously** (listing 3.7): install a **SIGCHLD** handler that calls `wait` (storing the status in a `sig_atomic_t`). The parent does not block yet leaves no zombies. Several children dying close together may produce a single SIGCHLD → loop on `waitpid(-1, &s, WNOHANG)` until it returns ≤ 0.
 
-## Trắc nghiệm
+## Quiz
 
-### Hàm nào trả về PID của process cha?
+### Which function returns the PID of the parent process?
 - [ ] `getpid()`
 - [x] `getppid()`
 - [ ] `getuid()`
 - [ ] `getpgid()`
-> getpid() là PID của chính nó; getuid() là user ID; getpgid() là process group ID.
+> getpid() is the process's own PID; getuid() is the user ID; getpgid() is the process group ID.
 
-### `kill 1234` (không ghi signal) gửi signal nào?
+### Which signal does `kill 1234` (no signal given) send?
 - [ ] SIGKILL
 - [x] SIGTERM
 - [ ] SIGINT
 - [ ] SIGHUP
-> SIGTERM bắt được nên chương trình có cơ hội dọn dẹp. `kill -9`/`kill -KILL` mới là SIGKILL.
+> SIGTERM can be caught, so the program can clean up. `kill -9`/`kill -KILL` is SIGKILL.
 
-### Vì sao sách khuyên tránh `system()` trong chương trình thật? (chọn tất cả đáp án đúng)
-- [x] Phụ thuộc vào shell `/bin/sh` của hệ thống, hành vi có thể khác nhau
-- [x] Nguy hiểm khi chuỗi lệnh chứa dữ liệu từ người dùng (shell injection), nhất là trong chương trình setuid
-- [x] Tốn thêm một process shell
-- [ ] system() không trả về exit code
-> system trả về wait status (đọc bằng WEXITSTATUS). Dùng fork + exec để kiểm soát chính xác chương trình và đối số.
+### Why does the book advise avoiding `system()` in real programs? (select all that apply)
+- [x] It depends on the system's `/bin/sh`, whose behavior can vary
+- [x] It is dangerous when the command string contains user data (shell injection), especially in setuid programs
+- [x] It costs an extra shell process
+- [ ] system() does not return an exit code
+> system returns a wait status (read it with WEXITSTATUS). Use fork + exec to control exactly which program runs with which arguments.
 
-### fork() trả về gì trong process con?
-- [ ] PID của con
-- [ ] PID của cha
+### What does fork() return in the child process?
+- [ ] The child's PID
+- [ ] The parent's PID
 - [x] 0
 - [ ] -1
-> Cha nhận PID của con (> 0). -1 nghĩa là fork thất bại (không có process con nào được tạo).
+> The parent gets the child's PID (> 0). -1 means fork failed (no child was created).
 
-### Đoạn code in ra bao nhiêu dòng "hello"?
+### How many "hello" lines does this print?
 ```c
 fork();
 fork();
@@ -77,162 +77,162 @@ printf("hello\n");
 - [ ] 3
 - [x] 4
 - [ ] 8
-> Mỗi fork nhân đôi số process: 1 → 2 → 4 process, mỗi process in một dòng.
+> Each fork doubles the number of processes: 1 → 2 → 4, and each prints one line.
 
-### Process con sau fork KHÔNG kế thừa gì từ cha?
-- [ ] Các file descriptor đang mở
-- [ ] Biến môi trường
-- [x] PID
-- [ ] Signal handler đã cài
-> Con có PID mới, PPID là PID của cha. Signal đang chờ (pending) và khoá file (fcntl) cũng không được kế thừa.
+### What does a child NOT inherit from its parent after fork?
+- [ ] Open file descriptors
+- [ ] Environment variables
+- [x] The PID
+- [ ] Installed signal handlers
+> The child gets a new PID; its PPID is the parent's PID. Pending signals and fcntl file locks are not inherited either.
 
-### Dòng `printf("after exec\n");` được in khi nào?
+### When is `printf("after exec\n");` printed?
 ```c
 execlp("ls", "ls", "-l", NULL);
 printf("after exec\n");
 ```
-- [ ] Luôn luôn, sau khi ls chạy xong
-- [ ] Không bao giờ
-- [x] Chỉ khi execlp thất bại
-- [ ] Trước khi ls chạy
-> exec thành công thay toàn bộ chương trình, không quay về. Vì vậy sau exec thường là code xử lý lỗi (listing 3.4 gọi abort).
+- [ ] Always, after ls finishes
+- [ ] Never
+- [x] Only if execlp fails
+- [ ] Before ls runs
+> A successful exec replaces the whole program and never returns. So the code after exec is usually error handling (listing 3.4 calls abort).
 
-### Hàm exec nào tìm chương trình theo biến PATH và nhận đối số dạng mảng?
+### Which exec function searches PATH and takes its arguments as an array?
 - [ ] `execv`
 - [x] `execvp`
 - [ ] `execl`
 - [ ] `execle`
-> p = PATH, v = vector (mảng). execv cần đường dẫn đầy đủ; execl/execle nhận đối số liệt kê.
+> p = PATH, v = vector (array). execv needs a full path; execl/execle take a list of arguments.
 
-### Khi gọi `execl`, danh sách đối số phải kết thúc bằng gì?
-- [ ] Chuỗi rỗng ""
-- [x] Con trỏ NULL
-- [ ] Số 0 kiểu int
-- [ ] Không cần kết thúc
-> Thường viết `(char *)NULL` để đúng kiểu trên mọi nền tảng. Mảng argv cho execv cũng phải kết thúc bằng NULL.
+### What must the argument list passed to `execl` end with?
+- [ ] An empty string ""
+- [x] A NULL pointer
+- [ ] An int 0
+- [ ] Nothing
+> Usually written `(char *)NULL` to have the right type on every platform. An argv array for execv must end with NULL too.
 
-### Hàm exec nào cho phép truyền một môi trường hoàn toàn mới cho chương trình được chạy?
+### Which exec function lets you pass a completely new environment to the program it runs?
 - [ ] `execvp`
 - [ ] `execlp`
-- [x] `execle` (và `execve`)
+- [x] `execle` (and `execve`)
 - [ ] `execv`
-> Hậu tố e = environment. Các hàm khác dùng `environ` hiện tại của process.
+> The e suffix = environment. The others use the process's current `environ`.
 
-### Sau fork, cha hay con chạy trước?
-- [ ] Luôn là cha
-- [ ] Luôn là con
-- [x] Không xác định, do scheduler quyết định
-- [ ] Con chạy xong cha mới chạy
-> Cần thứ tự thì phải đồng bộ (wait, pipe, signal, semaphore).
+### After fork, does the parent or the child run first?
+- [ ] Always the parent
+- [ ] Always the child
+- [x] Unspecified; the scheduler decides
+- [ ] The parent waits until the child is done
+> If you need an order, synchronize (wait, a pipe, a signal, a semaphore).
 
-### Giá trị niceness nào cho process ưu tiên CAO nhất?
+### Which niceness value gives a process the HIGHEST priority?
 - [x] -20
 - [ ] 0
 - [ ] 19
 - [ ] 20
-> Niceness càng cao càng "nhường" CPU. User thường chỉ tăng được niceness; giảm (tăng ưu tiên) cần root.
+> The higher the niceness, the more the process "yields" the CPU. Normal users can only raise niceness; lowering it (raising priority) needs root.
 
-### Signal nào KHÔNG thể bắt, chặn hay bỏ qua? (chọn tất cả đáp án đúng)
+### Which signals can NOT be caught, blocked or ignored? (select all that apply)
 - [x] SIGKILL
 - [x] SIGSTOP
 - [ ] SIGTERM
 - [ ] SIGINT
-> Đây là đường lui cuối cùng của hệ thống để luôn dừng hoặc giết được process.
+> They are the system's last resort, so a process can always be stopped or killed.
 
-### Ctrl+C trong terminal gửi signal nào tới process đang chạy foreground?
+### Which signal does Ctrl+C send to the foreground process in a terminal?
 - [ ] SIGTERM
 - [x] SIGINT
 - [ ] SIGQUIT
 - [ ] SIGTSTP
-> Ctrl+\ gửi SIGQUIT (kèm core dump), Ctrl+Z gửi SIGTSTP (dừng process).
+> Ctrl+\ sends SIGQUIT (with a core dump), Ctrl+Z sends SIGTSTP (stops the process).
 
-### Truy cập vượt quá cuối file trong vùng đã mmap thường gây signal nào?
+### Accessing past the end of a file in an mmap'ed region usually causes which signal?
 - [ ] SIGSEGV
 - [x] SIGBUS
 - [ ] SIGFPE
 - [ ] SIGPIPE
-> SIGSEGV dùng cho địa chỉ không được map hoặc sai quyền; SIGBUS dùng cho địa chỉ có map nhưng không có trang dữ liệu thật phía sau.
+> SIGSEGV is for unmapped addresses or wrong permissions; SIGBUS is for mapped addresses with no real page behind them.
 
-### Phép chia số nguyên cho 0 trên Linux x86 gây signal nào?
+### Integer division by zero on Linux x86 causes which signal?
 - [ ] SIGSEGV
 - [x] SIGFPE
 - [ ] SIGABRT
-- [ ] Không có signal, kết quả là 0
-> FPE (floating-point exception) là tên lịch sử, nhưng signal này dùng cho mọi lỗi số học.
+- [ ] No signal, the result is 0
+> FPE (floating-point exception) is a historical name; the signal covers every arithmetic error.
 
-### Kiểu biến nào sách khuyên dùng cho biến dùng chung giữa signal handler và chương trình chính?
+### Which type does the book recommend for a variable shared between a signal handler and the main program?
 - [ ] `int`
 - [ ] `atomic_int`
-- [x] `sig_atomic_t` (kèm volatile)
+- [x] `sig_atomic_t` (with volatile)
 - [ ] `pthread_mutex_t`
-> Gán và đọc sig_atomic_t được thực hiện trong một lệnh máy nên không bị signal ngắt giữa chừng. Không dùng mutex trong handler (có thể deadlock).
+> sig_atomic_t is read and written in a single machine instruction, so a signal cannot interrupt it halfway. Do not use a mutex in a handler (it can deadlock).
 
-### Vì sao không nên gọi printf hay malloc trong signal handler?
-- [ ] Vì handler không có stack
-- [x] Vì handler có thể ngắt đúng lúc chương trình đang ở trong printf/malloc; gọi lại sẽ làm hỏng trạng thái nội bộ (không async-signal-safe)
-- [ ] Vì printf bị cấm trong mọi hàm static
-- [ ] Vì printf luôn trả về EINTR
-> Trong handler chỉ dùng các hàm async-signal-safe (write, _exit, ...), hoặc tốt nhất chỉ đặt một cờ rồi xử lý ở vòng lặp chính.
+### Why should a signal handler not call printf or malloc?
+- [ ] Handlers have no stack
+- [x] The handler may interrupt the program right inside printf/malloc; calling them again corrupts their internal state (they are not async-signal-safe)
+- [ ] printf is forbidden in every static function
+- [ ] printf always returns EINTR
+> Only async-signal-safe functions (write, _exit, ...) belong in a handler; better still, just set a flag and handle it in the main loop.
 
-### Trong struct sigaction, gán `sa_handler = SIG_IGN` có nghĩa là?
-- [ ] Khôi phục hành vi mặc định
-- [x] Bỏ qua signal đó
-- [ ] Chặn signal tạm thời cho tới khi bỏ chặn
-- [ ] Gọi handler mặc định của thư viện
-> SIG_DFL là hành vi mặc định. Chặn (block) bằng sigprocmask thì signal được giữ lại (pending) và giao sau, còn bỏ qua thì signal bị vứt đi.
+### In struct sigaction, what does `sa_handler = SIG_IGN` mean?
+- [ ] Restore the default behavior
+- [x] Ignore the signal
+- [ ] Block the signal until it is unblocked
+- [ ] Call the library's default handler
+> SIG_DFL is the default action. Blocking (with sigprocmask) keeps a signal pending and delivers it later, whereas ignoring throws it away.
 
-### Khác nhau giữa `exit()` và `_exit()`?
-- [ ] Không khác
-- [x] exit() chạy các hàm atexit và flush buffer stdio rồi mới vào kernel; _exit() kết thúc ngay
-- [ ] _exit() chỉ dùng cho thread
-- [ ] exit() không đóng file descriptor
-> Process con sau fork (khi exec thất bại) nên dùng `_exit`, để không flush lại buffer stdio đã copy từ cha (in trùng output).
+### How do `exit()` and `_exit()` differ?
+- [ ] No difference
+- [x] exit() runs the atexit functions and flushes stdio buffers before entering the kernel; _exit() ends immediately
+- [ ] _exit() is only for threads
+- [ ] exit() does not close file descriptors
+> A child after fork (when exec fails) should use `_exit`, so it does not flush the stdio buffers copied from the parent (duplicated output).
 
-### Con gọi `exit(258)`. Cha đọc `WEXITSTATUS(status)` được bao nhiêu?
+### A child calls `exit(258)`. What does the parent read from `WEXITSTATUS(status)`?
 - [ ] 258
 - [x] 2
 - [ ] 255
 - [ ] 0
-> Chỉ giữ 8 bit thấp: 258 mod 256 = 2.
+> Only the low 8 bits survive: 258 mod 256 = 2.
 
-### Con bị `abort()`. Macro nào đúng?
-- [ ] WIFEXITED(status) đúng, WEXITSTATUS = 6
-- [x] WIFSIGNALED(status) đúng, WTERMSIG = SIGABRT (6)
-- [ ] WIFSTOPPED(status) đúng
+### A child calls `abort()`. Which macros apply?
+- [ ] WIFEXITED(status) is true, WEXITSTATUS = 6
+- [x] WIFSIGNALED(status) is true, WTERMSIG = SIGABRT (6)
+- [ ] WIFSTOPPED(status) is true
 - [ ] WEXITSTATUS = 134
-> Bị signal giết thì không có exit code. 134 = 128 + 6 chỉ là cách shell báo trong `$?`.
+> A process killed by a signal has no exit code. 134 = 128 + 6 is only how the shell reports it in `$?`.
 
-### `waitpid(pid, &status, WNOHANG)` trả về 0 có nghĩa là?
-- [ ] Con thoát với exit code 0
-- [x] Con vẫn đang chạy, chưa có thay đổi trạng thái
-- [ ] Lỗi, xem errno
-- [ ] Không có con nào
-> Không có con nào thì trả về -1 với errno = ECHILD.
+### What does it mean when `waitpid(pid, &status, WNOHANG)` returns 0?
+- [ ] The child exited with code 0
+- [x] The child is still running; its state has not changed
+- [ ] An error, check errno
+- [ ] There are no children
+> With no children at all it returns -1 with errno = ECHILD.
 
-### Zombie process là gì?
-- [ ] Process có cha đã chết
-- [x] Process đã kết thúc nhưng cha chưa gọi wait để lấy trạng thái thoát
-- [ ] Process bị treo không phản hồi
-- [ ] Process chạy nền sau khi đóng terminal
-> Process có cha đã chết là orphan (được init nhận nuôi). Zombie không tốn CPU hay bộ nhớ, nhưng chiếm một entry/PID trong bảng process.
+### What is a zombie process?
+- [ ] A process whose parent has died
+- [x] A process that has ended but whose parent has not yet called wait to collect its exit status
+- [ ] A hung, unresponsive process
+- [ ] A process left running in the background after closing the terminal
+> A process whose parent died is an orphan (adopted by init). A zombie uses no CPU or memory but takes an entry/PID in the process table.
 
-### Làm sao loại bỏ một zombie?
-- [ ] `kill -9` zombie đó
-- [x] Cho process cha gọi wait/waitpid, hoặc kết thúc process cha (init sẽ nhận nuôi và dọn zombie)
-- [ ] Khởi động lại terminal
-- [ ] `nice -n 19` zombie đó
-> Zombie đã chết nên kill không có tác dụng.
+### How do you get rid of a zombie?
+- [ ] `kill -9` the zombie
+- [x] Have the parent call wait/waitpid, or end the parent (init adopts and reaps the zombie)
+- [ ] Restart the terminal
+- [ ] `nice -n 19` the zombie
+> A zombie is already dead, so kill has no effect.
 
-### Cách nào giúp cha không phải chặn chờ mà vẫn không để lại zombie?
-- [ ] Gọi sleep trong cha
-- [x] Cài handler cho SIGCHLD và gọi wait/waitpid trong handler
-- [ ] Gọi exit trong cha
-- [ ] Chặn SIGCHLD
-> Listing 3.7. Vì nhiều SIGCHLD có thể gộp thành một, nên lặp `while (waitpid(-1, &s, WNOHANG) > 0);`. Cũng có thể đặt SIGCHLD = SIG_IGN để kernel tự dọn (nhưng khi đó không lấy được exit status).
+### How can a parent avoid zombies without blocking in wait?
+- [ ] Call sleep in the parent
+- [x] Install a SIGCHLD handler that calls wait/waitpid
+- [ ] Call exit in the parent
+- [ ] Block SIGCHLD
+> Listing 3.7. Since several SIGCHLDs can merge into one, loop `while (waitpid(-1, &s, WNOHANG) > 0);`. Setting SIGCHLD to SIG_IGN also makes the kernel reap them (but then you cannot get the exit status).
 
-### `wait(&status)` khi process có 3 con đang chạy sẽ làm gì?
-- [ ] Chờ cả 3 con kết thúc
-- [x] Chặn tới khi một con bất kỳ kết thúc và trả về PID của con đó
-- [ ] Trả về ngay -1
-- [ ] Chờ con được tạo đầu tiên
-> Muốn chờ hết thì gọi wait 3 lần (hoặc lặp tới khi trả về -1/ECHILD).
+### What does `wait(&status)` do in a process with 3 running children?
+- [ ] Waits for all 3 children to finish
+- [x] Blocks until any one child finishes and returns that child's PID
+- [ ] Returns -1 immediately
+- [ ] Waits for the first child that was created
+> To wait for all of them, call wait 3 times (or loop until it returns -1/ECHILD).

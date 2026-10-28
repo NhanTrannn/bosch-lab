@@ -1,9 +1,9 @@
 /*
- * Bài: System V shared memory và semaphore: shmget/shmat/shmctl, semget/semop, SEM_UNDO (ALP 5.1, 5.2)
- * Chủ đề: ALP chương 5
- * Dự đoán trước khi chạy: shm_nattch bằng mấy trước fork, trong lúc con còn sống, sau khi con thoát? Cha đọc được chuỗi con ghi vào vùng nhớ chung không? semop -1 với IPC_NOWAIT khi giá trị là 0? Con tăng semaphore với SEM_UNDO rồi thoát thì giá trị còn lại bao nhiêu?
- * Ý chính: shmget tạo (hoặc lấy) segment theo key (IPC_PRIVATE = luôn tạo mới), shmat gắn vào không gian địa chỉ, shmdt gỡ. Segment KHÔNG tự mất khi process thoát; phải shmctl(IPC_RMID) (hoặc ipcrm), xem bằng ipcs -m. Shared memory không tự đồng bộ → cần semaphore. semop với sem_op âm = wait, dương = post; SEM_UNDO để kernel hoàn tác khi process chết.
- * Thử thêm: Bỏ hai dòng IPC_RMID, chạy xong gõ ipcs -m và ipcs -s, rồi xoá bằng ipcrm -m <shmid> / ipcrm -s <semid>.
+ * Lab: System V shared memory and semaphores: shmget/shmat/shmctl, semget/semop, SEM_UNDO (ALP 5.1, 5.2)
+ * Topic: ALP chapter 5
+ * Predict before running: What is shm_nattch before fork, while the child is alive, and after the child exits? Can the parent read the string the child wrote into shared memory? semop -1 with IPC_NOWAIT when the value is 0? The child adds to the semaphore with SEM_UNDO and exits: what value is left?
+ * Key idea: shmget creates (or gets) a segment by key (IPC_PRIVATE = always a new one), shmat attaches it to the address space, shmdt detaches. A segment does NOT disappear when processes exit; you must shmctl(IPC_RMID) it (or ipcrm), and ipcs -m lists them. Shared memory is not synchronized → use a semaphore. semop with a negative sem_op = wait, positive = post; SEM_UNDO makes the kernel undo the change when the process dies.
+ * Try next: Remove the two IPC_RMID lines, then run ipcs -m and ipcs -s afterwards, and remove them with ipcrm -m <shmid> / ipcrm -s <semid>.
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -45,41 +45,41 @@ int main(void)
 
     errno = 0;
     int rc = sem_change(semid, -1, IPC_NOWAIT);
-    printf("semop -1 IPC_NOWAIT khi = 0: %d, errno = %s\n", rc, errno == EAGAIN ? "EAGAIN" : strerror(errno));
+    printf("semop -1 IPC_NOWAIT at 0: %d, errno = %s\n", rc, errno == EAGAIN ? "EAGAIN" : strerror(errno));
     fflush(stdout);
 
     pid_t pid = fork();
     if (pid == 0) {
-        sprintf(shared_memory, "Hello, world (tu con)");
-        printf("  [con] da ghi, nattch = %lu\n", nattch(segment_id));
+        sprintf(shared_memory, "Hello, world (from the child)");
+        printf("  [child] wrote it, nattch = %lu\n", nattch(segment_id));
         fflush(stdout);
-        sem_change(semid, +1, 0);          /* post: báo cha đọc được */
-        sem_change(semid, -1, 0);          /* chờ cha đọc xong */
-        _exit(0);                          /* thoát → tự shmdt */
+        sem_change(semid, +1, 0);          /* post: tell the parent it can read */
+        sem_change(semid, -1, 0);          /* wait until the parent has read it */
+        _exit(0);                          /* exiting → automatic shmdt */
     }
     sem_change(semid, -1, 0);              /* wait */
-    printf("  [cha] doc duoc: \"%s\"\n", shared_memory);
+    printf("  [parent] read: \"%s\"\n", shared_memory);
     fflush(stdout);
     sem_change(semid, +1, 0);
     waitpid(pid, NULL, 0);
-    printf("sau khi con thoat: nattch = %lu\n", nattch(segment_id));
+    printf("after the child exited: nattch = %lu\n", nattch(segment_id));
 
     pid = fork();
     if (pid == 0) {
         sem_change(semid, +3, SEM_UNDO);
-        printf("  [con] +3 voi SEM_UNDO, gia tri = %d\n", semctl(semid, 0, GETVAL));
+        printf("  [child] +3 with SEM_UNDO, value = %d\n", semctl(semid, 0, GETVAL));
         fflush(stdout);
         _exit(0);
     }
     waitpid(pid, NULL, 0);
-    printf("con thoat, kernel hoan tac: gia tri = %d\n", semctl(semid, 0, GETVAL));
+    printf("child exited, the kernel undid it: value = %d\n", semctl(semid, 0, GETVAL));
 
     shmdt(shared_memory);
-    printf("sau shmdt cua cha: nattch = %lu\n", nattch(segment_id));
+    printf("after the parent's shmdt: nattch = %lu\n", nattch(segment_id));
     shmctl(segment_id, IPC_RMID, NULL);
     semctl(semid, 0, IPC_RMID);
     errno = 0;
     shmctl(segment_id, IPC_STAT, &ds);
-    printf("sau IPC_RMID: shmctl IPC_STAT -> %s\n", errno == EINVAL || errno == EIDRM ? "EINVAL/EIDRM (da xoa)" : strerror(errno));
+    printf("after IPC_RMID: shmctl IPC_STAT -> %s\n", errno == EINVAL || errno == EIDRM ? "EINVAL/EIDRM (removed)" : strerror(errno));
     return 0;
 }

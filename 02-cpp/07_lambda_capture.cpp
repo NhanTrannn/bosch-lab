@@ -1,9 +1,9 @@
 /*
- * Bài: Lambda capture theo giá trị và tham chiếu
- * Chủ đề: C++
- * Dự đoán trước khi chạy: byVal, byRef in gì sau khi x đổi thành 20? inc() lần 3 trả về gì, counter ngoài bằng bao nhiêu? all() và dòng cuối?
- * Ý chính: [x] copy giá trị TẠI THỜI ĐIỂM TẠO lambda; [&x] tham chiếu tới biến gốc. mutable cho phép sửa bản copy bên trong lambda.
- * Thử thêm: Trả về một lambda [&] capture biến cục bộ từ hàm rồi gọi nó: chuyện gì xảy ra (dangling reference)?
+ * Lab: Lambda capture by value and by reference
+ * Topic: C++
+ * Predict before running: What do byVal and byRef print after x changes to 20? What does the third inc() return, and what is the outer counter? What about all() and the last line?
+ * Key idea: [x] copies the value AT THE MOMENT THE LAMBDA IS CREATED; [&x] refers to the original variable. mutable lets the lambda modify its own copy.
+ * Try next: Return a [&] lambda that captures a local from a function and call it: what happens (dangling reference)?
  */
 #include <iostream>
 #include <functional>

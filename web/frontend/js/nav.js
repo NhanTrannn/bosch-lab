@@ -1,4 +1,4 @@
-// Thanh bên: tab chế độ, danh sách bài lab / chủ đề; màu chủ đề, icon, vòng tiến độ.
+// Sidebar: mode tabs, lab / topic lists; topic colors, icons, progress rings.
 "use strict";
 
 // ---------- sidebar
@@ -30,17 +30,17 @@ function ring(pct, color, label) {
 }
 function theoryBanner() {
   return TOPICS.length ? null : h("div", { class: "banner", html:
-    "<b>Không tải được lý thuyết/trắc nghiệm từ server.</b><br>Server đang chạy là bản cũ: tắt nó (Ctrl+C trong terminal đang chạy <code>make web</code>) rồi chạy lại <code>make web</code> và tải lại trang." });
+    "<b>Could not load theory/quizzes from the server.</b><br>The running server is an old version: stop it (Ctrl+C in the terminal running <code>make web</code>), run <code>make web</code> again and reload the page." });
 }
 
 function renderNav() {
   const wrong = qStats(TOPICS.flatMap(t => t.questions)).wrong;
-  const M = [["home", "Tổng quan"], ["lab", "Bài lab"], ["theory", "Lý thuyết"], ["quiz", "Trắc nghiệm"]];
+  const M = [["home", "Overview"], ["lab", "Labs"], ["theory", "Theory"], ["quiz", "Quiz"]];
   $("#modes").replaceChildren(...M.map(([k, v]) =>
     h("button", { class: mode === k ? "on" : "", onclick: () => switchMode(k) }, svgIcon(k), v,
-      k === "quiz" && wrong ? h("span", { class: "badge", title: "số câu đang sai" }, String(wrong)) : null)));
+      k === "quiz" && wrong ? h("span", { class: "badge", title: "questions currently wrong" }, String(wrong)) : null)));
   const d = daysLeft();
-  $("#brandSub").textContent = d > 0 ? `Còn ${d} ngày tới assessment` : d === 0 ? "Hôm nay thi — cố lên!" : "Ôn C++ & Linux System";
+  $("#brandSub").textContent = d > 0 ? `${d} day${d > 1 ? "s" : ""} until the assessment` : d === 0 ? "Exam day — good luck!" : "C++ & Linux System prep";
   if (mode === "lab") renderLabNav(); else renderTopicNav();
 }
 function switchMode(k) {
@@ -52,9 +52,9 @@ function switchMode(k) {
 function renderTopicNav() {
   const all = TOPICS.flatMap(t => t.questions), stats = qStats(all);
   $("#bar").style.width = (all.length ? 100 * stats.done / all.length : 0) + "%";
-  $("#stats").textContent = TOPICS.length ? `${stats.done}/${all.length} câu đã làm · ${stats.wrong} đang sai` : "Chưa tải được trắc nghiệm";
+  $("#stats").textContent = TOPICS.length ? `${stats.done}/${all.length} questions done · ${stats.wrong} wrong` : "Quizzes not loaded";
   $("#filters").replaceChildren();
-  $("#nav").replaceChildren(h("div", { class: "group" }, h("h2", {}, mode === "quiz" ? "Làm hết câu của một chủ đề" : "Chủ đề lý thuyết"),
+  $("#nav").replaceChildren(h("div", { class: "group" }, h("h2", {}, mode === "quiz" ? "Quiz a whole topic" : "Theory topics"),
     TOPICS.map(t => {
       const st = qStats(t.questions);
       const dot = !st.done ? "" : st.wrong ? "wrong" : st.done === st.total ? "right" : "pred";
@@ -62,15 +62,15 @@ function renderTopicNav() {
       return h("div", { class: "item" + (active ? " active" : ""), style: hueStyle(topicHue(t)),
         onclick: () => mode === "quiz" ? startQuiz({ topics: [t.id], count: "all", filter: "all" }) : showTopic(t.id) },
         h("span", { class: "dot " + dot }),
-        h("span", { class: "nm" }, t.title, h("small", {}, `${st.done}/${st.total} câu` + (st.wrong ? ` · ${st.wrong} sai` : "")),
+        h("span", { class: "nm" }, t.title, h("small", {}, `${st.done}/${st.total} questions` + (st.wrong ? ` · ${st.wrong} wrong` : "")),
           h("div", { class: "minibar" }, h("div", { style: `width:${st.total ? 100 * st.done / st.total : 0}%` }))));
     })));
 }
 function renderLabNav() {
   const c = counts();
   $("#bar").style.width = (c.total ? 100 * c.done / c.total : 0) + "%";
-  $("#stats").textContent = `${c.done}/${c.total} bài đã chấm · ${c.right} đúng · ${c.wrong} sai`;
-  const F = { all: "Tất cả", todo: "Chưa làm", wrong: "Đoán sai" };
+  $("#stats").textContent = `${c.done}/${c.total} labs graded · ${c.right} right · ${c.wrong} wrong`;
+  const F = { all: "All", todo: "To do", wrong: "Guessed wrong" };
   $("#filters").replaceChildren(...Object.entries(F).map(([k, v]) =>
     h("button", { class: "small" + (filter === k ? " on" : ""), onclick: () => { filter = k; renderNav(); } }, v)));
   const nav = $("#nav");
@@ -91,8 +91,8 @@ function renderLabNav() {
         return h("div", { class: "item" + (current?.id === lab.id ? " active" : ""), onclick: () => go(lab.id) },
           h("span", { class: "dot " + dot }),
           h("span", { class: "nm" }, lab.name, h("small", {}, lab.title)),
-          running ? h("span", { class: "run-badge", title: "đang chạy" }, "●") : null);
+          running ? h("span", { class: "run-badge", title: "running" }, "●") : null);
       })));
   }
-  if (!nav.children.length) nav.append(h("div", { class: "empty" }, "Không có bài nào."));
+  if (!nav.children.length) nav.append(h("div", { class: "empty" }, "No labs."));
 }

@@ -1,9 +1,9 @@
 /*
- * Bài: Truyền &i vào thread và lấy kết quả qua pthread_join
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Phần "SAI" in id nào? Phần "DUNG" in gì và tổng bằng bao nhiêu?
- * Ý chính: Mọi thread nhận CÙNG địa chỉ &i, trong khi main vẫn tiếp tục tăng i → thread đọc giá trị đã đổi (data race). Cách đúng: truyền giá trị (ép vào void*) hoặc mỗi thread một ô nhớ riêng. Giá trị trả về của thread lấy qua pthread_join.
- * Thử thêm: Chạy nhiều lần và với -fsanitize=thread. Trả về con trỏ tới biến local của thread → UB (stack đã bị huỷ).
+ * Lab: Passing &i to threads, and getting results back through pthread_join
+ * Topic: Thread
+ * Predict before running: Which ids does the "WRONG" part print? What does the "RIGHT" part print and what is the sum?
+ * Key idea: Every thread gets the SAME address &i while main keeps incrementing i → the threads read a changed value (a data race). The right way: pass the value (cast into void*) or give each thread its own memory. A thread's return value comes back through pthread_join.
+ * Try next: Run it many times and with -fsanitize=thread. Return a pointer to a thread's local variable → UB (its stack is gone).
  */
 #define _GNU_SOURCE
 #include <pthread.h>
@@ -14,7 +14,7 @@
 
 static void *bad(void *arg)
 {
-    printf("  SAI: thread nhan id = %d\n", *(int *)arg);
+    printf("  WRONG: thread got id = %d\n", *(int *)arg);
     return NULL;
 }
 
@@ -38,9 +38,9 @@ int main(void)
     for (int i = 0; i < N; i++) {
         void *ret;
         pthread_join(t[i], &ret);
-        printf("  DUNG: thread %d tra ve %ld\n", i, (long)(intptr_t)ret);
+        printf("  RIGHT: thread %d returned %ld\n", i, (long)(intptr_t)ret);
         sum += (intptr_t)ret;
     }
-    printf("tong = %ld\n", (long)sum);
+    printf("sum = %ld\n", (long)sum);
     return 0;
 }

@@ -1,9 +1,9 @@
 /*
- * Bài: getopt_long: tùy chọn ngắn/dài, optarg, optind, "--" và hoán vị argv (ALP 2.1.3)
- * Chủ đề: ALP chương 2
- * Dự đoán trước khi chạy: Với mỗi argv mẫu, getopt_long trả về những tùy chọn nào, optarg là gì, optind dừng ở đâu? "-vo x.txt" được hiểu thế nào? Sau "--" thì "-h" còn là tùy chọn không? Gặp "-x" (không khai báo) và "-o" thiếu đối số thì sao?
- * Ý chính: short_options "ho:v": dấu ':' sau chữ cái nghĩa là tùy chọn đó cần đối số (optarg). struct option {name, has_arg, flag, val}, mảng kết thúc bằng phần tử toàn 0. getopt_long trả về -1 khi hết tùy chọn; optind là chỉ số của đối số không phải tùy chọn đầu tiên. GNU getopt hoán vị argv để đưa các đối số thường xuống cuối. Tùy chọn sai → trả về '?' và in lỗi ra stderr.
- * Thử thêm: Chạy ./build/10-alp/01_getopt_long -v --output=a.txt b c để xem chương trình phân tích argv thật. Đặt POSIXLY_CORRECT=1 rồi chạy lại mẫu 4 (không hoán vị nữa).
+ * Lab: getopt_long: short/long options, optarg, optind, "--" and argv permutation (ALP 2.1.3)
+ * Topic: ALP chapter 2
+ * Predict before running: For each sample argv, which options does getopt_long return, what is optarg, and where does optind stop? How is "-vo x.txt" understood? After "--", is "-h" still an option? What happens with "-x" (not declared) and "-o" without its argument?
+ * Key idea: short_options "ho:v": a ':' after a letter means that option needs an argument (optarg). struct option {name, has_arg, flag, val}; the array ends with an all-zero element. getopt_long returns -1 when the options run out; optind is the index of the first non-option argument. GNU getopt permutes argv to move the plain arguments to the end. An invalid option → returns '?' and prints an error to stderr.
+ * Try next: Run ./build/10-alp/01_getopt_long -v --output=a.txt b c to parse a real argv. Set POSIXLY_CORRECT=1 and run sample 4 again (no more permutation).
  */
 #define _GNU_SOURCE
 #include <getopt.h>
@@ -25,7 +25,7 @@ static void parse(const char *title, int argc, char *argv[])
     printf("\n");
     fflush(stdout);
 
-    optind = 0;   /* glibc: 0 = khởi tạo lại hoàn toàn để phân tích argv mới */
+    optind = 0;   /* glibc: 0 = full reinitialization to parse a new argv */
     while ((next_option = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
         switch (next_option) {
         case 'h': printf("  -h/--help\n"); break;
@@ -35,7 +35,7 @@ static void parse(const char *title, int argc, char *argv[])
         }
         fflush(stdout);
     }
-    printf("  optind = %d, doi so con lai:", optind);
+    printf("  optind = %d, remaining arguments:", optind);
     for (int i = optind; i < argc; ++i) printf(" %s", argv[i]);
     printf("\n");
 }
@@ -48,15 +48,15 @@ int main(int argc, char *argv[])
     char *a4[] = {"prog", "in1", "-v", "in2", "--output", "o.txt", NULL};
     char *a5[] = {"prog", "-x", "-o", NULL};
 
-    parse("Mau 1", 6, a1);
-    parse("Mau 2", 4, a2);
-    parse("Mau 3", 5, a3);
-    parse("Mau 4", 6, a4);
-    printf("  argv sau khi hoan vi:");
+    parse("Sample 1", 6, a1);
+    parse("Sample 2", 4, a2);
+    parse("Sample 3", 5, a3);
+    parse("Sample 4", 6, a4);
+    printf("  argv after permutation:");
     for (int i = 1; i < 6; ++i) printf(" %s", a4[i]);
     printf("\n");
-    parse("Mau 5", 3, a5);
+    parse("Sample 5", 3, a5);
 
-    if (argc > 1) parse("argv that", argc, argv);
+    if (argc > 1) parse("real argv", argc, argv);
     return 0;
 }

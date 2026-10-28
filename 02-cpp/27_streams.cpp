@@ -1,9 +1,9 @@
 /*
- * Bài: I/O stream: định dạng bằng iomanip, manipulator "dính" và không dính, stringstream, trạng thái lỗi
- * Chủ đề: C++ (Udemy section 19)
- * Dự đoán trước khi chạy: 1234.5678 in mặc định ra gì? setprecision(2) có và không có fixed? setw áp dụng cho mấy lần in? hex có giữ cho lần in sau không? Đọc "12 abc" vào hai biến int thì sao?
- * Ý chính: Mặc định in 6 chữ số CÓ NGHĨA (không phải 6 số sau dấu phẩy). setprecision(n) không có fixed = n chữ số có nghĩa, có fixed = n số sau dấu phẩy. setw chỉ áp dụng cho lần in KẾ TIẾP; các manipulator khác (fixed, hex, left, setfill, boolalpha) giữ nguyên tới khi đổi. Đọc lỗi → stream vào trạng thái fail, mọi lần đọc sau đều bị bỏ qua cho tới khi clear().
- * Thử thêm: Ghi ra file bằng ofstream rồi đọc lại bằng ifstream + getline. Kiểm tra if (!file.is_open()).
+ * Lab: I/O streams: formatting with iomanip, sticky and non-sticky manipulators, stringstream, error state
+ * Topic: C++ (Udemy section 19)
+ * Predict before running: What does 1234.5678 print by default? setprecision(2) with and without fixed? How many outputs does setw apply to? Does hex stay in effect for the next output? What happens when "12 abc" is read into two ints?
+ * Key idea: By default 6 SIGNIFICANT digits are printed (not 6 digits after the point). setprecision(n) without fixed = n significant digits, with fixed = n digits after the point. setw only applies to the NEXT output; the other manipulators (fixed, hex, left, setfill, boolalpha) stay until changed. A failed read puts the stream in the fail state and every later read is skipped until clear().
+ * Try next: Write a file with ofstream and read it back with ifstream + getline. Check if (!file.is_open()).
  */
 #include <iomanip>
 #include <iostream>
@@ -14,10 +14,10 @@ using namespace std;
 int main()
 {
     double d = 1234.5678;
-    cout << "mac dinh:            " << d << ", 1234567.89 -> " << 1234567.89 << '\n';
+    cout << "default:             " << d << ", 1234567.89 -> " << 1234567.89 << '\n';
     cout << "setprecision(2):     " << setprecision(2) << d << '\n';
     cout << "fixed setprecision(2): " << fixed << d << '\n';
-    cout << "van con fixed:       " << 3.14159 << '\n';
+    cout << "still fixed:         " << 3.14159 << '\n';
     cout.unsetf(ios::fixed);
     cout << setprecision(6);
 
@@ -33,7 +33,7 @@ int main()
     int num;
     double total;
     in >> name >> num >> total;
-    cout << "doc: " << name << " | " << num << " | " << total << '\n';
+    cout << "read: " << name << " | " << num << " | " << total << '\n';
 
     istringstream bad{"12 abc 34"};
     int x = 0, y = 0, z = 0;
@@ -42,7 +42,7 @@ int main()
     bad.clear();
     string skip;
     bad >> skip >> z;
-    cout << "sau clear(): skip = " << skip << ", z = " << z << '\n';
+    cout << "after clear(): skip = " << skip << ", z = " << z << '\n';
 
     ostringstream out;
     out << "Total: " << setw(5) << 42 << '!';
@@ -51,7 +51,7 @@ int main()
     int value;
     string input = "123abc";
     istringstream check{input};
-    if (check >> value && check.eof()) cout << input << " la so nguyen\n";
-    else cout << input << " khong phai so nguyen (doc duoc " << value << ")\n";
+    if (check >> value && check.eof()) cout << input << " is an integer\n";
+    else cout << input << " is not an integer (read " << value << ")\n";
     return 0;
 }

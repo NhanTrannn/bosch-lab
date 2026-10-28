@@ -1,9 +1,9 @@
 /*
- * Bài: Producer–consumer một slot với condition variable
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Thứ tự các dòng produce / consume? Có thể có 2 dòng produce liền nhau không?
- * Ý chính: pthread_cond_wait nhả mutex và ngủ một cách nguyên tử; khi được đánh thức sẽ lấy lại mutex. Luôn kiểm tra điều kiện trong vòng while (spurious wakeup).
- * Thử thêm: Đổi while thành if, thêm consumer thứ 2 và dùng pthread_cond_broadcast — tìm ra kịch bản đọc slot rỗng.
+ * Lab: A one-slot producer–consumer with a condition variable
+ * Topic: Thread
+ * Predict before running: In what order do the produce / consume lines appear? Can two produce lines appear in a row?
+ * Key idea: pthread_cond_wait atomically releases the mutex and sleeps; when woken it re-acquires the mutex. Always check the condition in a while loop (spurious wakeups).
+ * Try next: Change while to if, add a second consumer and use pthread_cond_broadcast — find the scenario where a consumer reads an empty slot.
  */
 #define _GNU_SOURCE
 #include <stdio.h>

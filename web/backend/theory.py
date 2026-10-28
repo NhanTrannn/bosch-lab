@@ -1,4 +1,4 @@
-"""Lý thuyết + trắc nghiệm: mỗi file 09-theory/*.md là một chủ đề."""
+"""Theory + quizzes: each 09-theory/*.md file is one topic."""
 import hashlib
 import re
 
@@ -6,7 +6,7 @@ from config import ROOT
 
 
 def parse_quiz(stem, text):
-    """Phần "## Trắc nghiệm": mỗi "### " là một câu, "- [ ]"/"- [x]" là lựa chọn, "> " là giải thích."""
+    """The "## Quiz" section: each "### " is a question, "- [ ]"/"- [x]" are options, "> " is the explanation."""
     questions, cur, fence = [], None, False
     for line in text.split("\n"):
         if line.startswith("```"):
@@ -36,14 +36,15 @@ def parse_quiz(stem, text):
 
 def parse_theory():
     topics = []
-    # private/: ghi chú riêng (vd. từ khóa học Udemy), không đưa lên git
+    # private/: personal notes (e.g. copied from a Udemy course), kept out of git
     theory_dir = ROOT / "09-theory"
     for path in sorted(theory_dir.glob("*.md")) + sorted(theory_dir.glob("private/*.md")):
         text = path.read_text(encoding="utf-8")
         m = re.search(r"^# (.+)$", text, re.M)
-        theory, _, quiz = text.partition("\n## Trắc nghiệm")
+        parts = re.split(r"\n## Quiz[^\n]*", text, maxsplit=1)
+        theory, quiz = parts[0], parts[1] if len(parts) > 1 else ""
         theory = re.sub(r"^# .+\n+", "", theory, count=1)
-        theory = re.sub(r"^## Lý thuyết\n+", "", theory.strip(), count=1)
+        theory = re.sub(r"^## Theory\n+", "", theory.strip(), count=1)
         topics.append({"id": path.stem, "title": m.group(1).strip() if m else path.stem,
                        "theory": theory, "questions": parse_quiz(path.stem, quiz)})
     return topics

@@ -1,9 +1,9 @@
 /*
- * Bài: virtual, gọi qua object/pointer/reference và object slicing
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Mỗi dòng in "Animal", "Woof" hay "name: ..."? sizeof(Animal) và sizeof(Dog)?
- * Ý chính: Dynamic dispatch chỉ xảy ra khi gọi hàm virtual qua pointer hoặc reference. Gán/truyền theo giá trị làm mất phần Derived (slicing).
- * Thử thêm: Bỏ chữ virtual trước speak() trong Animal và đoán lại toàn bộ.
+ * Lab: virtual, calls through an object/pointer/reference, and object slicing
+ * Topic: C++
+ * Predict before running: Does each line print "Animal", "Woof" or "name: ..."? What are sizeof(Animal) and sizeof(Dog)?
+ * Key idea: Dynamic dispatch only happens when a virtual function is called through a pointer or reference. Assigning/passing by value cuts off the Derived part (slicing).
+ * Try next: Remove the virtual in front of speak() in Animal and predict everything again.
  */
 #include <iostream>
 using namespace std;

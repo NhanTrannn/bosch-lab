@@ -1,105 +1,105 @@
-# Hàm, con trỏ và tham chiếu
+# Functions, pointers and references
 
-## Lý thuyết
+## Theory
 
-Theo Udemy *Beginning C++ Programming*, section 11–12. Lab: `02-cpp/21_functions`, `02-cpp/22_pointers_refs`, xem thêm `01-c/02`, `01-c/03`, `01-c/13`.
+Follows the Udemy course *Beginning C++ Programming*, sections 11–12. Labs: `02-cpp/21_functions`, `02-cpp/22_pointers_refs`; see also `01-c/02`, `01-c/03`, `01-c/13`.
 
-### Hàm (section 11)
-- **Prototype** (khai báo) cho compiler biết tên, kiểu trả về, kiểu tham số. Định nghĩa phải xuất hiện đúng một lần trong cả chương trình (ODR). Prototype thường đặt trong `.h`, định nghĩa trong `.cpp`.
-- Tham số (parameter) là biến trong định nghĩa; đối số (argument) là giá trị truyền vào khi gọi.
-- **Pass by value** (mặc định): hàm nhận bản copy, sửa không ảnh hưởng biến gốc; copy object lớn tốn kém.
-- **Pass by reference** `T&`: hàm làm việc trên biến gốc, không copy. Dùng `const T&` khi chỉ đọc (vừa rẻ vừa an toàn, nhận được cả giá trị tạm).
-- **Pass by pointer** `T*`: truyền địa chỉ; có thể là `nullptr`. Bản thân con trỏ vẫn được truyền theo giá trị.
-- `return`: hàm `void` có thể không return. Không bao giờ trả về reference/con trỏ tới biến local (dangling).
-- **Tham số mặc định**: chỉ ghi ở khai báo (prototype), không ghi lại ở định nghĩa; phải là các tham số **cuối cùng**: `void f(int a, int b = 1, int c = 2);`.
-- **Overloading**: cùng tên, khác danh sách tham số (số lượng/kiểu/thứ tự). **Không** overload chỉ bằng kiểu trả về. Thứ tự chọn: khớp chính xác → promotion (`char/short → int`, `float → double`) → chuyển đổi chuẩn (`int → double`, `const char* → bool`) → chuyển đổi do người dùng định nghĩa (constructor, operator chuyển kiểu). Hai ứng viên cùng hạng → lỗi **ambiguous**.
-- Mảng truyền vào hàm bị **decay** thành con trỏ tới phần tử đầu: `void f(int a[])` giống hệt `void f(int *a)`, mất kích thước → phải truyền thêm size. `const int a[]` để hàm không sửa được mảng.
-- **Scope**: local (khối `{}`), global, static local (khởi tạo một lần, sống suốt chương trình nhưng chỉ nhìn thấy trong hàm).
-- **Cơ chế gọi hàm**: mỗi lần gọi đẩy một **stack frame** (activation record) gồm tham số, biến local, địa chỉ trả về. Hàm return thì frame bị gỡ. Stack có giới hạn (mặc định 8 MB trên Linux) → đệ quy quá sâu gây **stack overflow**.
-- `inline`: gợi ý compiler chèn thân hàm vào chỗ gọi để bỏ chi phí gọi; compiler tự quyết. Hàm inline được định nghĩa trong header mà không vi phạm ODR.
-- **Đệ quy**: phải có điều kiện dừng (base case). Ví dụ: factorial, fibonacci (bản ngây thơ có độ phức tạp O(2ⁿ)). Đệ quy nào cũng viết lại được thành vòng lặp.
+### Functions (section 11)
+- A **prototype** (declaration) tells the compiler the name, return type and parameter types. The definition must appear exactly once in the whole program (ODR). Prototypes usually go in `.h`, definitions in `.cpp`.
+- Parameters are the variables in the definition; arguments are the values passed in a call.
+- **Pass by value** (default): the function gets a copy; changing it does not affect the original; copying large objects is expensive.
+- **Pass by reference** `T&`: the function works on the original, no copy. Use `const T&` when only reading (cheap, safe, and accepts temporaries).
+- **Pass by pointer** `T*`: passes an address; may be `nullptr`. The pointer itself is still passed by value.
+- `return`: a `void` function may omit it. Never return a reference/pointer to a local variable (dangling).
+- **Default arguments**: written only in the declaration (prototype), not repeated in the definition; must be the **last** parameters: `void f(int a, int b = 1, int c = 2);`.
+- **Overloading**: same name, different parameter lists (count/types/order). You **cannot** overload on the return type alone. Ranking: exact match → promotion (`char/short → int`, `float → double`) → standard conversion (`int → double`, `const char* → bool`) → user-defined conversion (constructors, conversion operators). Two candidates of the same rank → **ambiguous** error.
+- An array passed to a function **decays** to a pointer to its first element: `void f(int a[])` is exactly `void f(int *a)`, so the size is lost → pass it separately. `const int a[]` keeps the function from modifying the array.
+- **Scope**: local (a `{}` block), global, static local (initialized once, lives for the whole program but is visible only in the function).
+- **How calls work**: each call pushes a **stack frame** (activation record) holding the parameters, locals and return address. Returning pops the frame. The stack is limited (8 MB by default on Linux) → too-deep recursion causes a **stack overflow**.
+- `inline`: asks the compiler to insert the function body at the call site to avoid call overhead; the compiler decides. Inline functions may be defined in headers without breaking the ODR.
+- **Recursion**: needs a base case. Examples: factorial, Fibonacci (the naive version is O(2ⁿ)). Any recursion can be rewritten as a loop.
 
-### Con trỏ (section 12)
-- Con trỏ là biến chứa **địa chỉ**. Khai báo `int *p;` (chưa khởi tạo → địa chỉ rác). Nên khởi tạo ngay: `int *p = nullptr;` (C++11, thay cho `NULL`/`0`).
-- `&x`: lấy địa chỉ. `*p`: dereference (truy cập giá trị tại địa chỉ). `p->m` = `(*p).m`.
-- `sizeof` mọi con trỏ dữ liệu đều như nhau (8 byte trên 64-bit), không phụ thuộc kiểu được trỏ tới.
-- Kiểu con trỏ phải khớp: `double *p = &int_var;` lỗi biên dịch.
-- **Cấp phát động**: `new T` / `delete p`; `new T[n]` / `delete[] p`. Không trộn `new[]` với `delete`, không trộn `new` với `free`. Vùng nhớ nằm trên **heap**, sống tới khi delete.
-- **Mảng và con trỏ**: `a[i]` ≡ `*(a + i)`. `p + 1` tiến thêm `sizeof(*p)` byte. Hiệu hai con trỏ (cùng một mảng) = số phần tử giữa chúng (`ptrdiff_t`). So sánh hai con trỏ `==` là so sánh địa chỉ.
-- **const và con trỏ**: `const int *p` (con trỏ tới hằng: không sửa `*p`), `int *const p` (con trỏ hằng: không đổi `p`), `const int *const p` (cả hai). Đọc từ phải sang trái.
-- Truyền con trỏ vào hàm để hàm sửa được biến gốc (cách của C). Muốn hàm đổi **chính con trỏ** thì truyền `int *&p` hoặc `int **p`.
-- Trả về con trỏ từ hàm: được nếu trỏ tới vùng nhớ vẫn còn sống (tham số con trỏ, vùng `new`, biến static); **không** được trả về địa chỉ biến local.
-- **Lỗi hay gặp**: con trỏ chưa khởi tạo (wild pointer), **dangling pointer** (trỏ vào vùng đã delete hoặc biến đã hết scope), dereference `nullptr` (segfault), **memory leak** (mất con trỏ tới vùng chưa delete), double delete. `delete nullptr` an toàn → gán `p = nullptr` sau khi delete.
+### Pointers (section 12)
+- A pointer is a variable holding an **address**. `int *p;` (uninitialized → garbage address). Initialize it right away: `int *p = nullptr;` (C++11, replaces `NULL`/`0`).
+- `&x`: take the address. `*p`: dereference (access the value at that address). `p->m` = `(*p).m`.
+- All data pointers have the same `sizeof` (8 bytes on 64-bit), regardless of the pointed-to type.
+- Pointer types must match: `double *p = &int_var;` is a compile error.
+- **Dynamic allocation**: `new T` / `delete p`; `new T[n]` / `delete[] p`. Do not mix `new[]` with `delete`, nor `new` with `free`. The memory lives on the **heap** until it is deleted.
+- **Arrays and pointers**: `a[i]` ≡ `*(a + i)`. `p + 1` advances by `sizeof(*p)` bytes. The difference of two pointers (into the same array) = the number of elements between them (`ptrdiff_t`). `==` on pointers compares addresses.
+- **const and pointers**: `const int *p` (pointer to const: cannot modify `*p`), `int *const p` (const pointer: cannot change `p`), `const int *const p` (both). Read right to left.
+- Pass a pointer to a function so it can modify the original (the C way). For a function to change **the pointer itself**, pass `int *&p` or `int **p`.
+- Returning a pointer from a function: fine if it points to memory that is still alive (a pointer parameter, `new`'ed memory, a static variable); **never** the address of a local.
+- **Common bugs**: uninitialized (wild) pointers, **dangling pointers** (to deleted memory or a variable out of scope), dereferencing `nullptr` (segfault), **memory leaks** (losing the pointer to undeleted memory), double delete. `delete nullptr` is safe → set `p = nullptr` after deleting.
 
-### Tham chiếu (reference)
-- `int &r = x;` tạo tên khác cho x (alias). **Bắt buộc khởi tạo**, **không thể null**, **không thể gắn lại** sang biến khác: `r = y` là gán giá trị của y vào x.
+### References
+- `int &r = x;` creates another name for x (an alias). It **must be initialized**, **cannot be null** and **cannot be reseated**: `r = y` assigns y's value to x.
 - `sizeof(r)` = `sizeof(x)`; `&r == &x`.
-- Dùng làm tham số (tránh copy, sửa biến gốc) và trong range-for (`for (auto &x : v)`).
-- `const T&` gắn được vào giá trị tạm (rvalue): `const int &r = 5;` hợp lệ, còn `int &r = 5;` thì lỗi.
-- **lvalue**: có tên, có địa chỉ, đứng được bên trái phép gán. **rvalue**: giá trị tạm (`5`, `x + 1`, kết quả hàm trả về theo giá trị). C++11 thêm rvalue reference `T&&` (xem move semantics).
+- Used for parameters (avoid copies, modify the original) and in range-for (`for (auto &x : v)`).
+- `const T&` can bind to a temporary (rvalue): `const int &r = 5;` is valid, `int &r = 5;` is not.
+- **lvalue**: has a name and an address, can appear on the left of an assignment. **rvalue**: a temporary (`5`, `x + 1`, a function result returned by value). C++11 adds rvalue references `T&&` (see move semantics).
 
-| | Con trỏ | Tham chiếu |
+| | Pointer | Reference |
 | --- | --- | --- |
-| Null | có thể | không |
-| Khởi tạo | không bắt buộc | bắt buộc |
-| Đổi đối tượng trỏ tới | được | không |
-| Pointer arithmetic | có | không |
-| Cú pháp truy cập | `*p`, `p->m` | như biến thường |
-| Dùng khi | có thể không có đối tượng, cần trỏ lại, mảng động | tham số/alias luôn hợp lệ |
+| Null | possible | no |
+| Initialization | optional | required |
+| Rebind to another object | yes | no |
+| Pointer arithmetic | yes | no |
+| Access syntax | `*p`, `p->m` | like a normal variable |
+| Use when | the object may be absent, must be reseated, dynamic arrays | parameters/aliases that are always valid |
 
-## Trắc nghiệm
+## Quiz
 
-### Có thể overload hai hàm chỉ khác nhau ở tên tham số không?
+### Can you overload two functions that differ only in parameter names?
 ```cpp
 void f(int a);
 void f(int b);
 ```
-- [ ] Được, vì tên tham số khác nhau
-- [x] Không, đó là cùng một hàm (khai báo lại)
-- [ ] Được nếu thêm `inline`
-- [ ] Lỗi linker
-> Chữ ký hàm chỉ gồm tên hàm và kiểu các tham số; tên tham số không tính.
+- [ ] Yes, because the parameter names differ
+- [x] No, they are the same function (a redeclaration)
+- [ ] Yes, if you add `inline`
+- [ ] It is a linker error
+> A function's signature is its name plus its parameter types; parameter names do not count.
 
-### Với các overload dưới, `print("hi")` gọi bản nào?
+### Given the overloads below, which one does `print("hi")` call?
 ```cpp
 void print(bool);
 void print(const std::string &);
 ```
 - [x] `print(bool)`
 - [ ] `print(const std::string &)`
-- [ ] Lỗi ambiguous
-- [ ] Lỗi biên dịch: không có bản phù hợp
-> `const char*` → `bool` là chuyển đổi chuẩn, được ưu tiên hơn `const char*` → `std::string` (chuyển đổi do người dùng định nghĩa). Đây là bẫy thật; xem lab 21.
+- [ ] Ambiguous error
+- [ ] Compile error: no matching overload
+> `const char*` → `bool` is a standard conversion, which beats `const char*` → `std::string` (a user-defined conversion). A real trap; see lab 21.
 
-### Với `void f(int); void f(double);`, lời gọi `f(5L)` (long) cho kết quả gì?
-- [ ] Gọi f(int)
-- [ ] Gọi f(double)
-- [x] Lỗi biên dịch: ambiguous
-- [ ] Gọi f(int) vì long gần int hơn
-> long → int và long → double đều là chuyển đổi chuẩn cùng hạng nên compiler không chọn được.
+### With `void f(int); void f(double);`, what happens with `f(5L)` (a long)?
+- [ ] Calls f(int)
+- [ ] Calls f(double)
+- [x] Compile error: ambiguous
+- [ ] Calls f(int) because long is closer to int
+> long → int and long → double are both standard conversions of the same rank, so the compiler cannot choose.
 
-### `f(3.5f)` với `void f(int); void f(double);` gọi bản nào?
+### With `void f(int); void f(double);`, which one does `f(3.5f)` call?
 - [ ] f(int)
 - [x] f(double)
 - [ ] Ambiguous
-- [ ] Lỗi biên dịch
-> float → double là **promotion**, ưu tiên hơn float → int (chuyển đổi chuẩn).
+- [ ] Compile error
+> float → double is a **promotion**, which beats float → int (a standard conversion).
 
-### Khai báo tham số mặc định nào hợp lệ?
+### Which default-argument declaration is valid?
 - [ ] `void f(int a = 1, int b);`
 - [x] `void f(int a, int b = 2, int c = 3);`
 - [ ] `void f(int a = 1, int b, int c = 3);`
 - [ ] `void f(int = 1, int);`
-> Tham số mặc định phải nằm liền nhau ở cuối danh sách.
+> Default arguments must be consecutive at the end of the parameter list.
 
-### Prototype `void f(int x = 5);` ở header, định nghĩa trong .cpp nên viết thế nào?
+### The header has the prototype `void f(int x = 5);`. How should the definition in the .cpp be written?
 - [ ] `void f(int x = 5) { ... }`
 - [x] `void f(int x) { ... }`
 - [ ] `void f(int x = 0) { ... }`
 - [ ] `void f() { ... }`
-> Ghi giá trị mặc định ở cả hai nơi sẽ báo lỗi "redefinition of default argument". Chỉ ghi ở khai báo mà nơi gọi nhìn thấy.
+> Writing the default in both places gives "redefinition of default argument". Put it only in the declaration that callers see.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int counter() { static int c = 0; return ++c; }
 int main() { counter(); counter(); cout << counter(); }
@@ -107,52 +107,52 @@ int main() { counter(); counter(); cout << counter(); }
 - [ ] 1
 - [ ] 0
 - [x] 3
-- [ ] Không xác định
-> Biến static local chỉ khởi tạo ở lần gọi đầu tiên và giữ giá trị giữa các lần gọi.
+- [ ] Undefined
+> A static local is initialized only on the first call and keeps its value between calls.
 
-### Bên trong `void f(int arr[])`, `sizeof(arr)` trên Linux 64-bit bằng?
-- [ ] Kích thước cả mảng truyền vào
-- [x] 8 (kích thước con trỏ)
+### Inside `void f(int arr[])`, what is `sizeof(arr)` on 64-bit Linux?
+- [ ] The size of the whole array passed in
+- [x] 8 (the size of a pointer)
 - [ ] 4
-- [ ] Lỗi biên dịch
-> Tham số mảng decay thành `int*`. gcc còn cảnh báo `-Wsizeof-array-argument`. Phải truyền kích thước làm tham số riêng.
+- [ ] Compile error
+> An array parameter decays to `int*`. gcc even warns with `-Wsizeof-array-argument`. Pass the size as a separate parameter.
 
-### Cách khai báo tham số nào tốt nhất cho hàm chỉ đọc một `std::vector<int>` lớn?
+### What is the best parameter declaration for a function that only reads a large `std::vector<int>`?
 - [ ] `void f(std::vector<int> v)`
 - [ ] `void f(std::vector<int> &v)`
 - [x] `void f(const std::vector<int> &v)`
 - [ ] `void f(std::vector<int> *v)`
-> Không copy, không sửa được, và nhận được cả giá trị tạm.
+> No copy, no modification, and it also accepts temporaries.
 
-### Điều gì xảy ra mỗi lần gọi một hàm?
-- [ ] Hàm được copy lên heap
-- [x] Một stack frame chứa tham số, biến local và địa chỉ trả về được đẩy lên call stack
-- [ ] Biến global được lưu lại
-- [ ] Tạo một thread mới
-> Khi hàm return thì frame bị gỡ, nên biến local không còn hợp lệ.
+### What happens on every function call?
+- [ ] The function is copied to the heap
+- [x] A stack frame holding the parameters, locals and return address is pushed onto the call stack
+- [ ] Global variables are saved
+- [ ] A new thread is created
+> When the function returns the frame is popped, so its locals are no longer valid.
 
-### Hàm đệ quy không có điều kiện dừng sẽ gây ra?
-- [ ] Lỗi biên dịch
-- [ ] Vòng lặp vô hạn không ảnh hưởng gì
-- [x] Stack overflow (thường là segfault)
-- [ ] Memory leak trên heap
-> Mỗi lần gọi tốn thêm một stack frame cho tới khi hết stack.
+### A recursive function without a base case causes:
+- [ ] A compile error
+- [ ] A harmless infinite loop
+- [x] A stack overflow (usually a segfault)
+- [ ] A heap memory leak
+> Each call takes another stack frame until the stack runs out.
 
-### `inline` trên một hàm có ý nghĩa gì?
-- [ ] Bắt buộc compiler chèn thân hàm vào chỗ gọi
-- [x] Gợi ý chèn thân hàm, và cho phép định nghĩa hàm trong header mà không vi phạm ODR
-- [ ] Hàm chạy trên thread riêng
-- [ ] Hàm không được gọi đệ quy
-> Compiler có thể bỏ qua gợi ý (hàm lớn, đệ quy) hoặc tự inline hàm không có từ khoá này khi bật tối ưu.
+### What does `inline` on a function mean?
+- [ ] The compiler must insert the body at every call site
+- [x] A hint to inline the body, and permission to define the function in a header without breaking the ODR
+- [ ] The function runs on its own thread
+- [ ] The function cannot be recursive
+> The compiler may ignore the hint (large or recursive functions) or inline functions without the keyword when optimizing.
 
-### Hàm nào trả về giá trị nguy hiểm (dangling)?
+### Which function returns a dangerous (dangling) value?
 - [ ] `int f() { int x = 5; return x; }`
 - [x] `int &f() { int x = 5; return x; }`
 - [ ] `int *f() { return new int{5}; }`
 - [ ] `int *f() { static int x = 5; return &x; }`
-> Trả về reference tới biến local: biến bị huỷ khi hàm return. Trả về theo giá trị thì luôn an toàn; con trỏ tới vùng `new` hoặc biến static vẫn còn sống.
+> Returning a reference to a local: the variable is destroyed when the function returns. Returning by value is always safe; pointers to `new`'ed memory or statics are still alive.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int a = 10, b = 20;
 int &r = a;
@@ -164,23 +164,23 @@ cout << a << ' ' << b;
 - [x] 5 20
 - [ ] 20 5
 - [ ] 5 5
-> Reference không gắn lại được: `r = b` gán 20 vào a, rồi `r = 5` gán 5 vào a. b không đổi.
+> A reference cannot be reseated: `r = b` assigns 20 to a, then `r = 5` assigns 5 to a. b is unchanged.
 
-### Phát biểu nào ĐÚNG về reference? (chọn tất cả đáp án đúng)
-- [x] Phải được khởi tạo khi khai báo
-- [ ] Có thể gán bằng nullptr
-- [x] Không thể đổi để tham chiếu tới đối tượng khác
-- [x] `const int &r = 5;` hợp lệ
-> Chỉ `const T&` (hoặc `T&&`) mới gắn được vào giá trị tạm như 5.
+### Which statements about references are TRUE? (select all that apply)
+- [x] They must be initialized when declared
+- [ ] They can be set to nullptr
+- [x] They cannot be changed to refer to another object
+- [x] `const int &r = 5;` is valid
+> Only `const T&` (or `T&&`) can bind to a temporary like 5.
 
-### `int &r = 5;` thì sao?
-- [ ] Hợp lệ, r = 5
-- [x] Lỗi biên dịch: không gắn non-const lvalue reference vào rvalue
+### What about `int &r = 5;`?
+- [ ] Valid, r = 5
+- [x] Compile error: cannot bind a non-const lvalue reference to an rvalue
 - [ ] Undefined behavior
-- [ ] Hợp lệ nhưng có cảnh báo
-> 5 là rvalue. `const int &r = 5;` thì được: compiler tạo một biến tạm sống cùng r.
+- [ ] Valid but with a warning
+> 5 is an rvalue. `const int &r = 5;` works: the compiler creates a temporary that lives as long as r.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 void reset(int *p) { p = nullptr; }
 int main() {
@@ -192,38 +192,38 @@ int main() {
 - [x] 0
 - [ ] 1
 - [ ] Segfault
-- [ ] Lỗi biên dịch
-> Con trỏ được truyền theo giá trị: hàm chỉ đổi bản copy. Muốn đổi q phải dùng `int *&p` hoặc `int **p`.
+- [ ] Compile error
+> The pointer is passed by value: the function only changes its copy. To change q, use `int *&p` or `int **p`.
 
-### Với `int a[] = {10, 20, 30}; int *p = a;`, biểu thức `*p + 1` và `*(p + 1)` bằng?
-- [ ] 20 và 20
-- [x] 11 và 20
-- [ ] 11 và 11
-- [ ] 20 và 11
-> `*` ưu tiên hơn `+`: `*p + 1` = 10 + 1. `*(p + 1)` là phần tử thứ hai.
+### Given `int a[] = {10, 20, 30}; int *p = a;`, what are `*p + 1` and `*(p + 1)`?
+- [ ] 20 and 20
+- [x] 11 and 20
+- [ ] 11 and 11
+- [ ] 20 and 11
+> `*` binds tighter than `+`: `*p + 1` = 10 + 1. `*(p + 1)` is the second element.
 
-### Với `double d[10]; double *p = &d[2], *q = &d[7];`, `q - p` bằng?
+### Given `double d[10]; double *p = &d[2], *q = &d[7];`, what is `q - p`?
 - [ ] 40
 - [x] 5
 - [ ] 20
-- [ ] Lỗi biên dịch
-> Hiệu hai con trỏ tính theo số phần tử, không theo byte.
+- [ ] Compile error
+> Pointer differences count elements, not bytes.
 
-### Khai báo nào cho phép đổi con trỏ sang địa chỉ khác nhưng KHÔNG cho sửa giá trị được trỏ tới?
+### Which declaration lets you point the pointer elsewhere but NOT modify the value it points to?
 - [x] `const int *p`
 - [ ] `int *const p`
 - [ ] `const int *const p`
 - [ ] `int const *const p`
-> Đọc từ phải sang trái: `p` là con trỏ tới `const int`. `int const *p` giống hệt `const int *p`.
+> Read right to left: `p` is a pointer to `const int`. `int const *p` is exactly the same as `const int *p`.
 
-### Cặp cấp phát/giải phóng nào ĐÚNG?
+### Which allocation/deallocation pair is CORRECT?
 - [ ] `int *p = new int[10]; delete p;`
 - [x] `int *p = new int[10]; delete[] p;`
 - [ ] `int *p = new int; free(p);`
 - [ ] `int *p = (int*)malloc(4); delete p;`
-> new đi với delete, new[] đi với delete[], malloc đi với free. Trộn lẫn là undefined behavior.
+> new goes with delete, new[] with delete[], malloc with free. Mixing them is undefined behavior.
 
-### Đoạn code có vấn đề gì?
+### What is wrong with this code?
 ```cpp
 void f() {
     int *p = new int[100];
@@ -231,36 +231,36 @@ void f() {
     delete[] p;
 }
 ```
-- [ ] Không có vấn đề
-- [x] Memory leak khi `error()` trả về true
-- [ ] Double free
-- [ ] Dangling pointer
-> Return sớm bỏ qua delete. Cách sửa trong C++ hiện đại: `std::vector<int>` hoặc `std::unique_ptr<int[]>` (RAII).
+- [ ] Nothing
+- [x] A memory leak when `error()` returns true
+- [ ] A double free
+- [ ] A dangling pointer
+> The early return skips the delete. The modern C++ fix: `std::vector<int>` or `std::unique_ptr<int[]>` (RAII).
 
-### `delete p;` rồi dùng `*p` tiếp là lỗi gì?
+### `delete p;` and then using `*p` is which kind of bug?
 - [ ] Memory leak
 - [x] Dangling pointer (use-after-free), undefined behavior
 - [ ] Null pointer dereference
-- [ ] Lỗi biên dịch
-> Sau delete nên gán `p = nullptr`; dùng nullptr sẽ crash ngay thay vì đọc rác âm thầm. AddressSanitizer (`-fsanitize=address`) phát hiện được lỗi này.
+- [ ] Compile error
+> After delete, set `p = nullptr`; using nullptr crashes immediately instead of silently reading garbage. AddressSanitizer (`-fsanitize=address`) catches this bug.
 
-### `sizeof(int*)` và `sizeof(double*)` trên Linux x86-64?
-- [ ] 4 và 8
-- [x] 8 và 8
-- [ ] 4 và 4
-- [ ] Phụ thuộc giá trị trỏ tới
-> Kích thước con trỏ chỉ phụ thuộc kiến trúc, không phụ thuộc kiểu được trỏ tới.
+### What are `sizeof(int*)` and `sizeof(double*)` on Linux x86-64?
+- [ ] 4 and 8
+- [x] 8 and 8
+- [ ] 4 and 4
+- [ ] It depends on the pointed-to value
+> A pointer's size depends only on the architecture, not on the pointed-to type.
 
-### Biểu thức nào là rvalue?
+### Which expression is an rvalue?
 - [ ] `x`
 - [ ] `arr[2]`
 - [x] `x + 1`
 - [ ] `*p`
-> `x + 1` là giá trị tạm, không có địa chỉ. `x`, `arr[2]`, `*p` đều chỉ tới một vùng nhớ cụ thể (lvalue) và đứng được bên trái phép gán.
+> `x + 1` is a temporary with no address. `x`, `arr[2]` and `*p` all designate a specific memory location (lvalues) and can appear on the left of an assignment.
 
-### Khi nào nên dùng con trỏ thay vì reference? (chọn tất cả đáp án đúng)
-- [x] Khi đối tượng có thể không tồn tại (cần giá trị null)
-- [x] Khi cần trỏ sang đối tượng khác về sau
-- [ ] Khi muốn hàm nhận tham số không bị copy
-- [x] Khi làm việc với mảng động cấp phát bằng new[]
-> Chỉ muốn tránh copy thì reference (đặc biệt `const T&`) gọn và an toàn hơn.
+### When should you use a pointer instead of a reference? (select all that apply)
+- [x] When the object may not exist (you need a null value)
+- [x] When it must later point to a different object
+- [ ] When you want a parameter that is not copied
+- [x] When working with dynamic arrays allocated with new[]
+> If you only want to avoid copies, a reference (especially `const T&`) is simpler and safer.

@@ -1,9 +1,9 @@
 /*
- * Bài: Class: constructor overload, delegating constructor, copy constructor, const method, static member, shallow/deep copy
- * Chủ đề: C++ OOP (Udemy section 13)
- * Dự đoán trước khi chạy: Player a; in ra những dòng nào và theo thứ tự nào? display(c) gọi copy constructor không? Player::count ở các thời điểm? Thứ tự destructor khi ra khỏi khối? Shallow copy hai con trỏ có cùng địa chỉ không?
- * Ý chính: Delegating constructor chạy constructor đích (cả thân hàm) TRƯỚC, rồi mới tới thân của constructor ủy quyền. Truyền object theo giá trị gọi copy constructor. Object local huỷ theo thứ tự ngược với lúc tạo. Copy mặc định copy từng member (shallow): con trỏ bị copy địa chỉ → hai object cùng trỏ một vùng nhớ.
- * Thử thêm: Đổi display(Player p) thành display(const Player &p) và đếm lại số lần copy. Bỏ comment v.set_name(...) để thấy lỗi gọi hàm không const trên object const.
+ * Lab: Classes: constructor overloading, delegating constructors, the copy constructor, const methods, static members, shallow/deep copy
+ * Topic: C++ OOP (Udemy section 13)
+ * Predict before running: Which lines does Player a; print, and in what order? Does display(c) call the copy constructor? What is Player::count at each point? In what order are destructors called when leaving the block? Do the two pointers of the shallow copy share an address?
+ * Key idea: A delegating constructor runs the target constructor (including its body) FIRST, then the body of the delegating constructor. Passing an object by value calls the copy constructor. Local objects are destroyed in the reverse order of creation. The default copy copies member by member (shallow): a pointer's address is copied → both objects point to the same memory.
+ * Try next: Change display(Player p) to display(const Player &p) and count the copies again. Uncomment v.set_name(...) to see the error of calling a non-const function on a const object.
  */
 #include <iostream>
 #include <string>
@@ -64,24 +64,24 @@ int main()
         cout << "Player d = c:\n";
         Player d = c;
         d.set_name("Clone");
-        cout << "count = " << Player::count << ", ra khoi khoi:\n";
+        cout << "count = " << Player::count << ", leaving the block:\n";
     }
     cout << "count = " << Player::count << '\n';
 
     const Player v{"Villain"};
     cout << "v.get_name() = " << v.get_name() << '\n';
-    // v.set_name("X");   // lỗi: set_name không phải const
+    // v.set_name("X");   // error: set_name is not const
 
     Shallow s1{1};
     Shallow s2 = s1;
     *s2.data = 42;
-    cout << "Shallow: cung dia chi ? " << (s1.data == s2.data) << ", *s1.data = " << *s1.data << '\n';
-    delete s1.data;      // chỉ delete một lần, delete thêm s2.data là double free
+    cout << "Shallow: same address ? " << (s1.data == s2.data) << ", *s1.data = " << *s1.data << '\n';
+    delete s1.data;      // delete only once; deleting s2.data too would be a double free
 
     Deep d1{1};
     Deep d2 = d1;
     *d2.data = 42;
-    cout << "Deep: cung dia chi ? " << (d1.data == d2.data) << ", *d1.data = " << *d1.data << '\n';
-    cout << "het main:\n";
+    cout << "Deep: same address ? " << (d1.data == d2.data) << ", *d1.data = " << *d1.data << '\n';
+    cout << "end of main:\n";
     return 0;
 }

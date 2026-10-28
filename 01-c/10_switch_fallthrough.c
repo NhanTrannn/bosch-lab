@@ -1,10 +1,10 @@
 /*
- * Bài: switch thiếu break
- * Chủ đề: C
- * Dự đoán trước khi chạy: Với x từ 0 đến 4, mỗi dòng in gì?
- * Ý chính: Không có break thì chạy tiếp xuống các case bên dưới (fall-through). default không cần đứng cuối.
- * Thử thêm: Thêm break sau "three " và đoán lại dòng x = 3.
- * Cảnh báo biên dịch cố ý: -Wimplicit-fallthrough (cố ý, để thấy compiler cảnh báo chỗ nào).
+ * Lab: switch without break
+ * Topic: C
+ * Predict before running: For x from 0 to 4, what does each line print?
+ * Key idea: Without a break, execution continues into the cases below (fall-through). default does not have to be last.
+ * Try next: Add a break after "three " and predict the x = 3 line again.
+ * Intentional compiler warning: -Wimplicit-fallthrough (deliberate, so you see where the compiler warns).
  */
 #include <stdio.h>
 

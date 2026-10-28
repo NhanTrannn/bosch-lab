@@ -1,10 +1,10 @@
 /*
- * Bài: Exception, stack unwinding và RAII
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Thứ tự các dòng +/− ? catch nào bắt được? Bắt bằng giá trị in what() ra gì? ~Bad có chạy không?
- * Ý chính: Khi ném exception, các object local được huỷ theo thứ tự ngược (stack unwinding) — đó là nền tảng của RAII (lock_guard, unique_ptr...). Bắt exception bằng const reference để tránh slicing. Constructor ném lỗi → destructor của chính object KHÔNG chạy, nhưng các member đã tạo xong thì có.
- * Cảnh báo biên dịch cố ý: -Wcatch-value (bắt std::exception bằng giá trị).
- * Thử thêm: Ném exception trong destructor khi đang unwinding → std::terminate. Đánh dấu một hàm noexcept rồi ném bên trong.
+ * Lab: Exceptions, stack unwinding and RAII
+ * Topic: C++
+ * Predict before running: In what order do the +/− lines appear? Which catch handles each exception? What does what() print when caught by value? Does ~Bad run?
+ * Key idea: When an exception is thrown, local objects are destroyed in reverse order (stack unwinding) — the foundation of RAII (lock_guard, unique_ptr...). Catch exceptions by const reference to avoid slicing. If a constructor throws, the object's own destructor does NOT run, but the members already built are destroyed.
+ * Intentional compiler warning: -Wcatch-value (catching std::exception by value).
+ * Try next: Throw from a destructor during unwinding → std::terminate. Mark a function noexcept and throw inside it.
  */
 #include <iostream>
 #include <stdexcept>
@@ -24,8 +24,8 @@ struct MyError : runtime_error {
 void level2()
 {
     Guard g("L2");
-    throw MyError("loi o level2");
-    cout << "khong bao gio in\n";
+    throw MyError("error in level2");
+    cout << "never printed\n";
 }
 
 void level1()
@@ -34,9 +34,9 @@ void level1()
     try {
         level2();
     } catch (const logic_error &) {
-        cout << "level1 bat duoc\n";
+        cout << "level1 caught it\n";
     }
-    cout << "level1 ket thuc binh thuong\n";
+    cout << "level1 finished normally\n";
 }
 
 struct Bad {
@@ -51,13 +51,13 @@ int main()
         Guard g("main");
         level1();
     } catch (const exception &e) {
-        cout << "main bat: " << e.what() << '\n';
+        cout << "main caught: " << e.what() << '\n';
     }
 
     try {
         throw MyError("chi tiet");
     } catch (exception e) {
-        cout << "bat bang gia tri: " << e.what() << '\n';
+        cout << "caught by value: " << e.what() << '\n';
     }
 
     try {
@@ -73,7 +73,7 @@ int main()
     try {
         Bad b;
     } catch (int) {
-        cout << "constructor cua Bad nem loi\n";
+        cout << "Bad's constructor threw\n";
     }
     return 0;
 }

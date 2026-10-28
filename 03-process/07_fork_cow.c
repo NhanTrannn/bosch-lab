@@ -1,9 +1,9 @@
 /*
- * Bài: Biến sau fork(): copy-on-write
- * Chủ đề: Process
- * Dự đoán trước khi chạy: Cha in g, local, heap bằng mấy sau khi con đã tăng cả ba? Địa chỉ &g ở cha và con có giống nhau không?
- * Ý chính: Sau fork(), con có bản sao RIÊNG của toàn bộ không gian địa chỉ (global, heap, stack). Địa chỉ ảo giống hệt nhau nhưng ánh xạ tới trang vật lý khác nhau khi có ghi (copy-on-write). Muốn chia sẻ dữ liệu phải dùng IPC (shm, pipe...).
- * Thử thêm: Dùng mmap(MAP_SHARED | MAP_ANONYMOUS) cho biến đếm rồi fork — lần này cha thấy thay đổi của con.
+ * Lab: Variables after fork(): copy-on-write
+ * Topic: Process
+ * Predict before running: What do g, local and heap print in the parent after the child incremented all three? Are the &g addresses the same in parent and child?
+ * Key idea: After fork(), the child has its OWN copy of the whole address space (globals, heap, stack). The virtual addresses are identical but map to different physical pages once someone writes (copy-on-write). Sharing data needs IPC (shm, pipes...).
+ * Try next: Use mmap(MAP_SHARED | MAP_ANONYMOUS) for the counter and fork — this time the parent sees the child's changes.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -24,12 +24,12 @@ int main(void)
         g++;
         local++;
         (*heap)++;
-        printf("con: g=%d local=%d heap=%d | &g=%p heap=%p\n", g, local, *heap, (void *)&g, (void *)heap);
+        printf("child:  g=%d local=%d heap=%d | &g=%p heap=%p\n", g, local, *heap, (void *)&g, (void *)heap);
         free(heap);
         exit(0);
     }
     wait(NULL);
-    printf("cha: g=%d local=%d heap=%d | &g=%p heap=%p\n", g, local, *heap, (void *)&g, (void *)heap);
+    printf("parent: g=%d local=%d heap=%d | &g=%p heap=%p\n", g, local, *heap, (void *)&g, (void *)heap);
     free(heap);
     return 0;
 }

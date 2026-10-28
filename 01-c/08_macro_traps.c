@@ -1,10 +1,10 @@
 /*
- * Bài: Bẫy macro
- * Chủ đề: C
- * Dự đoán trước khi chạy: Giá trị của từng dòng? Sau SQ_OK(i++) và MAX(j++, 3) thì i, j bằng bao nhiêu?
- * Ý chính: Macro chỉ thay thế văn bản. Luôn bọc ngoặc từng tham số và cả biểu thức; tham số có side effect có thể bị tính nhiều lần.
- * Thử thêm: Viết lại SQ và MAX thành static inline function, chạy lại và so sánh i, j.
- * Cảnh báo biên dịch cố ý: -Wsequence-point ở dòng SQ_OK(i++) (undefined behavior cố ý).
+ * Lab: Macro traps
+ * Topic: C
+ * Predict before running: What is the value on each line? After SQ_OK(i++) and MAX(j++, 3), what are i and j?
+ * Key idea: Macros are pure text substitution. Always parenthesize each parameter and the whole expression; an argument with side effects may be evaluated more than once.
+ * Try next: Rewrite SQ and MAX as static inline functions, run again and compare i and j.
+ * Intentional compiler warning: -Wsequence-point on the SQ_OK(i++) line (deliberate undefined behavior).
  */
 #include <stdio.h>
 

@@ -1,9 +1,9 @@
 /*
- * Bài: sizeof của class: class rỗng, vptr, padding, static
- * Chủ đề: C++
- * Dự đoán trước khi chạy: sizeof của từng struct trên x86_64? Hai object Empty có cùng địa chỉ không?
- * Ý chính: Class rỗng có sizeof = 1 để mỗi object có địa chỉ riêng. Có hàm virtual → thêm một con trỏ vptr (8 byte trên 64-bit) mỗi object, vtable thì dùng chung cho cả class. Hàm thành viên và static member không làm tăng sizeof. Empty Base Optimization: lớp cơ sở rỗng không tốn byte.
- * Thử thêm: Thêm [[no_unique_address]] (C++20) cho member Empty. Thêm hàm virtual thứ hai vào WithVirtual — sizeof có đổi không?
+ * Lab: sizeof of classes: empty classes, the vptr, padding, static members
+ * Topic: C++
+ * Predict before running: What is sizeof of each struct on x86_64? Do two Empty objects share an address?
+ * Key idea: An empty class has sizeof = 1 so every object has its own address. Virtual functions → one extra vptr per object (8 bytes on 64-bit); the vtable itself is shared by the whole class. Member functions and static members do not increase sizeof. Empty Base Optimization: an empty base class costs no bytes.
+ * Try next: Add [[no_unique_address]] (C++20) to the Empty member. Add a second virtual function to WithVirtual — does sizeof change?
  */
 #include <iostream>
 using namespace std;

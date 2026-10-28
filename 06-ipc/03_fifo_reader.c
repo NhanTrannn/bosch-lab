@@ -1,10 +1,10 @@
 /*
- * !!! Cần 2 terminal. Terminal 1: make run T=06-ipc/03_fifo_reader. Terminal 2: make run T=06-ipc/03_fifo_writer.
- * Bài: Named pipe (FIFO) giữa 2 chương trình
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Khi chỉ chạy reader, nó dừng ở dòng nào? Khi writer gõ Ctrl+D, reader in gì rồi kết thúc ra sao?
- * Ý chính: FIFO là pipe có tên trong filesystem, cho phép 2 tiến trình KHÔNG họ hàng giao tiếp. open() đầu đọc chặn cho tới khi có đầu ghi mở (và ngược lại).
- * Thử thêm: Chạy ls -l /tmp/bosch_fifo khi reader đang chờ: ký tự đầu tiên của quyền là gì? Thử echo hello > /tmp/bosch_fifo thay cho writer.
+ * !!! Needs 2 terminals. Terminal 1: make run T=06-ipc/03_fifo_reader. Terminal 2: make run T=06-ipc/03_fifo_writer.
+ * Lab: A named pipe (FIFO) between 2 programs
+ * Topic: IPC
+ * Predict before running: When only the reader runs, at which line does it stop? When the writer presses Ctrl+D, what does the reader print and how does it end?
+ * Key idea: A FIFO is a pipe with a name in the filesystem, letting 2 UNRELATED processes communicate. open() for reading blocks until a writer opens it (and vice versa).
+ * Try next: Run ls -l /tmp/bosch_fifo while the reader waits: what is the first character of the permissions? Try echo hello > /tmp/bosch_fifo instead of the writer.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -21,19 +21,19 @@ int main(void)
         perror("mkfifo");
         return 1;
     }
-    printf("Reader: dang mo FIFO...\n");
+    printf("Reader: opening the FIFO...\n");
     fflush(stdout);
     int fd = open(FIFO, O_RDONLY);
-    printf("Reader: da mo, cho du lieu\n");
+    printf("Reader: opened, waiting for data\n");
 
     char buf[128];
     ssize_t n;
     while ((n = read(fd, buf, sizeof(buf) - 1)) > 0) {
         buf[n] = '\0';
-        printf("Reader nhan: %s", buf);
+        printf("Reader got: %s", buf);
         fflush(stdout);
     }
-    printf("Reader: read tra ve %zd, ket thuc\n", n);
+    printf("Reader: read returned %zd, exiting\n", n);
     close(fd);
     unlink(FIFO);
     return 0;

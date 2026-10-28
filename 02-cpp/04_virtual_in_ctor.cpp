@@ -1,9 +1,9 @@
 /*
- * Bài: Gọi hàm virtual trong constructor/destructor
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Trong Base ctor và Base dtor, hello() gọi phiên bản nào?
- * Ý chính: Trong lúc Base đang được tạo (hoặc huỷ), object chỉ "là" Base: lời gọi virtual không đi xuống Derived.
- * Thử thêm: Đổi Base::hello thành pure virtual (= 0) rồi build: compiler/linker báo gì? Chạy thì sao?
+ * Lab: Calling virtual functions in constructors/destructors
+ * Topic: C++
+ * Predict before running: Inside the Base ctor and Base dtor, which version of hello() is called?
+ * Key idea: While Base is being constructed (or destroyed) the object only "is" a Base: virtual calls do not reach Derived.
+ * Try next: Make Base::hello pure virtual (= 0) and build: what do the compiler/linker report? What happens at run time?
  */
 #include <iostream>
 #include <string>

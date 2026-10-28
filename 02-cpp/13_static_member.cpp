@@ -1,9 +1,9 @@
 /*
- * Bài: static member, static local và singleton
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Các dòng "tao/copy/huy" theo thứ tự nào? make() có gọi copy không? Logger() in mấy lần? sizeof(Counter)?
- * Ý chính: static member dùng chung cho mọi object, không nằm trong sizeof object, phải định nghĩa ở ngoài class (hoặc inline static từ C++17). static member function không có this. static local khởi tạo một lần, thread-safe từ C++11 → Meyers singleton. C++17 bảo đảm copy elision khi return prvalue.
- * Thử thêm: Đổi make() thành Counter c; return c; (NRVO, thường vẫn không copy). Biên dịch với -fno-elide-constructors.
+ * Lab: static members, static locals and the singleton
+ * Topic: C++
+ * Predict before running: In what order do the "create/copy/destroy" lines appear? Does make() call copy? How many times is Logger() printed? What is sizeof(Counter)?
+ * Key idea: A static member is shared by all objects, is not part of sizeof, and must be defined outside the class (or inline static since C++17). A static member function has no this. A static local is initialized once, thread-safely since C++11 → the Meyers singleton. C++17 guarantees copy elision when returning a prvalue.
+ * Try next: Change make() to Counter c; return c; (NRVO, usually still no copy). Compile with -fno-elide-constructors.
  */
 #include <iostream>
 using namespace std;
@@ -14,9 +14,9 @@ class Counter {
     int id;
 
 public:
-    Counter() : id(++created) { ++alive; cout << "tao #" << id << '\n'; }
+    Counter() : id(++created) { ++alive; cout << "create #" << id << '\n'; }
     Counter(const Counter &o) : id(++created) { ++alive; cout << "copy #" << o.id << " -> #" << id << '\n'; }
-    ~Counter() { --alive; cout << "huy #" << id << '\n'; }
+    ~Counter() { --alive; cout << "destroy #" << id << '\n'; }
     static void report() { cout << "alive=" << alive << " created=" << created << '\n'; }
 };
 
@@ -54,7 +54,7 @@ int main()
 
     Logger::get().n++;
     Logger::get().n++;
-    cout << "n = " << Logger::get().n << ", cung 1 object? " << (&Logger::get() == &Logger::get()) << '\n';
+    cout << "n = " << Logger::get().n << ", same object? " << (&Logger::get() == &Logger::get()) << '\n';
     cout << "sizeof(Counter) = " << sizeof(Counter) << '\n';
     return 0;
 }

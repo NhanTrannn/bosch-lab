@@ -1,51 +1,51 @@
-# web — giao diện ôn bài
+# web — study UI
 
 ```sh
-make web            # hoặc: npm start  /  python3 web/backend/server.py [--port 8000]
+make web            # or: npm start  /  python3 web/backend/server.py [--port 8000]
 ```
-Mở http://localhost:8000. Không cần cài gì thêm: backend chỉ dùng thư viện chuẩn của Python 3, frontend là HTML/CSS/JS thuần (không build).
+Open http://localhost:8000. Nothing else to install: the backend uses only the Python 3 standard library, and the frontend is plain HTML/CSS/JS (no build step).
 
-## Cấu trúc
+## Layout
 
 ```
 web/
-├── backend/                 Python 3, thư viện chuẩn
-│   ├── server.py            HTTP: phục vụ frontend + JSON API, tự khởi động lại khi file .py đổi
-│   ├── config.py            đường dẫn, thư mục bài, giới hạn thời gian/output
-│   ├── labs.py              đọc bài lab (comment đầu file nguồn) + ANSWERS.md
-│   ├── theory.py            đọc 09-theory/*.md → lý thuyết + câu trắc nghiệm
-│   ├── runner.py            build bằng Makefile gốc, chạy bài trong pty, giữ output
-│   └── jobwrap.py           chạy chương trình như shell chạy foreground job (Ctrl+C/Z, orphan)
+├── backend/                 Python 3, standard library only
+│   ├── server.py            HTTP: serves the frontend + JSON API, restarts itself when a .py file changes
+│   ├── config.py            paths, lab directories, time/output limits
+│   ├── labs.py              reads labs (header comment of each source file) + ANSWERS.md
+│   ├── theory.py            reads 09-theory/*.md -> theory + quiz questions
+│   ├── runner.py            builds with the top-level Makefile, runs labs in a pty, keeps the output
+│   └── jobwrap.py           runs a program the way a shell runs a foreground job (Ctrl+C/Z, orphans)
 └── frontend/
-    ├── index.html           khung trang
-    ├── css/style.css        giao diện (sáng/tối)
-    └── js/                  nạp theo thứ tự trong index.html, dùng chung biến toàn cục
-        ├── core.js          h(), api(), lưu tiến độ (localStorage), trạng thái chung
-        ├── render.js        tô màu code, markdown
-        ├── terminal.js      terminal trong trình duyệt + Terminal 2
-        ├── nav.js           thanh bên, màu chủ đề, icon
-        ├── home.js          trang Tổng quan
-        ├── lab.js           trang bài lab + diff dự đoán/output
-        ├── theory.js        trang lý thuyết
-        ├── quiz.js          trắc nghiệm
-        └── main.js          khởi động + định tuyến (#home, #lab/<id>, #theory/<id>, #quiz)
+    ├── index.html           page shell
+    ├── css/style.css        styles (light/dark)
+    └── js/                  loaded in the order listed in index.html, sharing globals
+        ├── core.js          h(), api(), progress storage (localStorage), shared state
+        ├── render.js        code highlighting, markdown
+        ├── terminal.js      in-browser terminal + Terminal 2
+        ├── nav.js           sidebar, topic colors, icons
+        ├── home.js          Overview page
+        ├── lab.js           lab page + prediction/output diff
+        ├── theory.js        theory page
+        ├── quiz.js          quizzes
+        └── main.js          startup + routing (#home, #lab/<id>, #theory/<id>, #quiz)
 ```
 
-Nội dung không nằm trong `web/`: bài lab ở `01-c` … `08-shell`, đáp án ở `ANSWERS.md`, lý thuyết + trắc nghiệm ở `09-theory/`. Backend đọc lại các file này mỗi lần gọi API, nên sửa nội dung chỉ cần tải lại trang.
+Content lives outside `web/`: labs in `01-c` … `10-alp`, answers in `ANSWERS.md`, theory + quizzes in `09-theory/`. The backend re-reads these files on every API call, so editing content only needs a page reload.
 
 ## API
 
-| Method | Đường dẫn | Mô tả |
+| Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/labs` | danh sách bài, mã nguồn, câu hỏi, đáp án |
-| GET | `/api/theory` | các chủ đề lý thuyết và câu trắc nghiệm |
-| POST | `/api/runs` | `{id}`: build & chạy bài; `{terminal: true}`: mở bash |
-| GET | `/api/runs/<run>?from=N` | output từ chunk N, trạng thái, PID |
-| POST | `/api/runs/<run>/input` | `{text}` gửi vào stdin |
-| POST | `/api/runs/<run>/key` | `{key: "c" \| "z" \| "\\" \| "d"}` như Ctrl+C/Z/\/D |
+| GET | `/api/labs` | labs, source code, questions, answers |
+| GET | `/api/theory` | theory topics and quiz questions |
+| POST | `/api/runs` | `{id}`: build & run a lab; `{terminal: true}`: open bash |
+| GET | `/api/runs/<run>?from=N` | output from chunk N, state, PID |
+| POST | `/api/runs/<run>/input` | `{text}` sent to stdin |
+| POST | `/api/runs/<run>/key` | `{key: "c" \| "z" \| "\\" \| "d"}` like Ctrl+C/Z/\/D |
 | POST | `/api/runs/<run>/job` | `{cmd: "fg" \| "bg"}` |
-| POST | `/api/runs/<run>/signal` | `{sig: "TERM" \| "USR1" \| …}` gửi tới PID của bài |
-| POST | `/api/runs/<run>/ps` | in `ps` của các tiến trình trong lần chạy |
-| POST | `/api/runs/<run>/stop` | kill -9 toàn bộ |
+| POST | `/api/runs/<run>/signal` | `{sig: "TERM" \| "USR1" \| …}` sent to the lab's PID |
+| POST | `/api/runs/<run>/ps` | prints `ps` for the processes of this run |
+| POST | `/api/runs/<run>/stop` | kill -9 everything |
 
-Server chỉ lắng nghe `127.0.0.1` và từ chối request có Host/Origin lạ (vì có endpoint mở bash). POST phải là `application/json`.
+The server listens on `127.0.0.1` only and rejects requests with an unexpected Host/Origin (because one endpoint opens bash). POST bodies must be `application/json`.

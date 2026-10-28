@@ -1,9 +1,9 @@
 /*
- * Bài: Phạm vi biến (scope), che tên (shadowing) và static trong vòng lặp
- * Chủ đề: C
- * Dự đoán trước khi chạy: Mỗi dòng x= in số mấy? Ba lần gọi f() in gì? Vòng for cuối in s, t thế nào?
- * Ý chính: Biến trong khối trong che biến cùng tên ở ngoài. static local chỉ khởi tạo MỘT lần và sống suốt chương trình; biến auto khởi tạo lại mỗi lần vào khối. Biến static/global không khởi tạo = 0 (nằm ở .bss).
- * Thử thêm: Biên dịch với -Wshadow để thấy cảnh báo. Bỏ "= 0" ở int m → giá trị rác (UB), thử với valgrind.
+ * Lab: Variable scope, shadowing and static inside a loop
+ * Topic: C
+ * Predict before running: Which number does each x= line print? What do the three calls to f() print? How do s and t print in the last for loop?
+ * Key idea: A variable in an inner block shadows an outer variable with the same name. A static local is initialized ONCE and lives for the whole program; an automatic variable is re-initialized every time the block is entered. Uninitialized static/global variables are 0 (they live in .bss).
+ * Try next: Compile with -Wshadow to see the warnings. Remove the "= 0" from int m → garbage value (UB); try it under valgrind.
  */
 #include <stdio.h>
 
@@ -24,9 +24,9 @@ int main(void)
     int x = 2;
     {
         int x = 3;
-        printf("x = %d (khoi trong)\n", x);
+        printf("x = %d (inner block)\n", x);
         {
-            extern int x; /* lấy lại biến toàn cục */
+            extern int x; /* back to the global variable */
             printf("x = %d (extern)\n", x);
         }
     }

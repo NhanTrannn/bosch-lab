@@ -1,9 +1,9 @@
 /*
- * Bài: Ghi vào pipe không còn đầu đọc: SIGPIPE và EPIPE
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Khi bỏ qua SIGPIPE, write trả về gì? Khi để mặc định, tiến trình con kết thúc thế nào? Dung lượng pipe mặc định trên Linux?
- * Ý chính: Ghi vào pipe/socket mà mọi đầu đọc đã đóng → kernel gửi SIGPIPE (mặc định giết tiến trình). Nếu bỏ qua SIGPIPE thì write trả -1, errno = EPIPE. Ngược lại, đọc pipe khi mọi đầu ghi đã đóng → read trả 0 (EOF); quên đóng một đầu ghi → read chặn mãi.
- * Thử thêm: Chạy yes | head -1 rồi echo ${PIPESTATUS[@]} — yes chết vì SIGPIPE (141 = 128 + 13).
+ * Lab: Writing to a pipe with no reader: SIGPIPE and EPIPE
+ * Topic: IPC
+ * Predict before running: With SIGPIPE ignored, what does write return? With the default action, how does the child end? What is the default pipe capacity on Linux?
+ * Key idea: Writing to a pipe/socket whose read ends are all closed → the kernel sends SIGPIPE (kills the process by default). If SIGPIPE is ignored, write returns -1 with errno = EPIPE. Conversely, reading a pipe whose write ends are all closed → read returns 0 (EOF); forgetting to close a write end → read blocks forever.
+ * Try next: Run yes | head -1, then echo ${PIPESTATUS[@]} — yes dies of SIGPIPE (141 = 128 + 13).
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -18,24 +18,24 @@ int main(void)
 {
     int fd[2];
     pipe(fd);
-    printf("dung luong pipe = %d byte\n", fcntl(fd[1], F_GETPIPE_SZ));
-    close(fd[0]); /* không còn ai đọc */
+    printf("pipe capacity = %d bytes\n", fcntl(fd[1], F_GETPIPE_SZ));
+    close(fd[0]); /* nobody reads any more */
 
     signal(SIGPIPE, SIG_IGN);
     ssize_t n = write(fd[1], "x", 1);
-    printf("bo qua SIGPIPE: write = %zd, errno = %s\n", n, strerror(errno));
+    printf("SIGPIPE ignored: write = %zd, errno = %s\n", n, strerror(errno));
 
     pid_t pid = fork();
     if (pid == 0) {
         signal(SIGPIPE, SIG_DFL);
         write(fd[1], "x", 1);
-        printf("con: khong in\n");
+        printf("child: not printed\n");
         _exit(0);
     }
     int st;
     waitpid(pid, &st, 0);
     if (WIFSIGNALED(st))
-        printf("con bi kill boi signal %d (%s)\n", WTERMSIG(st), strsignal(WTERMSIG(st)));
+        printf("child killed by signal %d (%s)\n", WTERMSIG(st), strsignal(WTERMSIG(st)));
 
     int p2[2];
     pipe(p2);
@@ -44,6 +44,6 @@ int main(void)
     char buf[8];
     ssize_t a = read(p2[0], buf, sizeof(buf));
     ssize_t b = read(p2[0], buf, sizeof(buf));
-    printf("read lan 1 = %zd, read lan 2 = %zd (EOF)\n", a, b);
+    printf("1st read = %zd, 2nd read = %zd (EOF)\n", a, b);
     return 0;
 }

@@ -1,4 +1,4 @@
-/* Giao diện bosch-lab: biến màu (sáng/tối), khung trang, từng màn hình. */
+/* bosch-lab UI: color variables (light/dark), page frame, each screen. */
 :root {
   --bg: #f3f4f9; --panel: #ffffff; --panel-2: #f8f9fc; --line: #e3e6ef; --text: #161b2e; --muted: #687089;
   --accent: #4f46e5; --accent-2: #7c3aed; --accent-ink: #fff; --accent-soft: #eef0ff;
@@ -165,7 +165,7 @@ kbd { font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .dock-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 4; background: #151a30; color: #e2e5f5; border-color: #2f3860; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); padding: 9px 16px; border-radius: 12px; font-weight: 600; }
 .empty { color: var(--muted); padding: 40px; text-align: center; }
 
-/* ---------- tổng quan */
+/* ---------- overview */
 .hero { position: relative; border-radius: 20px; padding: 26px 28px; color: #fff; overflow: hidden; background: radial-gradient(120% 140% at 0% 0%, #6366f1 0%, #7c3aed 45%, #be185d 100%); box-shadow: 0 14px 40px rgba(124, 58, 237, .3); }
 .hero::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 14px); pointer-events: none; }
 .hero .top { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; position: relative; z-index: 1; }
@@ -193,7 +193,7 @@ kbd { font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .tile .acts { display: flex; gap: 6px; margin-top: auto; padding-top: 4px; flex-wrap: wrap; }
 .tile .acts button { white-space: nowrap; }
 
-/* ---------- lý thuyết */
+/* ---------- theory */
 .theory-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 24px; align-items: start; }
 @media (max-width: 1100px) { .theory-layout { grid-template-columns: 1fr; } .toc { display: none; } }
 .topic-hero { border-radius: 18px; padding: 22px 24px; margin-bottom: 18px; background: linear-gradient(135deg, hsl(var(--h) 80% 96%), hsl(calc(var(--h) + 40) 80% 95%)); border: 1px solid hsl(var(--h) 60% 88%); }
@@ -207,8 +207,18 @@ kbd { font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; 
 .toc a { display: block; padding: 5px 10px; margin: 2px 0; border-left: 2px solid var(--line); color: var(--muted); font-size: 13px; }
 .toc a:hover { color: hsl(var(--h) 60% 50%); border-left-color: hsl(var(--h) 70% 58%); text-decoration: none; }
 
-/* ---------- trắc nghiệm */
+/* ---------- quiz */
 .setup h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; }
+.topic-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.topic-cards > .card { margin: 0; }
+.topic-card { padding: 14px 16px; cursor: pointer; border-top: 4px solid hsl(var(--h) 70% 58%); display: flex; flex-direction: column; gap: 6px; transition: transform .12s, box-shadow .12s; }
+.topic-card:hover, .topic-card:focus-visible { transform: translateY(-2px); box-shadow: var(--shadow); outline: none; border-color: hsl(var(--h) 70% 58%); }
+.topic-card .eyebrow { color: hsl(var(--h) 60% 45%); }
+.topic-card .t { font-weight: 650; font-size: 15px; line-height: 1.35; flex: 1; }
+.topic-card .bar { height: 5px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.topic-card .bar > div { height: 100%; background: hsl(var(--h) 70% 55%); }
+.topic-card .foot { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.topic-card .wrong-chip { margin-left: auto; color: var(--bad); border-color: currentColor; }
 .topics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
 .topic-pick { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid hsl(var(--h) 70% 58%); border-radius: 10px; cursor: pointer; background: var(--panel); transition: box-shadow .15s, border-color .15s; }
 .topic-pick:hover { box-shadow: var(--shadow); }

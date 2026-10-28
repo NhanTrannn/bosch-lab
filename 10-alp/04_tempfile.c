@@ -1,9 +1,9 @@
 /*
- * Bài: File tạm an toàn: mkstemp + unlink ngay, tmpfile (ALP 2.1.7, listing 2.5)
- * Chủ đề: ALP chương 2
- * Dự đoán trước khi chạy: mkstemp tạo file với quyền gì? Sau unlink, access() thấy file không, còn read qua fd thì sao? st_nlink trước và sau unlink?
- * Ý chính: mkstemp thay "XXXXXX" bằng ký tự ngẫu nhiên, tạo VÀ mở file (O_EXCL) với quyền 0600 → không bị đoán tên hay chen vào giữa. unlink chỉ xoá tên; dữ liệu còn tới khi fd cuối cùng đóng (kể cả khi chương trình crash). tmpfile() làm việc này cho FILE*. Không dùng mktemp/tmpnam/tempnam (có race giữa lúc chọn tên và lúc mở).
- * Thử thêm: Bỏ unlink, chạy xong ls -l /tmp/alp_temp.*. Trong lúc fd còn mở, xem ls -l /proc/<pid>/fd (file hiện "(deleted)").
+ * Lab: Safe temporary files: mkstemp + immediate unlink, tmpfile (ALP 2.1.7, listing 2.5)
+ * Topic: ALP chapter 2
+ * Predict before running: What permissions does mkstemp give the file? After unlink, does access() still see the file, and can you still read through the fd? What is st_nlink before and after unlink?
+ * Key idea: mkstemp replaces "XXXXXX" with random characters and creates AND opens the file (O_EXCL) with mode 0600 → its name cannot be guessed or raced. unlink only removes the name; the data lives until the last fd is closed (even if the program crashes). tmpfile() does this for a FILE*. Do not use mktemp/tmpnam/tempnam (there is a race between choosing the name and opening it).
+ * Try next: Remove the unlink, then ls -l /tmp/alp_temp.* after the run. While the fd is open, look at ls -l /proc/<pid>/fd (the file shows "(deleted)").
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -19,20 +19,20 @@ int main(void)
     int fd = mkstemp(temp_filename);
     if (fd == -1) { perror("mkstemp"); return 1; }
 
-    printf("ten file: /tmp/alp_temp.<6 ky tu>, con XXXXXX ? %s, do dai = %zu\n",
-           strstr(temp_filename, "XXXXXX") ? "con" : "khong", strlen(temp_filename));
+    printf("file name: /tmp/alp_temp.<6 chars>, still XXXXXX ? %s, length = %zu\n",
+           strstr(temp_filename, "XXXXXX") ? "yes" : "no", strlen(temp_filename));
     struct stat st;
     fstat(fd, &st);
-    printf("quyen = %o, st_nlink = %lu\n", (unsigned)(st.st_mode & 0777), (unsigned long)st.st_nlink);
+    printf("mode = %o, st_nlink = %lu\n", (unsigned)(st.st_mode & 0777), (unsigned long)st.st_nlink);
 
     unlink(temp_filename);
     errno = 0;
     int r = access(temp_filename, F_OK);
-    printf("sau unlink: access() = %d (%s)", r, strerror(errno));
+    printf("after unlink: access() = %d (%s)", r, strerror(errno));
     fstat(fd, &st);
     printf(", st_nlink = %lu\n", (unsigned long)st.st_nlink);
 
-    const char *data = "du lieu tam";
+    const char *data = "temporary data";
     size_t length = strlen(data) + 1;
     write(fd, &length, sizeof(length));
     write(fd, data, length);
@@ -42,7 +42,7 @@ int main(void)
     read(fd, &len2, sizeof(len2));
     char *buffer = malloc(len2);
     read(fd, buffer, len2);
-    printf("doc lai qua fd: length = %zu, data = \"%s\"\n", len2, buffer);
+    printf("read back through the fd: length = %zu, data = \"%s\"\n", len2, buffer);
     free(buffer);
     close(fd);
 
@@ -52,7 +52,7 @@ int main(void)
     int x;
     char word[16];
     fscanf(f, "%d %15s", &x, word);
-    printf("tmpfile: doc lai %d %s, fileno(f) > 2 ? %d\n", x, word, fileno(f) > 2);
+    printf("tmpfile: read back %d %s, fileno(f) > 2 ? %d\n", x, word, fileno(f) > 2);
     fclose(f);
     return 0;
 }

@@ -1,10 +1,10 @@
 /*
- * Bài: Đa kế thừa, diamond và virtual inheritance
- * Chủ đề: C++
- * Dự đoán trước khi chạy: D d; in thứ tự constructor nào? A được tạo mấy lần? Với VD thì sao? Thứ tự E (khai báo C trước B)?
- * Ý chính: Lớp cơ sở được khởi tạo theo thứ tự KHAI BÁO trong danh sách kế thừa (không theo initializer list). Diamond thường → 2 bản A, truy cập x bị mơ hồ. Kế thừa virtual → chỉ 1 bản A, và lớp CUỐI CÙNG (most derived) gọi constructor của A.
- * Cảnh báo biên dịch cố ý: -Wreorder ở E (viết B(), C() nhưng C vẫn được khởi tạo trước vì khai báo trước).
- * Thử thêm: Bỏ comment dòng d.x → lỗi "request for member 'x' is ambiguous". Cho A constructor có tham số và xem VD phải gọi A(...) trực tiếp.
+ * Lab: Multiple inheritance, the diamond and virtual inheritance
+ * Topic: C++
+ * Predict before running: In what order does D d; print its constructors? How many times is A created? What about VD? And the order for E (which lists C before B)?
+ * Key idea: Base classes are initialized in the order they are DECLARED in the base list (not initializer-list order). A plain diamond → 2 copies of A and accessing x is ambiguous. Virtual inheritance → a single A, and the MOST DERIVED class calls A's constructor.
+ * Intentional compiler warning: -Wreorder in E (it writes B(), C() but C is still initialized first because it is declared first).
+ * Try next: Uncomment the d.x line → "request for member 'x' is ambiguous". Give A a constructor with a parameter and see that VD must call A(...) directly.
  */
 #include <iostream>
 using namespace std;

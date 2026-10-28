@@ -1,15 +1,15 @@
 /*
- * Bài: static local, static mức file và extern
- * Chủ đề: C
- * Dự đoán trước khi chạy: n và m in ra gì sau 3 lần gọi counter()? Nếu bỏ comment dòng extern int g_hidden và dùng nó thì lỗi ở bước compile hay link?
- * Ý chính: static local sống suốt chương trình, chỉ khởi tạo 1 lần. static ở mức file = internal linkage (file khác không thấy). extern chỉ khai báo, định nghĩa ở file khác.
- * Thử thêm: Bỏ chữ static trước g_hidden trong 04_helper.c rồi build lại phần extern.
+ * Lab: static locals, file-scope static and extern
+ * Topic: C
+ * Predict before running: What do n and m print after 3 calls to counter()? If you uncomment the extern int g_hidden line and use it, does it fail at compile time or link time?
+ * Key idea: A static local lives for the whole program and is initialized once. File-scope static = internal linkage (other files cannot see it). extern only declares; the definition is in another file.
+ * Try next: Remove the static in front of g_hidden in 04_helper.c and rebuild the extern part.
  */
 #include <stdio.h>
 
-extern int g_shared;             /* định nghĩa ở 04_helper.c */
+extern int g_shared;             /* defined in 04_helper.c */
 int helper_get_hidden(void);
-/* extern int g_hidden; */       /* bỏ comment và in g_hidden trong main */
+/* extern int g_hidden; */       /* uncomment and print g_hidden in main */
 
 static int file_counter = 0;
 

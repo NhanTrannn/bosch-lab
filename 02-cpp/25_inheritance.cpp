@@ -1,9 +1,9 @@
 /*
- * Bài: Kế thừa và đa hình: gọi constructor lớp cha, protected, hàm redefine (static binding) và virtual (dynamic binding)
- * Chủ đề: C++ OOP (Udemy section 15, 16)
- * Dự đoán trước khi chạy: Tạo Trust in ra các constructor theo thứ tự nào? Qua Account& gọi withdraw (không virtual) và print (virtual) chạy bản nào? Vòng lặp qua vector<Account*> in gì? Thứ tự destructor khi delete?
- * Ý chính: Constructor chạy từ lớp cha xuống lớp con, destructor ngược lại. Hàm KHÔNG virtual bị "redefine" ở lớp con được chọn theo kiểu của con trỏ/tham chiếu (lúc biên dịch). Hàm virtual chọn theo kiểu thật của object (lúc chạy). Base có hàm virtual thì destructor phải virtual. Lớp con gọi bản của lớp cha bằng Base::f().
- * Thử thêm: Bỏ virtual ở ~Account và xem destructor nào bị mất khi delete qua Account*. Thêm final vào Savings rồi thử kế thừa từ nó.
+ * Lab: Inheritance and polymorphism: calling the base constructor, protected, redefined (static binding) vs virtual (dynamic binding) functions
+ * Topic: C++ OOP (Udemy sections 15, 16)
+ * Predict before running: In what order are the constructors printed when creating a Trust? Through an Account&, which versions of withdraw (not virtual) and print (virtual) run? What does the loop over vector<Account*> print? In what order are destructors called on delete?
+ * Key idea: Constructors run from the base class down to the derived class, destructors the other way. A NON-virtual function "redefined" in a derived class is chosen by the type of the pointer/reference (at compile time). A virtual function is chosen by the object's real type (at run time). A base with virtual functions needs a virtual destructor. A derived class calls the base version with Base::f().
+ * Try next: Remove virtual from ~Account and see which destructor is lost when deleting through Account*. Add final to Savings and try to derive from it.
  */
 #include <iostream>
 #include <string>
@@ -54,7 +54,7 @@ public:
 
 class Shape {
 public:
-    virtual double area() const = 0;   // pure virtual → Shape là abstract
+    virtual double area() const = 0;   // pure virtual → Shape is abstract
     virtual ~Shape() = default;
 };
 class Square : public Shape {
@@ -67,7 +67,7 @@ public:
 
 int main()
 {
-    cout << "Tao Trust t:\n";
+    cout << "Create Trust t:\n";
     Trust t{"Tom", 1000};
 
     Account &ref = t;
@@ -78,17 +78,17 @@ int main()
     cout << "ref.print():\n";
     ref.print();
 
-    cout << "Tao vector<Account*>:\n";
+    cout << "Create vector<Account*>:\n";
     vector<Account *> accounts{new Account{"A", 10}, new Savings{"S", 20, 3}};
-    cout << "In qua Account*:\n";
+    cout << "Print through Account*:\n";
     for (const Account *acc : accounts) acc->print();
     cout << "delete:\n";
     for (Account *acc : accounts) delete acc;
 
-    // Shape s;   // lỗi: không tạo được object của lớp abstract
+    // Shape s;   // error: cannot create an object of an abstract class
     Square sq{3};
     const Shape &sh = sq;
     cout << "sh.area() = " << sh.area() << '\n';
-    cout << "het main:\n";
+    cout << "end of main:\n";
     return 0;
 }

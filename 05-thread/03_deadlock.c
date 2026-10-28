@@ -1,10 +1,10 @@
 /*
- * !!! BÀI TREO CỐ Ý: chương trình sẽ đứng yên, nhấn Ctrl+C để thoát.
- * Bài: Deadlock do khoá ngược thứ tự
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Chương trình in những dòng nào rồi sao nữa? Dòng "Khong deadlock" có xuất hiện không?
- * Ý chính: T1 giữ A chờ B, T2 giữ B chờ A → chờ vòng tròn mãi mãi. Cách sửa phổ biến nhất: mọi thread khoá các mutex theo CÙNG một thứ tự.
- * Thử thêm: Sửa T2 khoá A rồi mới B. Hoặc dùng pthread_mutex_trylock và nhả A nếu không lấy được B.
+ * !!! HANGS ON PURPOSE: the program will freeze; press Ctrl+C to quit.
+ * Lab: Deadlock from locking in opposite orders
+ * Topic: Thread
+ * Predict before running: Which lines does the program print, and then what? Does the "No deadlock" line appear?
+ * Key idea: T1 holds A and waits for B, T2 holds B and waits for A → a circular wait forever. The most common fix: every thread locks the mutexes in the SAME order.
+ * Try next: Make T2 lock A before B. Or use pthread_mutex_trylock and release A if B cannot be taken.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -18,10 +18,10 @@ static void *t1(void *arg)
 {
     (void)arg;
     pthread_mutex_lock(&A);
-    printf("T1: giu A, cho B...\n");
+    printf("T1: holding A, waiting for B...\n");
     usleep(100000);
     pthread_mutex_lock(&B);
-    printf("T1: co ca A va B\n");
+    printf("T1: has both A and B\n");
     pthread_mutex_unlock(&B);
     pthread_mutex_unlock(&A);
     return NULL;
@@ -31,10 +31,10 @@ static void *t2(void *arg)
 {
     (void)arg;
     pthread_mutex_lock(&B);
-    printf("T2: giu B, cho A...\n");
+    printf("T2: holding B, waiting for A...\n");
     usleep(100000);
     pthread_mutex_lock(&A);
-    printf("T2: co ca A va B\n");
+    printf("T2: has both A and B\n");
     pthread_mutex_unlock(&A);
     pthread_mutex_unlock(&B);
     return NULL;
@@ -47,6 +47,6 @@ int main(void)
     pthread_create(&y, NULL, t2, NULL);
     pthread_join(x, NULL);
     pthread_join(y, NULL);
-    printf("Khong deadlock!\n");
+    printf("No deadlock!\n");
     return 0;
 }

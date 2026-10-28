@@ -1,10 +1,10 @@
 /*
- * Bài: errno, strerror, perror và assert (kể cả NDEBUG) (ALP 2.2)
- * Chủ đề: ALP chương 2
- * Dự đoán trước khi chạy: errno của từng lời gọi lỗi là gì? Sau một lời gọi THÀNH CÔNG, errno có về 0 không? Với NDEBUG, assert(do_something() == 0) gọi hàm mấy lần? Dòng cuối kết thúc chương trình thế nào?
- * Ý chính: System call lỗi trả về -1 (hoặc NULL) và đặt errno; thành công thì KHÔNG xoá errno → chỉ đọc errno ngay sau khi lời gọi báo lỗi, và lưu lại trước khi gọi hàm khác. strerror(errno) đổi mã thành chuỗi, perror in ra stderr. assert(expr) sai → in file:dòng rồi abort(); -DNDEBUG xoá hẳn assert nên biểu thức trong assert không được có tác dụng phụ.
- * !!! Bài cố ý kết thúc bằng SIGABRT ở dòng assert cuối: shell báo "Aborted (core dumped)", exit code 134.
- * Thử thêm: Đọc /usr/include/asm-generic/errno-base.h. Biên dịch lại với -DNDEBUG và xem dòng assert cuối có còn abort không.
+ * Lab: errno, strerror, perror and assert (including NDEBUG) (ALP 2.2)
+ * Topic: ALP chapter 2
+ * Predict before running: What is errno after each failing call? After a SUCCESSFUL call, does errno go back to 0? With NDEBUG, how many times does assert(do_something() == 0) call the function? How does the last line end the program?
+ * Key idea: A failing system call returns -1 (or NULL) and sets errno; success does NOT clear errno → only read errno right after a call reports failure, and save it before calling anything else. strerror(errno) turns the code into a string, perror prints to stderr. A false assert(expr) prints file:line and calls abort(); -DNDEBUG removes asserts entirely, so the expression inside assert must have no side effects.
+ * !!! The lab deliberately ends with SIGABRT at the last assert: the shell reports "Aborted (core dumped)", exit code 134.
+ * Try next: Read /usr/include/asm-generic/errno-base.h. Rebuild with -DNDEBUG and check whether the last assert still aborts.
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -19,7 +19,7 @@ static int do_something(void) { ++calls; return 0; }
 
 static void report(const char *what, int ret)
 {
-    int saved = errno;   /* lưu ngay, printf có thể đổi errno */
+    int saved = errno;   /* save it right away; printf may change errno */
     printf("%-28s -> %2d, errno = %2d %-7s (%s)\n", what, ret, saved,
            saved == ENOENT ? "ENOENT" : saved == EISDIR ? "EISDIR" : saved == EBADF ? "EBADF" :
            saved == EACCES ? "EACCES" : saved == EEXIST ? "EEXIST" : saved == EINVAL ? "EINVAL" : "",
@@ -34,7 +34,7 @@ static void with_ndebug(void)
 }
 
 #undef NDEBUG
-#include <assert.h>   /* assert.h được thiết kế để include lại, mỗi lần đọc lại NDEBUG */
+#include <assert.h>   /* assert.h is designed to be re-included; it re-reads NDEBUG each time */
 static void without_ndebug(void)
 {
     for (int i = 0; i < 3; ++i) assert(do_something() == 0);
@@ -42,8 +42,8 @@ static void without_ndebug(void)
 
 int main(void)
 {
-    report("open(\"/khong/ton/tai\")", open("/khong/ton/tai", O_RDONLY));
-    report("getpid() (thanh cong)", getpid() > 0);
+    report("open(\"/does/not/exist\")", open("/does/not/exist", O_RDONLY));
+    report("getpid() (succeeds)", getpid() > 0);
     report("open(\"/tmp\", O_WRONLY)", open("/tmp", O_WRONLY));
     report("close(12345)", close(12345));
     report("mkdir(\"/tmp\")", mkdir("/tmp", 0755));
@@ -52,16 +52,16 @@ int main(void)
     fflush(stdout);
 
     errno = ENOENT;
-    perror("perror in ra stderr");
+    perror("perror prints to stderr");
 
     with_ndebug();
     printf("NDEBUG: calls = %d\n", calls);
     without_ndebug();
-    printf("khong NDEBUG: calls = %d\n", calls);
+    printf("without NDEBUG: calls = %d\n", calls);
     fflush(stdout);
 
     const char *pointer = NULL;
     assert(pointer != NULL);
-    printf("khong bao gio in\n");
+    printf("never printed\n");
     return 0;
 }

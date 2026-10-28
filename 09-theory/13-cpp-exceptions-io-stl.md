@@ -1,73 +1,73 @@
-# Smart pointer, exception, I/O stream, STL, lambda, enum
+# Smart pointers, exceptions, I/O streams, STL, lambdas, enums
 
-## Lý thuyết
+## Theory
 
-Theo Udemy *Beginning C++ Programming*, section 17–21 và 23. Lab: `02-cpp/26` … `02-cpp/29`, xem thêm `02-cpp/06`, `07`, `08`, `11`. Chủ đề "STL và C++ hiện đại" ở trên có bảng độ phức tạp container và move semantics.
+Follows the Udemy course *Beginning C++ Programming*, sections 17–21 and 23. Labs: `02-cpp/26` … `02-cpp/29`; see also `02-cpp/06`, `07`, `08`, `11`. The "STL and modern C++" topic above has the container complexity table and move semantics.
 
-### Smart pointer (section 17)
-- Vấn đề của con trỏ thô: quên delete (leak), delete hai lần, dangling, không rõ ai sở hữu, exception làm bỏ qua delete.
-- **RAII** (Resource Acquisition Is Initialization): tài nguyên gắn với vòng đời object; constructor lấy, destructor trả. Smart pointer là RAII cho bộ nhớ heap (`#include <memory>`).
-- `unique_ptr<T>`: sở hữu duy nhất. **Không copy được**, chỉ move (`std::move`). Kích thước bằng con trỏ thô. Tạo bằng `make_unique<T>(args)` (C++14). `get()` lấy con trỏ thô, `release()` bỏ quyền sở hữu (trả về con trỏ thô, không delete), `reset()` delete object cũ. `unique_ptr<T[]>` cho mảng.
-- `shared_ptr<T>`: sở hữu chung qua **reference count** trong control block; `use_count()`. Object bị delete khi shared_ptr cuối cùng bị huỷ. Copy thì count tăng. `make_shared` cấp phát object + control block trong một lần. Kích thước = 2 con trỏ.
-- `weak_ptr<T>`: không sở hữu, không tăng count. Dùng `lock()` để lấy shared_ptr (rỗng nếu object đã chết), `expired()`. Dùng để **phá vòng tham chiếu** (A ↔ B cùng giữ shared_ptr → không bao giờ giải phóng).
-- **Custom deleter**: `unique_ptr<FILE, decltype(&fclose)> f{fopen(...), &fclose};` hoặc dùng lambda.
-- Quy tắc: ưu tiên `unique_ptr`; chỉ dùng `shared_ptr` khi thực sự sở hữu chung. Không tạo hai smart pointer từ cùng một con trỏ thô. Truyền vào hàm chỉ để dùng thì truyền `T&` hoặc `T*`, không truyền smart pointer.
+### Smart pointers (section 17)
+- Problems with raw pointers: forgotten deletes (leaks), double deletes, dangling pointers, unclear ownership, exceptions skipping the delete.
+- **RAII** (Resource Acquisition Is Initialization): a resource is tied to an object's lifetime; the constructor acquires it and the destructor releases it. Smart pointers are RAII for heap memory (`#include <memory>`).
+- `unique_ptr<T>`: sole ownership. **Cannot be copied**, only moved (`std::move`). Same size as a raw pointer. Create with `make_unique<T>(args)` (C++14). `get()` returns the raw pointer, `release()` gives up ownership (returns the raw pointer without deleting), `reset()` deletes the old object. `unique_ptr<T[]>` for arrays.
+- `shared_ptr<T>`: shared ownership through a **reference count** in a control block; `use_count()`. The object is deleted when the last shared_ptr is destroyed. Copying increments the count. `make_shared` allocates the object + control block at once. Size = 2 pointers.
+- `weak_ptr<T>`: non-owning, does not increase the count. Use `lock()` to get a shared_ptr (empty if the object is gone), `expired()`. Used to **break reference cycles** (A ↔ B holding shared_ptrs to each other → never freed).
+- **Custom deleter**: `unique_ptr<FILE, decltype(&fclose)> f{fopen(...), &fclose};` or a lambda.
+- Rules: prefer `unique_ptr`; use `shared_ptr` only for real shared ownership. Never create two smart pointers from the same raw pointer. A function that only uses an object should take `T&` or `T*`, not a smart pointer.
 
-### Exception (section 18)
-- `throw` ném một object (bất kỳ kiểu nào: int, string, class); `try { } catch (const T &e) { }` bắt.
-- Khi throw, **stack unwinding**: các hàm bị thoát dần, destructor của mọi object local được gọi, tới khi gặp catch phù hợp. Không có catch nào khớp → `std::terminate()` → abort.
-- catch được thử **theo thứ tự viết**, chọn cái đầu tiên khớp → đặt lớp con trước lớp cha. Không có chuyển đổi kiểu số (throw 3.14 không vào `catch (int)`), chỉ có chuyển đổi Derived → Base. `catch (...)` bắt mọi thứ, đặt cuối cùng.
-- **Ném theo giá trị, bắt theo const reference** (tránh copy, tránh slicing, giữ đa hình của `what()`).
-- `throw;` (không biểu thức) ném lại exception đang xử lý, giữ nguyên kiểu thật. `throw e;` ném bản copy (có thể bị slicing).
-- Hệ thống lớp chuẩn (`<stdexcept>`): `std::exception` (`virtual const char *what() const noexcept`) → `logic_error` (`invalid_argument`, `out_of_range`, `length_error`, `domain_error`), `runtime_error` (`overflow_error`, `underflow_error`, `range_error`), `bad_alloc` (new thất bại), `bad_cast` (dynamic_cast reference thất bại).
-- Lớp exception tự định nghĩa: kế thừa `std::exception` (override `what()`) hoặc `std::runtime_error` (truyền thông điệp vào constructor).
-- `noexcept`: hàm hứa không ném. Nếu vẫn ném → `std::terminate`. Destructor mặc định là noexcept. **Không ném exception từ destructor.** Move constructor nên là noexcept để vector dùng move khi cấp phát lại.
-- Exception trong constructor: object coi như chưa được tạo, destructor của nó **không** chạy (nhưng destructor của các member đã dựng xong vẫn chạy) → dùng RAII cho member.
-- Không phải exception: chia số nguyên cho 0 (UB, thường SIGFPE), truy cập ngoài mảng bằng `[]`, dereference nullptr (SIGSEGV).
-- Dùng exception cho trường hợp bất thường, không dùng làm luồng điều khiển thông thường.
+### Exceptions (section 18)
+- `throw` throws an object (of any type: int, string, a class); `try { } catch (const T &e) { }` catches it.
+- On a throw, **stack unwinding** happens: functions are exited one by one and every local object's destructor runs, until a matching catch is found. No matching catch → `std::terminate()` → abort.
+- catch blocks are tried **in the order written** and the first match wins → put derived classes before base classes. There are no numeric conversions (throw 3.14 does not match `catch (int)`), only Derived → Base. `catch (...)` catches everything and goes last.
+- **Throw by value, catch by const reference** (no copy, no slicing, `what()` stays polymorphic).
+- `throw;` (no expression) rethrows the current exception, keeping its real type. `throw e;` throws a copy (may slice).
+- Standard hierarchy (`<stdexcept>`): `std::exception` (`virtual const char *what() const noexcept`) → `logic_error` (`invalid_argument`, `out_of_range`, `length_error`, `domain_error`), `runtime_error` (`overflow_error`, `underflow_error`, `range_error`), `bad_alloc` (new failed), `bad_cast` (dynamic_cast to a reference failed).
+- Custom exception classes: derive from `std::exception` (override `what()`) or from `std::runtime_error` (pass the message to the constructor).
+- `noexcept`: the function promises not to throw. If it throws anyway → `std::terminate`. Destructors are noexcept by default. **Never throw from a destructor.** Move constructors should be noexcept so vector uses them when reallocating.
+- An exception in a constructor: the object is considered never created and its destructor does **not** run (but the destructors of fully built members do) → use RAII members.
+- Not exceptions: integer division by zero (UB, usually SIGFPE), out-of-bounds access with `[]`, dereferencing nullptr (SIGSEGV).
+- Use exceptions for exceptional cases, not for normal control flow.
 
-### I/O và stream (section 19)
-- Phân cấp: `ios_base` → `ios` → `istream` / `ostream` → `iostream`; file: `ifstream`, `ofstream`, `fstream` (`<fstream>`); chuỗi: `istringstream`, `ostringstream`, `stringstream` (`<sstream>`).
-- Đối tượng chuẩn: `cin` (istream), `cout` (ostream, có buffer), `cerr` (không buffer), `clog` (có buffer).
-- Manipulator (`<iomanip>`): `setw(n)` (**chỉ áp dụng cho lần in kế tiếp**), `setfill(c)`, `left`/`right`/`internal`, `fixed`/`scientific`, `setprecision(n)`, `showpoint`, `showpos`, `boolalpha`, `hex`/`dec`/`oct`, `showbase`, `uppercase`. Trừ setw, các manipulator đều **dính** tới khi bị đổi.
-- `setprecision(n)` không có fixed: n **chữ số có nghĩa**; có fixed: n chữ số sau dấu phẩy. Mặc định 6 chữ số có nghĩa.
-- Mở file: `std::ifstream in{"data.txt"};` hoặc `in.open(...)`. Luôn kiểm tra `if (!in)` hoặc `in.is_open()`. Chế độ: `ios::in`, `ios::out` (ghi đè), `ios::app` (ghi thêm vào cuối), `ios::trunc`, `ios::binary`, `ios::ate`. File tự đóng khi object bị huỷ (RAII); `close()` để đóng sớm.
-- Đọc: `in >> x` (theo từ), `getline(in, line)` (theo dòng), `in.get(c)` (từng ký tự, kể cả khoảng trắng). Mẫu đúng: `while (getline(in, line)) {...}` hoặc `while (in >> x)`. **Không** dùng `while (!in.eof())` vì vòng cuối sẽ chạy thừa với dữ liệu cũ.
-- Ghi: `out << x`, `out.put(c)`. Binary: `write(reinterpret_cast<const char*>(&x), sizeof x)` / `read`.
-- Trạng thái stream: `good()`, `eof()`, `fail()` (đọc sai định dạng), `bad()` (lỗi nghiêm trọng). Khi fail, mọi thao tác đọc sau đều bị bỏ qua cho tới khi `clear()`; thường kèm `ignore(numeric_limits<streamsize>::max(), '\n')` để bỏ phần input hỏng.
-- `stringstream` dùng để tách chuỗi, chuyển chuỗi ↔ số, kiểm tra input hợp lệ (`if (ss >> n && ss.eof())`).
+### I/O and streams (section 19)
+- Hierarchy: `ios_base` → `ios` → `istream` / `ostream` → `iostream`; files: `ifstream`, `ofstream`, `fstream` (`<fstream>`); strings: `istringstream`, `ostringstream`, `stringstream` (`<sstream>`).
+- Standard objects: `cin` (istream), `cout` (ostream, buffered), `cerr` (unbuffered), `clog` (buffered).
+- Manipulators (`<iomanip>`): `setw(n)` (**applies only to the next output**), `setfill(c)`, `left`/`right`/`internal`, `fixed`/`scientific`, `setprecision(n)`, `showpoint`, `showpos`, `boolalpha`, `hex`/`dec`/`oct`, `showbase`, `uppercase`. Except setw, manipulators are **sticky** until changed.
+- `setprecision(n)` without fixed: n **significant digits**; with fixed: n digits after the decimal point. The default is 6 significant digits.
+- Opening a file: `std::ifstream in{"data.txt"};` or `in.open(...)`. Always check `if (!in)` or `in.is_open()`. Modes: `ios::in`, `ios::out` (overwrite), `ios::app` (append), `ios::trunc`, `ios::binary`, `ios::ate`. The file closes automatically when the object is destroyed (RAII); `close()` closes early.
+- Reading: `in >> x` (by word), `getline(in, line)` (by line), `in.get(c)` (by character, including whitespace). Correct loops: `while (getline(in, line)) {...}` or `while (in >> x)`. **Do not** use `while (!in.eof())`: the last iteration runs once too many with stale data.
+- Writing: `out << x`, `out.put(c)`. Binary: `write(reinterpret_cast<const char*>(&x), sizeof x)` / `read`.
+- Stream state: `good()`, `eof()`, `fail()` (bad format), `bad()` (serious error). Once failed, every later read is skipped until `clear()`; usually followed by `ignore(numeric_limits<streamsize>::max(), '\n')` to drop the bad input.
+- `stringstream` is used to split strings, convert string ↔ number and validate input (`if (ss >> n && ss.eof())`).
 
 ### STL (section 20)
-- Ba thành phần: **container** (chứa dữ liệu), **iterator** (duyệt container, như con trỏ tổng quát), **algorithm** (`<algorithm>`, `<numeric>`, làm việc trên khoảng iterator `[first, last)`). Thêm functor/lambda làm tiêu chí.
-- Template: `template <typename T> T max(T a, T b)`, class template `template <typename T> class Item`. Code được sinh khi dùng → định nghĩa phải đặt trong header. Non-type parameter: `template <int N>`.
-- `begin()` trỏ phần tử đầu, `end()` trỏ **sau** phần tử cuối (không dereference được). `cbegin`/`cend` (const), `rbegin`/`rend` (ngược).
-- Loại iterator: input, output, forward (`forward_list`, `unordered_*`), bidirectional (`list`, `set`, `map`), random access (`vector`, `deque`, `array`, `string`). `std::sort` cần random access → `list` dùng `l.sort()`.
-- Sequence container: `array` (cố định, không cấp phát động), `vector` (thêm/xoá ở cuối nhanh), `deque` (thêm/xoá hai đầu nhanh, không liền nhau hoàn toàn), `list` (liên kết đôi, chèn giữa O(1) khi có iterator, không có `[]`), `forward_list` (liên kết đơn, không có `size()`).
-- Associative: `set` (key duy nhất, có thứ tự), `multiset` (cho trùng), `map` (key → value, có thứ tự), `multimap`. Unordered (hash, `unordered_set`, `unordered_map`): trung bình O(1), không có thứ tự.
-- `map[key]` tự chèn phần tử mặc định nếu chưa có; `at(key)` ném `out_of_range`; `find`/`count` để kiểm tra. `insert` không ghi đè key đã có, trả về `pair<iterator, bool>`.
-- Adapter (không có iterator): `stack` (LIFO: `push`/`pop`/`top`), `queue` (FIFO: `push`/`pop`/`front`/`back`), `priority_queue` (heap, mặc định **max-heap**: `top` là phần tử lớn nhất; min-heap thì dùng `priority_queue<int, vector<int>, greater<int>>`). `pop()` không trả về giá trị.
-- Thuật toán hay dùng: `find`, `find_if`, `count`, `count_if`, `sort`, `stable_sort`, `binary_search` (cần đã sắp xếp), `min_element`, `max_element`, `for_each`, `transform`, `copy`, `replace`, `reverse`, `unique` (chỉ bỏ trùng **liền kề**), `remove`/`remove_if` (không đổi size → cần `erase`), `accumulate` (kiểu kết quả lấy theo giá trị khởi đầu: 0 → int).
-- Iterator invalidation: vector cấp phát lại làm mọi iterator vô hiệu; xoá trong vòng lặp dùng `it = c.erase(it)`.
+- Three parts: **containers** (hold data), **iterators** (walk containers, like generalized pointers), **algorithms** (`<algorithm>`, `<numeric>`, work on iterator ranges `[first, last)`). Plus functors/lambdas as criteria.
+- Templates: `template <typename T> T max(T a, T b)`, class templates `template <typename T> class Item`. Code is generated on use → definitions must live in headers. Non-type parameters: `template <int N>`.
+- `begin()` points to the first element, `end()` points **past** the last one (must not be dereferenced). `cbegin`/`cend` (const), `rbegin`/`rend` (reverse).
+- Iterator categories: input, output, forward (`forward_list`, `unordered_*`), bidirectional (`list`, `set`, `map`), random access (`vector`, `deque`, `array`, `string`). `std::sort` needs random access → use `l.sort()` for `list`.
+- Sequence containers: `array` (fixed, no dynamic allocation), `vector` (fast add/remove at the end), `deque` (fast at both ends, not fully contiguous), `list` (doubly linked, O(1) insert in the middle given an iterator, no `[]`), `forward_list` (singly linked, no `size()`).
+- Associative: `set` (unique keys, ordered), `multiset` (duplicates allowed), `map` (key → value, ordered), `multimap`. Unordered (hashing: `unordered_set`, `unordered_map`): O(1) on average, no order.
+- `map[key]` inserts a default element when missing; `at(key)` throws `out_of_range`; use `find`/`count` to check. `insert` does not overwrite an existing key and returns `pair<iterator, bool>`.
+- Adapters (no iterators): `stack` (LIFO: `push`/`pop`/`top`), `queue` (FIFO: `push`/`pop`/`front`/`back`), `priority_queue` (a heap, **max-heap** by default: `top` is the largest; for a min-heap use `priority_queue<int, vector<int>, greater<int>>`). `pop()` returns nothing.
+- Common algorithms: `find`, `find_if`, `count`, `count_if`, `sort`, `stable_sort`, `binary_search` (needs sorted input), `min_element`, `max_element`, `for_each`, `transform`, `copy`, `replace`, `reverse`, `unique` (only removes **adjacent** duplicates), `remove`/`remove_if` (does not change the size → needs `erase`), `accumulate` (the result type comes from the initial value: 0 → int).
+- Iterator invalidation: a vector reallocation invalidates every iterator; erase inside a loop with `it = c.erase(it)`.
 
-### Lambda (section 21)
-- `[capture](params) mutable noexcept -> ret { body }`. Kiểu trả về thường tự suy ra.
-- Trước lambda: function object (functor), tức class có `operator()`. Lambda thực chất được compiler biến thành một functor ẩn danh; mỗi lambda có kiểu riêng → lưu bằng `auto` hoặc `std::function<R(Args...)>`.
-- **Stateless** (`[]`): không capture, chuyển được thành con trỏ hàm. **Stateful**: có capture.
-- `[x]` copy lúc **tạo** lambda (chỉ đọc, trừ khi có `mutable`); `[&x]` tham chiếu, đọc giá trị lúc **gọi**; `[=]` copy mọi biến được dùng; `[&]` tham chiếu mọi biến; trộn `[=, &total]`, `[&, x]`; `[this]` (capture con trỏ this), `[*this]` (C++17); init capture `[y = x + 1]`, `[p = std::move(ptr)]` (C++14).
-- `mutable`: cho sửa bản copy riêng của lambda; bản copy giữ trạng thái giữa các lần gọi, biến bên ngoài không đổi.
-- Generic lambda (C++14): `[](auto a, auto b) { return a < b; }`.
-- Dùng nhiều nhất làm predicate/comparator cho thuật toán STL: `sort(v.begin(), v.end(), [](const P &a, const P &b) { return a.age < b.age; });`.
-- Nguy hiểm: capture theo reference rồi dùng lambda sau khi biến hết scope (trả lambda `[&]` ra khỏi hàm, lưu vào thread) → dangling.
+### Lambdas (section 21)
+- `[capture](params) mutable noexcept -> ret { body }`. The return type is usually deduced.
+- Before lambdas: function objects (functors), i.e. classes with `operator()`. A lambda is really an anonymous functor generated by the compiler; each lambda has its own type → store it in `auto` or `std::function<R(Args...)>`.
+- **Stateless** (`[]`): no captures, convertible to a function pointer. **Stateful**: has captures.
+- `[x]` copies when the lambda is **created** (read-only unless `mutable`); `[&x]` by reference, reads the value when **called**; `[=]` copies every variable used; `[&]` references every variable used; mixes `[=, &total]`, `[&, x]`; `[this]` (captures the this pointer), `[*this]` (C++17); init captures `[y = x + 1]`, `[p = std::move(ptr)]` (C++14).
+- `mutable`: lets the lambda modify its own copy; that copy keeps its state between calls, the outside variable is unchanged.
+- Generic lambdas (C++14): `[](auto a, auto b) { return a < b; }`.
+- Most common use: predicates/comparators for STL algorithms: `sort(v.begin(), v.end(), [](const P &a, const P &b) { return a.age < b.age; });`.
+- Danger: capturing by reference and calling the lambda after the variable went out of scope (returning a `[&]` lambda from a function, storing it in a thread) → dangling.
 
-### Enum (section 23)
-- **Unscoped** `enum Color { Red, Green = 5, Blue };`: tên tràn ra phạm vi bao ngoài (trùng tên giữa các enum → lỗi), tự chuyển ngầm sang int. Giá trị mặc định bắt đầu từ 0, phần tử không gán thì bằng phần tử trước + 1 (Blue = 6).
-- **Scoped** `enum class Color { Red, Green };` (C++11): phải viết `Color::Red`, **không** chuyển ngầm sang int (cần `static_cast<int>`), không so sánh được với enum khác → an toàn kiểu.
-- Kiểu nền (underlying type): `enum class Status : char { ... };` → `sizeof` = 1. Mặc định của enum class là int.
-- Dùng tốt với `switch` (gcc cảnh báo `-Wswitch` khi thiếu case).
+### Enums (section 23)
+- **Unscoped** `enum Color { Red, Green = 5, Blue };`: the names leak into the enclosing scope (name clashes between enums → errors) and convert implicitly to int. Values start at 0; an enumerator without a value is the previous one + 1 (Blue = 6).
+- **Scoped** `enum class Color { Red, Green };` (C++11): you must write `Color::Red`, there is **no** implicit conversion to int (use `static_cast<int>`), and different enums cannot be compared → type safe.
+- Underlying type: `enum class Status : char { ... };` → `sizeof` = 1. The default for enum class is int.
+- Works well with `switch` (gcc warns with `-Wswitch` about missing cases).
 
-## Trắc nghiệm
+## Quiz
 
-### Đoạn code nào biên dịch được?
+### Which line compiles?
 ```cpp
 auto p1 = std::make_unique<int>(5);
 ```
@@ -75,9 +75,9 @@ auto p1 = std::make_unique<int>(5);
 - [x] `auto p2 = std::move(p1);`
 - [ ] `std::unique_ptr<int> p2(p1);`
 - [ ] `std::unique_ptr<int> p2 = p1.get();`
-> unique_ptr không copy được, chỉ move. Sau khi move, p1 trở thành nullptr. Không có chuyển đổi ngầm từ con trỏ thô sang unique_ptr.
+> unique_ptr cannot be copied, only moved. After the move, p1 is nullptr. There is no implicit conversion from a raw pointer to unique_ptr.
 
-### `use_count()` in ra gì?
+### What does `use_count()` print?
 ```cpp
 auto a = std::make_shared<int>(1);
 {
@@ -90,37 +90,37 @@ std::cout << a.use_count();
 - [x] 1
 - [ ] 0
 - [ ] 2
-> b và c tăng count lên 3 nhưng bị huỷ khi ra khỏi khối, nên count còn 1.
+> b and c raise the count to 3, but they are destroyed at the end of the block, so the count is back to 1.
 
-### Mục đích chính của `weak_ptr`?
-- [ ] Nhanh hơn shared_ptr
-- [x] Quan sát object do shared_ptr quản lý mà không tăng reference count, dùng để phá vòng tham chiếu
-- [ ] Thay thế unique_ptr
-- [ ] Quản lý mảng
-> Truy cập object qua `lock()`; nếu object đã bị huỷ thì `lock()` trả về shared_ptr rỗng.
+### What is the main purpose of `weak_ptr`?
+- [ ] It is faster than shared_ptr
+- [x] Observing an object managed by shared_ptr without increasing the reference count, to break reference cycles
+- [ ] Replacing unique_ptr
+- [ ] Managing arrays
+> Access the object through `lock()`; if it has been destroyed, `lock()` returns an empty shared_ptr.
 
-### A giữ `shared_ptr<B>`, B giữ `shared_ptr<A>` trỏ lẫn nhau. Khi các shared_ptr bên ngoài bị huỷ thì sao?
-- [ ] Cả hai được giải phóng bình thường
-- [x] Không object nào được giải phóng (memory leak) vì count không về 0
-- [ ] Double free
-- [ ] Lỗi biên dịch
-> Cách sửa: một phía giữ `weak_ptr`.
+### A holds a `shared_ptr<B>` and B holds a `shared_ptr<A>`, pointing at each other. What happens when the outside shared_ptrs are destroyed?
+- [ ] Both are freed normally
+- [x] Neither is freed (a memory leak) because the counts never reach 0
+- [ ] A double free
+- [ ] Compile error
+> Fix: one side holds a `weak_ptr`.
 
-### Vì sao nên dùng `make_shared<T>()` thay cho `shared_ptr<T>(new T)`?
-- [ ] Vì `new` bị cấm trong C++11
-- [x] Cấp phát object và control block trong một lần (nhanh hơn, ít phân mảnh) và an toàn khi có exception
-- [ ] Vì shared_ptr(new T) không đếm reference
-- [ ] Vì make_shared trả về unique_ptr
-> Nhược điểm nhỏ: khi còn weak_ptr thì vùng nhớ của object chưa được trả lại, vì nằm chung khối với control block.
+### Why prefer `make_shared<T>()` over `shared_ptr<T>(new T)`?
+- [ ] Because `new` is banned in C++11
+- [x] It allocates the object and the control block in one go (faster, less fragmentation) and is exception-safe
+- [ ] Because shared_ptr(new T) does not count references
+- [ ] Because make_shared returns a unique_ptr
+> A small drawback: while weak_ptrs remain, the object's memory is not returned, since it shares a block with the control block.
 
-### RAII nghĩa là gì?
-- [ ] Mọi biến phải được khởi tạo
-- [x] Gắn tài nguyên (bộ nhớ, file, mutex) với vòng đời object: lấy trong constructor, trả trong destructor
-- [ ] Chỉ cấp phát trên stack
-- [ ] Chỉ dùng smart pointer
-> Destructor luôn chạy khi object hết scope, kể cả khi có exception (stack unwinding). Ví dụ: smart pointer, `std::lock_guard`, `std::fstream`, `std::vector`.
+### What does RAII mean?
+- [ ] Every variable must be initialized
+- [x] Tying a resource (memory, file, mutex) to an object's lifetime: acquire in the constructor, release in the destructor
+- [ ] Only allocate on the stack
+- [ ] Only use smart pointers
+> Destructors always run when an object goes out of scope, even during exceptions (stack unwinding). Examples: smart pointers, `std::lock_guard`, `std::fstream`, `std::vector`.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 try { throw 3.14; }
 catch (int e)   { cout << "int"; }
@@ -130,80 +130,80 @@ catch (...)     { cout << "other"; }
 - [ ] int
 - [ ] float
 - [x] other
-- [ ] Lỗi biên dịch
-> 3.14 là double. Catch không chuyển đổi kiểu số (double → int, double → float), chỉ chuyển đổi Derived → Base.
+- [ ] Compile error
+> 3.14 is a double. catch does not apply numeric conversions (double → int, double → float), only Derived → Base.
 
-### Thứ tự catch nào ĐÚNG?
-- [ ] `catch (const std::exception&)` rồi `catch (const std::out_of_range&)`
-- [x] `catch (const std::out_of_range&)` rồi `catch (const std::exception&)`
-- [ ] Thứ tự không quan trọng, compiler chọn cái khớp nhất
-- [ ] `catch (...)` đặt đầu tiên
-> Catch chọn khối khớp **đầu tiên** theo thứ tự viết. Lớp cha đặt trước sẽ che lớp con (gcc cảnh báo). `catch (...)` phải đặt cuối.
+### Which catch order is CORRECT?
+- [ ] `catch (const std::exception&)` then `catch (const std::out_of_range&)`
+- [x] `catch (const std::out_of_range&)` then `catch (const std::exception&)`
+- [ ] Order does not matter; the compiler picks the best match
+- [ ] `catch (...)` first
+> catch picks the **first** matching handler in the order written. A base class first hides the derived one (gcc warns). `catch (...)` must go last.
 
-### Vì sao nên bắt exception bằng `const T&`?
-- [ ] Bắt buộc theo chuẩn
-- [x] Tránh copy và tránh slicing (giữ được what() của lớp con)
-- [ ] Để sửa được exception
-- [ ] Để exception không bị huỷ
-> `catch (std::exception e)` copy phần base → what() trả về thông điệp của std::exception.
+### Why catch exceptions by `const T&`?
+- [ ] The standard requires it
+- [x] It avoids copies and slicing (keeps the derived what())
+- [ ] So the exception can be modified
+- [ ] So the exception is not destroyed
+> `catch (std::exception e)` copies only the base part → what() returns std::exception's message.
 
-### Khác nhau giữa `throw;` và `throw e;` trong khối catch?
-- [ ] Không khác
-- [x] `throw;` ném lại đúng object gốc (giữ kiểu thật); `throw e;` ném bản copy theo kiểu tĩnh của e (có thể bị slicing)
-- [ ] `throw;` không hợp lệ
-- [ ] `throw e;` kết thúc chương trình
-> Ở ngoài catch mà gọi `throw;` (không có exception nào đang được xử lý) thì gọi std::terminate.
+### How do `throw;` and `throw e;` differ inside a catch block?
+- [ ] No difference
+- [x] `throw;` rethrows the original object (keeping its real type); `throw e;` throws a copy of e's static type (may slice)
+- [ ] `throw;` is invalid
+- [ ] `throw e;` ends the program
+> Calling `throw;` outside a catch (no exception being handled) calls std::terminate.
 
-### Exception được ném ra nhưng không có catch nào bắt thì sao?
-- [ ] Chương trình bỏ qua và chạy tiếp
-- [x] `std::terminate()` được gọi, mặc định gọi abort
-- [ ] Trả về mã lỗi -1
-- [ ] Lỗi biên dịch
-> Khi terminate, việc stack unwinding có xảy ra hay không là do implementation quyết định.
+### An exception is thrown and no catch block handles it. What happens?
+- [ ] The program ignores it and continues
+- [x] `std::terminate()` is called, which aborts by default
+- [ ] It returns error code -1
+- [ ] Compile error
+> Whether the stack is unwound before terminate is implementation-defined.
 
-### Điều gì xảy ra khi exception thoát ra khỏi một hàm `noexcept`?
-- [ ] Bị bỏ qua
-- [ ] Truyền lên hàm gọi như bình thường
-- [x] `std::terminate()` được gọi
-- [ ] Lỗi biên dịch
-> noexcept là lời hứa. Compiler không kiểm tra lúc biên dịch, nhưng lúc chạy thì terminate.
+### What happens when an exception escapes a `noexcept` function?
+- [ ] It is ignored
+- [ ] It propagates to the caller as usual
+- [x] `std::terminate()` is called
+- [ ] Compile error
+> noexcept is a promise. The compiler does not check it at compile time, but at run time it terminates.
 
-### Vì sao không nên ném exception từ destructor?
-- [ ] Destructor không thể chứa try
-- [x] Destructor mặc định là noexcept, và nếu đang stack unwinding mà lại có exception thứ hai thì std::terminate
-- [ ] Vì destructor không có giá trị trả về
-- [ ] Chuẩn cấm hoàn toàn
-> Nếu destructor có thể lỗi, hãy xử lý (log) ngay bên trong hoặc cung cấp hàm `close()` riêng để người dùng gọi.
+### Why should you not throw from a destructor?
+- [ ] Destructors cannot contain try
+- [x] Destructors are noexcept by default, and a second exception during stack unwinding means std::terminate
+- [ ] Destructors have no return value
+- [ ] The standard forbids it completely
+> If a destructor can fail, handle it (log it) inside, or provide a separate `close()` function for users to call.
 
-### Constructor ném exception giữa chừng. Điều nào ĐÚNG?
-- [ ] Destructor của object vẫn được gọi
-- [x] Destructor của object không được gọi, nhưng destructor của các member đã dựng xong vẫn chạy
-- [ ] Bộ nhớ của object bị leak
-- [ ] Không được ném exception trong constructor
-> Vì vậy member nên là RAII (unique_ptr, vector) thay vì con trỏ thô cấp phát trong thân constructor.
+### A constructor throws halfway through. Which statement is TRUE?
+- [ ] The object's destructor still runs
+- [x] The object's destructor does not run, but the destructors of fully constructed members do
+- [ ] The object's memory leaks
+- [ ] Constructors must not throw
+> That is why members should be RAII types (unique_ptr, vector) rather than raw pointers allocated in the constructor body.
 
-### `int x = 10 / 0;` (với số 0 lúc chạy) có bị `catch (...)` bắt không?
-- [ ] Có, ném std::runtime_error
-- [ ] Có, ném std::domain_error
-- [x] Không, đây là undefined behavior (trên Linux thường là tín hiệu SIGFPE)
-- [ ] Không, vì lỗi biên dịch
-> C++ không tự ném exception cho lỗi phần cứng. Phải tự kiểm tra rồi throw.
+### Is `int x = 10 / 0;` (with the 0 known only at run time) caught by `catch (...)`?
+- [ ] Yes, it throws std::runtime_error
+- [ ] Yes, it throws std::domain_error
+- [x] No, it is undefined behavior (on Linux usually the SIGFPE signal)
+- [ ] No, because it is a compile error
+> C++ does not turn hardware faults into exceptions. Check yourself and throw.
 
-### `std::stoi("abc")` ném exception gì?
+### What does `std::stoi("abc")` throw?
 - [ ] `std::out_of_range`
 - [x] `std::invalid_argument`
 - [ ] `std::bad_cast`
-- [ ] Không ném, trả về 0
-> Số quá lớn so với int (`stoi("99999999999")`) thì ném `std::out_of_range`.
+- [ ] Nothing, it returns 0
+> A number too large for int (`stoi("99999999999")`) throws `std::out_of_range`.
 
-### `new` thất bại vì hết bộ nhớ thì mặc định làm gì?
-- [ ] Trả về nullptr
-- [x] Ném `std::bad_alloc`
-- [ ] Gọi abort ngay lập tức
-- [ ] Trả về con trỏ rác
-> `new (std::nothrow) T` mới trả về nullptr. malloc thì trả về NULL.
+### What does `new` do by default when memory runs out?
+- [ ] Returns nullptr
+- [x] Throws `std::bad_alloc`
+- [ ] Calls abort immediately
+- [ ] Returns a garbage pointer
+> Only `new (std::nothrow) T` returns nullptr. malloc returns NULL.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 cout << '[' << setw(5) << 42 << "][" << 42 << ']';
 ```
@@ -211,51 +211,51 @@ cout << '[' << setw(5) << 42 << "][" << 42 << ']';
 - [x] `[   42][42]`
 - [ ] `[42   ][42]`
 - [ ] `[42][42]`
-> setw chỉ áp dụng cho lần in kế tiếp, mặc định canh phải.
+> setw only applies to the next output, right-aligned by default.
 
-### `cout << setprecision(3) << 3.14159;` (không có fixed) in ra?
+### What does `cout << setprecision(3) << 3.14159;` (no fixed) print?
 - [ ] 3.142
 - [x] 3.14
 - [ ] 3.141
 - [ ] 3.1
-> Không có fixed: precision là số chữ số có nghĩa (3 chữ số). Với `fixed` thì là 3 chữ số sau dấu phẩy: 3.142.
+> Without fixed, precision means significant digits (3 of them). With `fixed` it means 3 digits after the point: 3.142.
 
-### `cout << hex << 255 << ' ' << 16;` in ra?
+### What does `cout << hex << 255 << ' ' << 16;` print?
 - [ ] ff 16
 - [x] ff 10
 - [ ] 0xff 0x10
 - [ ] 255 16
-> hex là manipulator "dính", có hiệu lực tới khi gặp `dec`. Muốn có tiền tố 0x thì thêm `showbase`.
+> hex is a sticky manipulator, in effect until `dec`. Add `showbase` for the 0x prefix.
 
-### Vì sao `while (!file.eof()) { file >> x; process(x); }` là cách đọc sai?
-- [ ] eof() không tồn tại
-- [x] eof chỉ bật sau khi một lần đọc thất bại, nên vòng cuối xử lý lại giá trị cũ (hoặc giá trị lỗi)
-- [ ] Đọc thiếu phần tử đầu tiên
-- [ ] Vòng lặp vô hạn trong mọi trường hợp
-> Đúng: `while (file >> x) { process(x); }`, kiểm tra kết quả của chính lần đọc.
+### Why is `while (!file.eof()) { file >> x; process(x); }` the wrong way to read?
+- [ ] eof() does not exist
+- [x] eof only becomes true after a read fails, so the last iteration processes the old (or bad) value again
+- [ ] It skips the first element
+- [ ] It always loops forever
+> Correct: `while (file >> x) { process(x); }`, which checks the result of the read itself.
 
-### Chế độ mở file nào để ghi thêm vào cuối, không xoá nội dung cũ?
+### Which open mode appends to the end without erasing the old content?
 - [ ] `ios::out`
 - [ ] `ios::trunc`
 - [x] `ios::app`
 - [ ] `ios::in`
-> `ofstream` mặc định là `ios::out | ios::trunc` (xoá nội dung cũ).
+> `ofstream` defaults to `ios::out | ios::trunc` (erases the old content).
 
-### Đọc chuỗi "12 abc 34" vào ba biến int bằng `ss >> a >> b >> c;` thì?
+### Reading "12 abc 34" into three ints with `ss >> a >> b >> c;` gives?
 - [ ] a = 12, b = 0, c = 34
-- [x] a = 12, b = 0, c không được đọc (giữ giá trị cũ), stream ở trạng thái fail
-- [ ] Ném exception
+- [x] a = 12, b = 0, c is not read (keeps its old value), and the stream is in the fail state
+- [ ] An exception
 - [ ] a = 12, b = 34
-> Sau khi fail, mọi lần đọc tiếp đều bị bỏ qua cho tới khi gọi `clear()`. C++11 gán 0 cho biến đọc thất bại.
+> After a failure every later read is skipped until `clear()`. Since C++11 a failed numeric read stores 0.
 
-### `end()` của một container trỏ tới đâu?
-- [ ] Phần tử cuối cùng
-- [x] Vị trí ngay sau phần tử cuối cùng (không được dereference)
+### Where does a container's `end()` point?
+- [ ] The last element
+- [x] Just past the last element (must not be dereferenced)
 - [ ] nullptr
-- [ ] Phần tử đầu tiên
-> Khoảng `[begin, end)` là nửa mở; container rỗng thì `begin() == end()`.
+- [ ] The first element
+> The range `[begin, end)` is half-open; for an empty container `begin() == end()`.
 
-### Sau đoạn code, `v.size()` bằng?
+### What is `v.size()` after this code?
 ```cpp
 vector<int> v{1, 2, 3, 2, 2};
 remove(v.begin(), v.end(), 2);
@@ -264,44 +264,44 @@ remove(v.begin(), v.end(), 2);
 - [x] 5
 - [ ] 3
 - [ ] 0
-> remove chỉ dồn phần tử cần giữ lên đầu và trả về iterator "end mới"; không đổi size. Phải dùng `v.erase(remove(...), v.end());`.
+> remove only moves the kept elements to the front and returns the "new end"; the size is unchanged. Use `v.erase(remove(...), v.end());`.
 
-### `accumulate(v.begin(), v.end(), 0)` với `vector<double> v{0.5, 0.5, 0.5}` bằng?
+### What is `accumulate(v.begin(), v.end(), 0)` for `vector<double> v{0.5, 0.5, 0.5}`?
 - [ ] 1.5
 - [x] 0
 - [ ] 1
-- [ ] Lỗi biên dịch
-> Kiểu tổng lấy theo giá trị khởi đầu (0 → int): 0 + 0.5 → 0, cứ thế, kết quả 0. Phải dùng `0.0`.
+- [ ] Compile error
+> The sum's type comes from the initial value (0 → int): 0 + 0.5 → 0, and so on, giving 0. Use `0.0`.
 
-### `set<int> s{3, 1, 3, 2, 1};` duyệt in ra?
+### `set<int> s{3, 1, 3, 2, 1};` iterated prints?
 - [ ] 3 1 3 2 1
 - [ ] 3 1 2
 - [x] 1 2 3
 - [ ] 1 1 2 3 3
-> set loại phần tử trùng và sắp xếp tăng dần (cây đỏ-đen). multiset thì giữ trùng.
+> set removes duplicates and sorts ascending (red-black tree). multiset keeps duplicates.
 
-### `priority_queue<int>` lần lượt push 3, 1, 4. `top()` bằng?
+### A `priority_queue<int>` gets pushes of 3, 1, 4. What is `top()`?
 - [ ] 3
 - [ ] 1
 - [x] 4
-- [ ] Lỗi vì chưa sort
-> Mặc định là max-heap. Min-heap: `priority_queue<int, vector<int>, greater<int>>`.
+- [ ] An error because it is not sorted
+> Max-heap by default. Min-heap: `priority_queue<int, vector<int>, greater<int>>`.
 
-### Container adapter nào là LIFO?
+### Which container adapter is LIFO?
 - [x] `stack`
 - [ ] `queue`
 - [ ] `deque`
 - [ ] `priority_queue`
-> `queue` là FIFO. `deque` là container thật (có iterator), không phải adapter; stack và queue mặc định dùng deque bên dưới.
+> `queue` is FIFO. `deque` is a real container (with iterators), not an adapter; stack and queue use a deque underneath by default.
 
-### Vì sao không gọi `std::sort` trên `std::list` được?
-- [ ] list không có phần tử
-- [x] std::sort cần random access iterator, list chỉ có bidirectional
-- [ ] list luôn được sắp xếp sẵn
-- [ ] sort chỉ dùng cho mảng C
-> Dùng hàm thành viên `l.sort()` (merge sort trên danh sách liên kết).
+### Why can't you call `std::sort` on a `std::list`?
+- [ ] A list has no elements
+- [x] std::sort needs random-access iterators, and list only has bidirectional ones
+- [ ] A list is always sorted
+- [ ] sort only works on C arrays
+> Use the member function `l.sort()` (a merge sort on the linked list).
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int x = 1;
 auto f = [x]() { return x; };
@@ -313,46 +313,46 @@ cout << f() << ' ' << g();
 - [x] 1 10
 - [ ] 1 1
 - [ ] 10 1
-> Capture theo giá trị chụp lúc tạo lambda; capture theo tham chiếu đọc giá trị lúc gọi.
+> A by-value capture is taken when the lambda is created; a by-reference capture reads the value when called.
 
-### Lambda `[n]() { return ++n; }` (không có mutable) thì sao?
-- [ ] Trả về n + 1, n ngoài tăng
-- [ ] Trả về n + 1, n ngoài không đổi
-- [x] Lỗi biên dịch: biến capture theo giá trị là read-only
+### What about the lambda `[n]() { return ++n; }` (without mutable)?
+- [ ] Returns n + 1, and the outer n increases
+- [ ] Returns n + 1, the outer n is unchanged
+- [x] Compile error: a by-value capture is read-only
 - [ ] Undefined behavior
-> `operator()` của lambda mặc định là const. Thêm `mutable` để sửa bản copy riêng; biến ngoài vẫn không đổi.
+> A lambda's `operator()` is const by default. Add `mutable` to modify its own copy; the outer variable still does not change.
 
-### Lambda nào chuyển được thành con trỏ hàm `int (*)(int)`?
+### Which lambda converts to a function pointer `int (*)(int)`?
 - [x] `[](int a) { return a * 2; }`
 - [ ] `[k](int a) { return a * k; }`
 - [ ] `[&](int a) { return a; }`
-- [ ] `[=](int a) { return a; }` có dùng biến ngoài
-> Chỉ lambda không capture (stateless) mới chuyển được thành con trỏ hàm, ví dụ để truyền cho `qsort` hoặc API C.
+- [ ] `[=](int a) { return a; }` using an outside variable
+> Only capture-less (stateless) lambdas convert to function pointers, e.g. to pass to `qsort` or a C API.
 
-### Hàm trả về `[&local]() { return local; }` với `local` là biến local của hàm. Gọi lambda sau khi hàm kết thúc thì sao?
-- [ ] Trả về giá trị cuối của local
-- [x] Undefined behavior (dangling reference)
-- [ ] Lỗi biên dịch
-- [ ] Trả về 0
-> Khi lambda sống lâu hơn scope hiện tại thì capture theo giá trị (`[local]`) hoặc move vào (`[p = std::move(p)]`).
+### A function returns `[&local]() { return local; }` where `local` is a local variable. What happens when the lambda is called after the function returns?
+- [ ] It returns the last value of local
+- [x] Undefined behavior (a dangling reference)
+- [ ] Compile error
+- [ ] It returns 0
+> When a lambda outlives the current scope, capture by value (`[local]`) or move into it (`[p = std::move(p)]`).
 
-### `enum Color { Red, Green = 5, Blue };` thì `Blue` bằng?
+### For `enum Color { Red, Green = 5, Blue };`, what is `Blue`?
 - [ ] 2
 - [x] 6
 - [ ] 7
 - [ ] 0
-> Phần tử không gán giá trị bằng phần tử trước + 1. Red = 0.
+> An enumerator without a value is the previous one + 1. Red = 0.
 
-### Điều nào ĐÚNG về `enum class` so với enum thường? (chọn tất cả đáp án đúng)
-- [x] Phải viết kèm tên: `Color::Red`
-- [x] Không tự chuyển sang int, phải dùng static_cast
-- [x] Hai enum class khác nhau có thể dùng chung tên phần tử (Red) mà không xung đột
-- [ ] Không dùng được trong switch
-> enum class dùng tốt trong switch với `case Color::Red:`.
+### Which statements about `enum class` compared to a plain enum are TRUE? (select all that apply)
+- [x] You must qualify the names: `Color::Red`
+- [x] No implicit conversion to int; use static_cast
+- [x] Two different enum classes can both have an enumerator named Red without clashing
+- [ ] It cannot be used in a switch
+> enum class works well in a switch with `case Color::Red:`.
 
-### `enum class Status : char { Ok, Error };` thì `sizeof(Status)` bằng?
+### For `enum class Status : char { Ok, Error };`, what is `sizeof(Status)`?
 - [x] 1
 - [ ] 4
 - [ ] 8
 - [ ] 2
-> Kiểu nền được chỉ định là char. Không chỉ định thì enum class mặc định dùng int (4 byte).
+> The underlying type is char. Without one, enum class uses int (4 bytes).

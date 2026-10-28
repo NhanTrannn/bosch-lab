@@ -1,9 +1,9 @@
 /*
- * Bài: Pipe với FILE*: fdopen (listing 5.7), dup2 + exec sort (listing 5.8), popen/pclose (listing 5.9)
- * Chủ đề: ALP chương 5
- * Dự đoán trước khi chạy: Các dòng gửi cho sort hiện ra lúc nào và theo thứ tự nào? popen("...; exit 3", "r") thì pclose trả về status gì? Process con đọc pipe bằng fgets dừng khi nào?
- * Ý chính: pipe(fds): fds[0] đầu đọc, fds[1] đầu ghi. fdopen bọc fd thành FILE* để dùng fprintf/fgets. Phải đóng đầu không dùng, nếu không bên đọc không bao giờ thấy EOF. dup2(fds[0], STDIN_FILENO) rồi exec → chương trình khác đọc từ pipe như stdin. popen gói gọn pipe + fork + exec sh -c; pclose chờ con và trả về wait status.
- * Thử thêm: Bỏ close(fds[1]) trong process con chạy sort → sort treo vì không bao giờ thấy EOF. popen("ls -l /", "r") và đọc từng dòng.
+ * Lab: Pipes with FILE*: fdopen (listing 5.7), dup2 + exec sort (listing 5.8), popen/pclose (listing 5.9)
+ * Topic: ALP chapter 5
+ * Predict before running: When do the lines sent to sort appear, and in what order? What status does pclose return for popen("...; exit 3", "r")? When does the child's fgets loop on the pipe stop?
+ * Key idea: pipe(fds): fds[0] is the read end, fds[1] the write end. fdopen wraps an fd in a FILE* so you can use fprintf/fgets. Close the ends you do not use, otherwise the reader never sees EOF. dup2(fds[0], STDIN_FILENO) then exec → another program reads the pipe as its stdin. popen wraps pipe + fork + exec sh -c; pclose waits for the child and returns its wait status.
+ * Try next: Remove close(fds[1]) in the child that runs sort → sort hangs because it never sees EOF. popen("ls -l /", "r") and read it line by line.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -25,8 +25,8 @@ int main(void)
         FILE *stream = fdopen(fds[0], "r");
         char buffer[64];
         while (fgets(buffer, sizeof buffer, stream) != NULL)
-            printf("  [con] nhan: %s", buffer);
-        printf("  [con] fgets tra ve NULL: EOF vi cha da dong dau ghi\n");
+            printf("  [child] got: %s", buffer);
+        printf("  [child] fgets returned NULL: EOF because the parent closed the write end\n");
         fclose(stream);
         _exit(0);
     }
@@ -51,7 +51,7 @@ int main(void)
     stream = fdopen(fds[1], "w");
     fprintf(stream, "  This is a test.\n  Hello, world.\n  My dog has fleas.\n  This program is great.\n  One fish, two fish.\n");
     fflush(stream);
-    printf("  [cha] da ghi xong 5 dong, sort chua in gi vi chua thay EOF\n");
+    printf("  [parent] wrote all 5 lines; sort prints nothing yet because it has not seen EOF\n");
     fflush(stdout);
     close(fds[1]);
     waitpid(pid, NULL, 0);
@@ -59,7 +59,7 @@ int main(void)
     printf("3) popen(\"sort\", \"w\"):\n");
     fflush(stdout);
     FILE *out = popen("sort", "w");
-    fprintf(out, "  chuoi\n  tao\n  cam\n");
+    fprintf(out, "  banana\n  apple\n  cherry\n");
     int status = pclose(out);
     printf("  pclose = %d (WEXITSTATUS %d)\n", status, WEXITSTATUS(status));
 
@@ -69,6 +69,6 @@ int main(void)
     fgets(line, sizeof line, in);
     line[strcspn(line, "\n")] = '\0';
     status = pclose(in);
-    printf("  doc duoc \"%s\", pclose -> WEXITSTATUS %d\n", line, WEXITSTATUS(status));
+    printf("  read \"%s\", pclose -> WEXITSTATUS %d\n", line, WEXITSTATUS(status));
     return 0;
 }

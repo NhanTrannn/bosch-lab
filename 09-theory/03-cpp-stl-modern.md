@@ -1,56 +1,56 @@
-# STL và C++ hiện đại (11/14/17)
+# STL and modern C++ (11/14/17)
 
-## Lý thuyết
+## Theory
 
-### Container và độ phức tạp
-| Container | Cấu trúc | Truy cập | Chèn/xoá | Ghi chú |
+### Containers and complexity
+| Container | Structure | Access | Insert/erase | Notes |
 | --- | --- | --- | --- | --- |
-| `vector` | mảng động liên tục | O(1) | cuối O(1) khấu hao, giữa O(n) | tăng capacity thường ×2 (libstdc++) hoặc ×1.5 (MSVC) |
-| `deque` | các khối | O(1) | hai đầu O(1) | |
-| `list` | danh sách liên kết đôi | O(n) | O(1) khi có iterator | iterator không bị vô hiệu khi chèn |
-| `map` / `set` | cây đỏ-đen | O(log n) | O(log n) | có thứ tự theo key |
-| `unordered_map` / `unordered_set` | bảng băm | O(1) trung bình, O(n) xấu nhất | O(1) trung bình | không thứ tự, rehash khi đầy |
-| `array` | mảng cố định | O(1) | — | kích thước biết lúc biên dịch |
-| `stack`, `queue`, `priority_queue` | adapter | | | priority_queue là heap, mặc định max-heap |
+| `vector` | contiguous dynamic array | O(1) | end: amortized O(1), middle: O(n) | capacity usually grows ×2 (libstdc++) or ×1.5 (MSVC) |
+| `deque` | chunks | O(1) | both ends O(1) | |
+| `list` | doubly linked list | O(n) | O(1) given an iterator | iterators stay valid on insert |
+| `map` / `set` | red-black tree | O(log n) | O(log n) | ordered by key |
+| `unordered_map` / `unordered_set` | hash table | O(1) average, O(n) worst | O(1) average | unordered, rehashes when full |
+| `array` | fixed-size array | O(1) | — | size known at compile time |
+| `stack`, `queue`, `priority_queue` | adapters | | | priority_queue is a heap, max-heap by default |
 
-- `map[key]` **tự chèn** phần tử mặc định nếu chưa có; dùng `find`/`count`/`contains` (C++20) để kiểm tra.
-- `size()` là số phần tử, `capacity()` là chỗ đã cấp phát. `reserve(n)` chỉ tăng capacity; `resize(n)` đổi size.
-- Iterator invalidation: vector cấp phát lại → **mọi** iterator/pointer/reference vô hiệu; erase giữa vector → iterator từ vị trí đó trở đi vô hiệu. Xoá trong vòng lặp: `it = v.erase(it);`.
+- `map[key]` **inserts** a default element if the key is missing; use `find`/`count`/`contains` (C++20) to check.
+- `size()` is the number of elements, `capacity()` the allocated space. `reserve(n)` only grows capacity; `resize(n)` changes the size.
+- Iterator invalidation: when a vector reallocates, **all** iterators/pointers/references become invalid; erasing in the middle of a vector invalidates iterators from that position on. Erasing while looping: `it = v.erase(it);`.
 - Erase-remove idiom: `v.erase(remove(v.begin(), v.end(), x), v.end());` (C++20: `std::erase(v, x)`).
 
-### Smart pointer (`<memory>`)
-- `unique_ptr<T>`: sở hữu độc quyền, không copy được, chỉ move. Chi phí bằng con trỏ thường. Tạo bằng `make_unique` (C++14).
-- `shared_ptr<T>`: sở hữu chung, đếm tham chiếu (atomic) trong control block; object bị huỷ khi count về 0. `make_shared` cấp phát object và control block một lần.
-- `weak_ptr<T>`: tham chiếu không sở hữu, không tăng count; dùng `lock()` để lấy shared_ptr. Dùng để **phá vòng tham chiếu** (A giữ shared_ptr tới B, B giữ shared_ptr tới A → không bao giờ giải phóng).
-- Không tạo hai shared_ptr từ cùng một con trỏ thô (hai control block → double delete).
+### Smart pointers (`<memory>`)
+- `unique_ptr<T>`: exclusive ownership; cannot be copied, only moved. Same cost as a raw pointer. Create with `make_unique` (C++14).
+- `shared_ptr<T>`: shared ownership via an (atomic) reference count in a control block; the object is destroyed when the count reaches 0. `make_shared` allocates the object and the control block in one go.
+- `weak_ptr<T>`: non-owning reference that does not increase the count; use `lock()` to get a shared_ptr. Used to **break reference cycles** (A holds a shared_ptr to B and B to A → never freed).
+- Never create two shared_ptrs from the same raw pointer (two control blocks → double delete).
 
 ### Move semantics
-- lvalue: có tên/địa chỉ. rvalue: giá trị tạm. `T&&` là rvalue reference.
-- `std::move(x)` chỉ là `static_cast<T&&>(x)` — không tự di chuyển gì; object bị move ở trạng thái hợp lệ nhưng không xác định.
-- vector chỉ dùng move khi cấp phát lại nếu move ctor là `noexcept`.
+- lvalue: has a name/address. rvalue: a temporary. `T&&` is an rvalue reference.
+- `std::move(x)` is just `static_cast<T&&>(x)`; it moves nothing by itself. A moved-from object is valid but in an unspecified state.
+- vector only moves elements when reallocating if the move constructor is `noexcept`.
 - Perfect forwarding: `template<class T> void f(T&& x) { g(std::forward<T>(x)); }` (forwarding reference).
-- Copy elision: C++17 bảo đảm khi trả về prvalue; NRVO cho biến có tên thì không bảo đảm nhưng compiler thường làm.
+- Copy elision: guaranteed in C++17 when returning a prvalue; NRVO for named variables is not guaranteed but compilers usually do it.
 
-### Lambda
+### Lambdas
 `[capture](params) mutable -> ret { body }`
-- `[=]` copy mọi biến dùng tới (giá trị chụp lúc **tạo** lambda), `[&]` tham chiếu, `[x, &y]`, `[this]`, `[*this]` (C++17), init-capture `[p = std::move(ptr)]` (C++14).
-- Lambda capture theo giá trị là `const` bên trong, cần `mutable` để sửa bản copy.
-- Capture theo reference rồi dùng lambda sau khi biến hết scope → dangling.
+- `[=]` copies every variable used (value captured when the lambda is **created**), `[&]` by reference, `[x, &y]`, `[this]`, `[*this]` (C++17), init-capture `[p = std::move(ptr)]` (C++14).
+- By-value captures are `const` inside the lambda; add `mutable` to modify the copy.
+- Capturing by reference and using the lambda after the variable went out of scope → dangling.
 
-### Tính năng khác
-- `auto`, range-for, `nullptr` (kiểu `nullptr_t`, thay NULL), `enum class` (có phạm vi, không chuyển ngầm sang int), `constexpr` (tính lúc biên dịch), `static_assert`, `using` alias, `= default/= delete`, `override/final`, uniform initialization `{}` (chặn narrowing), structured binding `auto [a, b] = pair;` (C++17), `std::optional`, `std::variant`, `std::string_view` (C++17).
-- Template: định nghĩa phải nằm trong header. Hàm thường ưu tiên hơn template khi khớp như nhau.
+### Other features
+- `auto`, range-for, `nullptr` (type `nullptr_t`, replaces NULL), `enum class` (scoped, no implicit conversion to int), `constexpr` (evaluated at compile time), `static_assert`, `using` aliases, `= default/= delete`, `override/final`, uniform initialization `{}` (blocks narrowing), structured bindings `auto [a, b] = pair;` (C++17), `std::optional`, `std::variant`, `std::string_view` (C++17).
+- Templates: definitions must be in the header. A regular function beats a template when both match equally well.
 
-## Trắc nghiệm
+## Quiz
 
-### Độ phức tạp trung bình của tìm kiếm trong `std::map` và `std::unordered_map`?
-- [ ] O(1) và O(1)
-- [x] O(log n) và O(1)
-- [ ] O(log n) và O(log n)
-- [ ] O(n) và O(1)
-> map là cây đỏ-đen cân bằng; unordered_map là bảng băm (xấu nhất O(n) khi nhiều va chạm).
+### What is the average lookup complexity of `std::map` and `std::unordered_map`?
+- [ ] O(1) and O(1)
+- [x] O(log n) and O(1)
+- [ ] O(log n) and O(log n)
+- [ ] O(n) and O(1)
+> map is a balanced red-black tree; unordered_map is a hash table (worst case O(n) with many collisions).
 
-### Đoạn sau in ra gì?
+### What does this print?
 ```cpp
 std::map<std::string, int> m;
 if (m["x"] == 0) {}
@@ -58,39 +58,39 @@ std::cout << m.size();
 ```
 - [ ] 0
 - [x] 1
-- [ ] Ném exception
+- [ ] Throws an exception
 - [ ] Undefined behavior
-> operator[] chèn phần tử mặc định khi key chưa có. Dùng `m.find("x")` hoặc `m.count("x")` để chỉ kiểm tra. `m.at("x")` ném `std::out_of_range`.
+> operator[] inserts a default element when the key is missing. Use `m.find("x")` or `m.count("x")` to only check. `m.at("x")` throws `std::out_of_range`.
 
-### Sau khi `push_back` làm vector cấp phát lại vùng nhớ, các iterator/con trỏ cũ tới phần tử thì sao?
-- [ ] Vẫn hợp lệ
-- [x] Bị vô hiệu (dùng là UB)
-- [ ] Tự cập nhật sang vùng mới
-- [ ] Chỉ iterator end() bị vô hiệu
-> Khi capacity tăng, các phần tử được chuyển sang vùng mới và vùng cũ bị giải phóng.
+### After a `push_back` makes a vector reallocate, what happens to old iterators/pointers to its elements?
+- [ ] They stay valid
+- [x] They are invalidated (using them is UB)
+- [ ] They are updated to the new memory automatically
+- [ ] Only end() is invalidated
+> When capacity grows, the elements move to new memory and the old block is freed.
 
-### Cách xoá phần tử chẵn trong vector khi đang duyệt bằng iterator?
+### How do you erase even elements from a vector while iterating with an iterator?
 - [ ] `for (auto it = v.begin(); it != v.end(); ++it) if (*it % 2 == 0) v.erase(it);`
 - [x] `for (auto it = v.begin(); it != v.end();) if (*it % 2 == 0) it = v.erase(it); else ++it;`
 - [ ] `for (int x : v) if (x % 2 == 0) v.erase(x);`
-- [ ] Không thể xoá khi đang duyệt
-> erase trả iterator tới phần tử kế tiếp; iterator cũ đã bị vô hiệu.
+- [ ] You cannot erase while iterating
+> erase returns an iterator to the next element; the old iterator has been invalidated.
 
-### `v.reserve(100)` với vector rỗng thì `size()` và `capacity()` là?
-- [ ] 100 và 100
-- [x] 0 và ít nhất 100
-- [ ] 100 và 0
-- [ ] 0 và 0
-> reserve chỉ cấp phát chỗ, không tạo phần tử. resize mới đổi size.
+### After `v.reserve(100)` on an empty vector, what are `size()` and `capacity()`?
+- [ ] 100 and 100
+- [x] 0 and at least 100
+- [ ] 100 and 0
+- [ ] 0 and 0
+> reserve only allocates space, it creates no elements. resize changes the size.
 
-### Phát biểu nào đúng về `std::unique_ptr`?
-- [ ] Có thể copy, khi đó cả hai cùng sở hữu
-- [x] Không copy được, chỉ chuyển quyền sở hữu bằng move
-- [ ] Có bộ đếm tham chiếu
-- [ ] Không tự giải phóng bộ nhớ
-> Copy constructor bị delete. `auto q = std::move(p);` → p thành nullptr.
+### Which statement about `std::unique_ptr` is true?
+- [ ] It can be copied, and then both copies own the object
+- [x] It cannot be copied; ownership is transferred only by moving
+- [ ] It has a reference count
+- [ ] It does not free memory automatically
+> The copy constructor is deleted. `auto q = std::move(p);` → p becomes nullptr.
 
-### Đoạn sau in ra gì?
+### What does this print?
 ```cpp
 auto a = std::make_shared<int>(5);
 auto b = a;
@@ -101,23 +101,23 @@ std::cout << a.use_count();
 - [x] 2
 - [ ] 3
 - [ ] 0
-> weak_ptr không làm tăng use_count.
+> weak_ptr does not increase use_count.
 
-### Vấn đề nào `weak_ptr` dùng để giải quyết?
-- [ ] Rò rỉ khi quên delete
-- [x] Vòng tham chiếu giữa các shared_ptr làm object không bao giờ được giải phóng
-- [ ] Double free khi copy unique_ptr
-- [ ] Truy cập đồng thời từ nhiều thread
-> Ví dụ cây có con giữ shared_ptr tới cha và cha giữ shared_ptr tới con → một chiều phải là weak_ptr.
+### Which problem does `weak_ptr` solve?
+- [ ] Leaks from forgetting delete
+- [x] Reference cycles between shared_ptrs that keep objects alive forever
+- [ ] Double free when copying a unique_ptr
+- [ ] Concurrent access from many threads
+> E.g. a tree where children hold a shared_ptr to the parent and the parent holds shared_ptrs to the children → one direction must be weak_ptr.
 
-### `std::move(x)` thực chất làm gì?
-- [ ] Copy x sang vùng nhớ mới rồi xoá x
-- [x] Ép x sang rvalue reference để có thể chọn move constructor/assignment
-- [ ] Giải phóng bộ nhớ của x
-- [ ] Đổi địa chỉ của x
-> Việc di chuyển thật sự do move constructor/assignment của kiểu đó thực hiện.
+### What does `std::move(x)` actually do?
+- [ ] Copies x to new memory and deletes x
+- [x] Casts x to an rvalue reference so the move constructor/assignment can be selected
+- [ ] Frees x's memory
+- [ ] Changes x's address
+> The actual moving is done by the type's move constructor/assignment.
 
-### Đoạn sau in ra gì?
+### What does this print?
 ```cpp
 int x = 1;
 auto f = [x]() { return x; };
@@ -129,60 +129,60 @@ std::cout << f() << " " << g();
 - [x] 1 10
 - [ ] 1 1
 - [ ] 10 1
-> Capture theo giá trị chụp lúc tạo lambda; capture theo reference đọc giá trị hiện tại.
+> A by-value capture is taken when the lambda is created; a by-reference capture reads the current value.
 
-### Muốn sửa biến capture theo giá trị bên trong lambda, cần gì?
+### What do you need to modify a by-value capture inside a lambda?
 - [ ] `const`
 - [x] `mutable`
 - [ ] `volatile`
 - [ ] `static`
-> operator() của lambda mặc định là const. mutable chỉ sửa bản copy bên trong lambda, không ảnh hưởng biến bên ngoài.
+> A lambda's operator() is const by default. mutable only changes the copy inside the lambda, not the outside variable.
 
-### Ưu điểm của `nullptr` so với `NULL`?
-- [ ] Nhanh hơn
-- [x] Có kiểu riêng (nullptr_t) nên không bị nhầm với số nguyên khi overload
-- [ ] Có thể dereference an toàn
-- [ ] Tự giải phóng bộ nhớ
-> `f(int)` và `f(char*)`: `f(NULL)` có thể gọi f(int); `f(nullptr)` luôn gọi bản con trỏ.
+### What is the advantage of `nullptr` over `NULL`?
+- [ ] It is faster
+- [x] It has its own type (nullptr_t), so overloads cannot mistake it for an integer
+- [ ] It can be dereferenced safely
+- [ ] It frees memory automatically
+> With `f(int)` and `f(char*)`, `f(NULL)` may call f(int); `f(nullptr)` always calls the pointer overload.
 
-### Khác biệt chính của `enum class` so với `enum` thường? (chọn tất cả đáp án đúng)
-- [x] Tên hằng nằm trong phạm vi của enum (`Color::Red`)
-- [x] Không tự chuyển ngầm sang int
-- [ ] Không chỉ định được kiểu nền
-- [ ] Chỉ dùng được trong class
-> Có thể chỉ định kiểu nền: `enum class Color : uint8_t { ... }`.
+### Main differences of `enum class` compared to a plain `enum`? (select all that apply)
+- [x] The enumerators are scoped to the enum (`Color::Red`)
+- [x] No implicit conversion to int
+- [ ] You cannot specify the underlying type
+- [ ] It can only be used inside a class
+> You can specify the underlying type: `enum class Color : uint8_t { ... }`.
 
-### Container nào phù hợp nhất khi cần chèn/xoá thường xuyên ở giữa và giữ iterator không bị vô hiệu?
+### Which container fits best when you often insert/erase in the middle and need iterators to stay valid?
 - [ ] vector
 - [ ] deque
 - [x] list
 - [ ] array
-> Chèn/xoá ở list không làm vô hiệu iterator tới phần tử khác. Tuy vậy thực tế vector thường nhanh hơn với dữ liệu nhỏ nhờ cache.
+> Inserting/erasing in a list does not invalidate iterators to other elements. In practice vector is still often faster for small data thanks to the cache.
 
-### `std::priority_queue<int>` mặc định lấy ra phần tử nào trước?
-- [x] Lớn nhất
-- [ ] Nhỏ nhất
-- [ ] Phần tử chèn đầu tiên
-- [ ] Phần tử chèn cuối cùng
-> Max-heap. Muốn min-heap: `priority_queue<int, vector<int>, greater<int>>`.
+### Which element does a default `std::priority_queue<int>` give you first?
+- [x] The largest
+- [ ] The smallest
+- [ ] The first inserted
+- [ ] The last inserted
+> Max-heap. For a min-heap: `priority_queue<int, vector<int>, greater<int>>`.
 
-### `constexpr` nghĩa là gì?
-- [ ] Biến không thể thay đổi lúc chạy, giống const
-- [x] Giá trị/hàm có thể (hoặc phải, với biến) được tính lúc biên dịch
-- [ ] Hàm được inline bắt buộc
-- [ ] Biến được đặt vào ROM
-> Biến constexpr phải là hằng lúc biên dịch; hàm constexpr được tính lúc biên dịch khi tham số là hằng.
+### What does `constexpr` mean?
+- [ ] The variable cannot change at run time, like const
+- [x] The value/function can be (or, for variables, must be) evaluated at compile time
+- [ ] The function is forced inline
+- [ ] The variable is placed in ROM
+> A constexpr variable must be a compile-time constant; a constexpr function is evaluated at compile time when its arguments are constants.
 
-### Vì sao nên dùng `make_shared` thay vì `shared_ptr<T>(new T)`?
-- [ ] Vì `new T` không hợp lệ với shared_ptr
-- [x] Cấp phát object và control block trong một lần, nhanh hơn và an toàn với exception
-- [ ] Vì make_shared không đếm tham chiếu
-- [ ] Vì make_shared tạo unique_ptr
-> Nhược điểm nhỏ: bộ nhớ của object chỉ được trả khi cả weak_ptr cũng hết.
+### Why prefer `make_shared` over `shared_ptr<T>(new T)`?
+- [ ] Because `new T` is not allowed with shared_ptr
+- [x] It allocates the object and the control block at once, which is faster and exception-safe
+- [ ] Because make_shared does not count references
+- [ ] Because make_shared creates a unique_ptr
+> A small drawback: the object's memory is only released once all weak_ptrs are gone too.
 
-### `auto [k, v] = *m.begin();` (với m là std::map) là tính năng gì?
+### `auto [k, v] = *m.begin();` (m is a std::map) uses which feature?
 - [ ] Lambda capture
-- [x] Structured binding (C++17)
-- [ ] Initializer list
+- [x] Structured bindings (C++17)
+- [ ] Initializer lists
 - [ ] Template deduction
-> Tách pair/tuple/struct thành các biến có tên.
+> Unpacks a pair/tuple/struct into named variables.

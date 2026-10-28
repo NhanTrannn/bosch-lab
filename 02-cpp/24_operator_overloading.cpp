@@ -1,9 +1,9 @@
 /*
- * Bài: Operator overloading: + - == ++ (prefix/postfix) += [] << và hàm non-member
- * Chủ đề: C++ OOP (Udemy section 14)
- * Dự đoán trước khi chạy: c = a++ thì c và a là gì? Có bao nhiêu dòng [pre++] khi gọi a++? 2 * a gọi được không, a * 2 thì sao? (a += b) += b cho kết quả gì?
- * Ý chính: Postfix có tham số giả int, trả về bản copy CŨ (theo giá trị); prefix trả về *this theo tham chiếu → prefix rẻ hơn. Toán tử có vế trái không phải class của mình (2 * v, cout << v) phải là hàm non-member (thường là friend). Toán tử gán/gán kép trả về T& để nối chuỗi được.
- * Thử thêm: Viết thêm Vec operator*(const Vec&, int) để a * 2 chạy được. Không overload được: . .* :: ?: sizeof.
+ * Lab: Operator overloading: + - == ++ (prefix/postfix) += [] << and non-member functions
+ * Topic: C++ OOP (Udemy section 14)
+ * Predict before running: After c = a++, what are c and a? How many [pre++] lines does a++ print? Does 2 * a compile, and a * 2? What does (a += b) += b produce?
+ * Key idea: Postfix takes a dummy int parameter and returns a copy of the OLD value (by value); prefix returns *this by reference → prefix is cheaper. Operators whose left operand is not your class (2 * v, cout << v) must be non-member functions (usually friends). Assignment/compound assignment operators return T& so they can be chained.
+ * Try next: Add Vec operator*(const Vec&, int) so a * 2 works. These cannot be overloaded: . .* :: ?: sizeof.
  */
 #include <iostream>
 using namespace std;
@@ -55,7 +55,7 @@ int main()
     cout << "\nd = ++a: d = " << d << ", a = " << a << '\n';
 
     cout << "2 * a = " << 2 * a << '\n';
-    // cout << a * 2;   // lỗi: không có operator*(Vec, int)
+    // cout << a * 2;   // error: there is no operator*(Vec, int)
 
     a[1] = 9;
     cout << "a[1] = 9 -> a = " << a << '\n';
@@ -64,7 +64,7 @@ int main()
     (e += b) += b;
     cout << "(e += b) += b -> e = " << e << '\n';
 
-    Vec f = 5;   // constructor không explicit: 5 -> Vec(5, 0)
+    Vec f = 5;   // non-explicit constructor: 5 -> Vec(5, 0)
     cout << "Vec f = 5 -> " << f << ", f + 1 = " << f + 1 << '\n';
     return 0;
 }

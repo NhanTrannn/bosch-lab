@@ -1,9 +1,9 @@
 /*
- * Bài: Template: suy luận kiểu, specialization, overload với hàm thường
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Mỗi lời gọi maxv chọn bản nào: hàm thường, template, hay bản specialization? Box<int>::count và Box<double>::count bằng mấy? Fact<5>::v?
- * Ý chính: Khi khớp như nhau, hàm thường được ưu tiên hơn template. Template không tự chuyển kiểu khi suy luận (maxv(1, 2.5) không suy ra được T). Mỗi kiểu T sinh ra một class riêng → static member riêng. Template có thể tính toán lúc biên dịch.
- * Thử thêm: Gọi maxv<double>(1, 2.5). Viết Fact bằng constexpr function thay vì template đệ quy.
+ * Lab: Templates: type deduction, specialization, overloading with a normal function
+ * Topic: C++
+ * Predict before running: Which version does each maxv call pick: the normal function, the template, or the specialization? What are Box<int>::count and Box<double>::count? Fact<5>::v?
+ * Key idea: When both match equally well, a normal function beats a template. Template deduction does not convert types (maxv(1, 2.5) cannot deduce T). Each type T generates a separate class → separate static members. Templates can compute at compile time.
+ * Try next: Call maxv<double>(1, 2.5). Write Fact as a constexpr function instead of a recursive template.
  */
 #include <cstring>
 #include <iostream>

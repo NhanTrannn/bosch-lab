@@ -1,9 +1,9 @@
 /*
- * Bài: Hàm: truyền tham trị/tham chiếu/con trỏ, tham số mặc định, overload, static local, đệ quy
- * Chủ đề: C++ cơ bản (Udemy section 11)
- * Dự đoán trước khi chạy: x sau by_val/by_ref/by_ptr? print(5.0f), print('a'), print("hi") gọi bản nào? counter() ba lần? fib(5) gọi bao nhiêu lần?
- * Ý chính: Tham trị nhận bản copy, tham chiếu/con trỏ sửa được biến gốc. Overload chọn bản khớp tốt nhất: khớp chính xác > promotion (float→double, char→int) > chuyển đổi chuẩn (const char*→bool) > chuyển đổi do người dùng định nghĩa (const char*→string). Tham số mặc định chỉ ghi ở khai báo và phải nằm cuối danh sách.
- * Thử thêm: Xoá print(bool) rồi chạy lại print("hi"). Gọi print(5L) để thấy lỗi ambiguous.
+ * Lab: Functions: pass by value/reference/pointer, default arguments, overloading, static locals, recursion
+ * Topic: C++ basics (Udemy section 11)
+ * Predict before running: x after by_val/by_ref/by_ptr? Which overload do print(5.0f), print('a') and print("hi") call? counter() three times? How many calls does fib(5) make?
+ * Key idea: Pass by value gets a copy; references/pointers can modify the original. Overload resolution picks the best match: exact match > promotion (float→double, char→int) > standard conversion (const char*→bool) > user-defined conversion (const char*→string). Default arguments go only in the declaration and must be last.
+ * Try next: Delete print(bool) and run print("hi") again. Call print(5L) to see the ambiguity error.
  */
 #include <iostream>
 #include <string>
@@ -29,7 +29,7 @@ void greet(const string &name = "Guest", int times = 1)
 
 int counter()
 {
-    static int c = 0;   // khởi tạo một lần duy nhất
+    static int c = 0;   // initialized exactly once
     return ++c;
 }
 
@@ -66,7 +66,7 @@ int main()
     int r3 = counter();
     cout << "counter: " << r1 << ' ' << r2 << ' ' << r3 << '\n';
 
-    cout << "fib(5) = " << fib(5) << ", so lan goi = " << calls << '\n';
+    cout << "fib(5) = " << fib(5) << ", number of calls = " << calls << '\n';
     cout << "factorial(10) = " << factorial(10) << '\n';
     return 0;
 }

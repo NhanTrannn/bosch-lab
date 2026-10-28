@@ -1,9 +1,9 @@
 /*
- * Bài: Bẫy STL: map[], erase trong vòng lặp, iterator invalidation
- * Chủ đề: C++
- * Dự đoán trước khi chạy: size của map sau khi đọc m["b"]? Vector v còn gì? capacity trước/sau và p còn trỏ tới w[0] không?
- * Ý chính: map::operator[] TỰ CHÈN key nếu chưa có. vector::erase trả về iterator kế tiếp. push_back vượt capacity cấp phát lại → mọi pointer/iterator cũ không còn hợp lệ.
- * Thử thêm: Viết lại phần lọc số chẵn bằng erase-remove idiom: v.erase(remove_if(...), v.end()).
+ * Lab: STL traps: map[], erasing in a loop, iterator invalidation
+ * Topic: C++
+ * Predict before running: What is the map's size after reading m["b"]? What is left in vector v? What are the capacities before/after, and does p still point to w[0]?
+ * Key idea: map::operator[] INSERTS the key if it is missing. vector::erase returns the next iterator. A push_back beyond capacity reallocates → every old pointer/iterator becomes invalid.
+ * Try next: Rewrite the even-number filter with the erase-remove idiom: v.erase(remove_if(...), v.end()).
  */
 #include <iostream>
 #include <map>
@@ -15,10 +15,10 @@ int main()
 {
     map<string, int> m;
     m["a"] = 1;
-    cout << "size truoc = " << m.size() << '\n';
+    cout << "size before = " << m.size() << '\n';
     if (m["b"] == 0)
         cout << "m[\"b\"] == 0\n";
-    cout << "size sau [] = " << m.size() << '\n';
+    cout << "size after [] = " << m.size() << '\n';
     cout << "count(\"c\") = " << m.count("c") << ", size = " << m.size() << '\n';
 
     vector<int> v = {1, 2, 3, 4, 5, 6};

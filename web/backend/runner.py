@@ -1,4 +1,4 @@
-"""Build bài bằng Makefile ở gốc và chạy trong pty qua jobwrap.py (giống terminal thật)."""
+"""Build labs with the top-level Makefile and run them in a pty via jobwrap.py (like a real terminal)."""
 import codecs
 import fcntl
 import os
@@ -22,7 +22,7 @@ BUILD_LOCK = threading.Lock()
 
 
 def build(lab_id):
-    # -B: luôn biên dịch lại để thấy cảnh báo và nhận thay đổi vừa sửa trong editor
+    # -B: always rebuild, so warnings show up and edits made in the editor are picked up
     with BUILD_LOCK:
         p = subprocess.run(["make", "--no-print-directory", "-B", f"build/{lab_id}"],
                            cwd=ROOT, capture_output=True, text=True, timeout=120)
@@ -33,10 +33,10 @@ class Run:
     def __init__(self, argv, cwd, limit, label):
         self.id = uuid.uuid4().hex[:12]
         self.label = label
-        self.chunks = []          # [loại, text]: "out" = từ terminal, "sys" = ghi chú của web
+        self.chunks = []          # [kind, text]: "out" = from the terminal, "sys" = note from the web UI
         self.size = 0
         self.lock = threading.Lock()
-        self.pid = None           # PID của job (chính chương trình bài)
+        self.pid = None           # PID of the job (the lab program itself)
         self.state = "running"    # running | stopped | exited | done
         self.result = None
         self.done = False
@@ -54,7 +54,7 @@ class Run:
         for fd in (slave, status_w, ctl_r):
             os.close(fd)
         self.master, self.ctl = master, ctl_w
-        self.sid = self.proc.pid  # wrapper là session leader → SID = PID của nó
+        self.sid = self.proc.pid  # the wrapper is the session leader, so SID = its PID
 
         threading.Thread(target=self._read_status, args=(status_r,), daemon=True).start()
         threading.Thread(target=self._read_output, daemon=True).start()
@@ -69,7 +69,7 @@ class Run:
             self.size += len(text)
             self.chunks.append([kind, text])
             if self.size > OUTPUT_LIMIT:
-                self.chunks.append(["sys", "\n[output quá dài, bỏ phần sau]\n"])
+                self.chunks.append(["sys", "\n[output too long, the rest is dropped]\n"])
 
     def _read_status(self, fd):
         names = {s.value: s.name for s in signal.Signals}
@@ -80,7 +80,7 @@ class Run:
                     self.pid = int(arg)
                 elif what == "stopped":
                     self.state = "stopped"
-                    self.add("sys", f"\n[{self.pid}] Stopped ({names.get(int(arg), arg)}) — bấm fg để chạy tiếp\n")
+                    self.add("sys", f"\n[{self.pid}] Stopped ({names.get(int(arg), arg)}) — press fg to continue\n")
                 elif what == "continued":
                     self.state = "running"
                     self.add("sys", f"\n[{self.pid}] Continued\n")
@@ -88,20 +88,20 @@ class Run:
                     self.state = "exited"
                     self.result = {"kind": what, "value": int(arg),
                                    "name": names.get(int(arg)) if what == "signal" else None}
-                    msg = f"mã thoát {arg}" if what == "exit" else f"bị kết thúc bởi {names.get(int(arg), arg)}"
-                    self.add("sys", f"\n[tiến trình {self.pid} kết thúc, {msg}]\n")
+                    msg = f"exit code {arg}" if what == "exit" else f"killed by {names.get(int(arg), arg)}"
+                    self.add("sys", f"\n[process {self.pid} finished, {msg}]\n")
                     threading.Timer(0.5, self._note_orphans).start()
 
     def _note_orphans(self):
         if not self.done:
-            self.add("sys", "[vẫn còn tiến trình con giữ terminal (orphan/chạy nền) — chờ chúng thoát hoặc bấm Dừng]\n")
+            self.add("sys", "[child processes still hold the terminal (orphans/background) — wait for them to exit or press Stop]\n")
 
     def _read_output(self):
         dec = codecs.getincrementaldecoder("utf-8")(errors="replace")
         while True:
             try:
                 data = os.read(self.master, 65536)
-            except OSError:   # EIO: không còn tiến trình nào giữ slave
+            except OSError:   # EIO: no process holds the slave side any more
                 data = b""
             if not data:
                 break
@@ -117,10 +117,10 @@ class Run:
 
     def _timeout(self, limit):
         if not self.done:
-            self.add("sys", f"\n[quá {limit} giây, kill toàn bộ]\n")
+            self.add("sys", f"\n[over {limit} seconds, killing everything]\n")
             self.kill_all()
 
-    # ---- điều khiển từ frontend
+    # ---- control from the frontend
     def write(self, data):
         if not self.done:
             try:
@@ -136,11 +136,11 @@ class Run:
 
     def send_signal(self, sig, group):
         if not self.pid or self.state in ("exited", "done"):
-            return "tiến trình đã kết thúc"
+            return "the process has already finished"
         try:
             (os.killpg if group else os.kill)(self.pid, SIGNALS[sig])
         except ProcessLookupError:
-            return "không tìm thấy tiến trình"
+            return "process not found"
         self.add("sys", f"\n$ kill -{sig} {'-' if group else ''}{self.pid}\n")
         return None
 

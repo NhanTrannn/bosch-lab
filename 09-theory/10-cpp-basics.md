@@ -1,84 +1,84 @@
-# C++ cơ bản: biến, toán tử, điều khiển luồng, chuỗi
+# C++ basics: variables, operators, control flow, strings
 
-## Lý thuyết
+## Theory
 
-Theo Udemy *Beginning C++ Programming*, section 4–10. Lab: `02-cpp/17` … `02-cpp/20`.
+Follows the Udemy course *Beginning C++ Programming*, sections 4–10. Labs: `02-cpp/17` … `02-cpp/20`.
 
-### Các loại lỗi (section 4)
-| Loại | Khi nào phát hiện | Ví dụ |
+### Kinds of errors (section 4)
+| Kind | Detected when | Example |
 | --- | --- | --- |
-| Compiler error (syntax/semantic) | lúc biên dịch | thiếu `;`, dùng biến chưa khai báo, gán `string` vào `int` |
-| Compiler warning | lúc biên dịch, vẫn tạo được file chạy | biến chưa khởi tạo, so sánh signed/unsigned, biến không dùng |
-| Linker error | lúc liên kết | khai báo hàm nhưng không định nghĩa (`undefined reference`), định nghĩa trùng (`multiple definition`) |
-| Runtime error | lúc chạy | chia cho 0, mở file không tồn tại, truy cập con trỏ null → crash |
-| Logic error | không ai báo, kết quả sai | dùng `>` thay vì `>=`, chia nguyên khi cần chia thực |
+| Compiler error (syntax/semantic) | at compile time | missing `;`, using an undeclared variable, assigning a `string` to an `int` |
+| Compiler warning | at compile time, still produces an executable | uninitialized variable, signed/unsigned comparison, unused variable |
+| Linker error | at link time | function declared but never defined (`undefined reference`), defined twice (`multiple definition`) |
+| Runtime error | while running | division by zero, opening a missing file, dereferencing a null pointer → crash |
+| Logic error | nobody reports it, the result is just wrong | using `>` instead of `>=`, integer division where real division was needed |
 
-Luôn bật `-Wall -Wextra` và coi warning như lỗi tiềm ẩn.
+Always enable `-Wall -Wextra` and treat warnings as latent bugs.
 
-### Cấu trúc chương trình (section 5)
-- `#include <iostream>`: chỉ thị **preprocessor**, chạy trước khi biên dịch; dán nội dung header vào file. `<...>` tìm trong thư mục hệ thống, `"..."` tìm ở thư mục hiện tại trước.
-- Comment: `//` một dòng, `/* ... */` nhiều dòng (không lồng nhau được). Comment bị bỏ đi ở bước preprocessor.
-- `main()`: điểm bắt đầu; `int main()` hoặc `int main(int argc, char *argv[])`. `argv[0]` là tên chương trình. Thiếu `return` trong main thì mặc định trả về 0; trả về 0 nghĩa là thành công.
-- Namespace: tránh trùng tên. `std::cout`, `using std::cout;` (chỉ một tên), `using namespace std;` (cả namespace; không nên dùng trong header).
-- `cout << ` (insertion operator), `cin >> ` (extraction operator). `cin >>` bỏ qua khoảng trắng và dừng ở khoảng trắng. `endl` = xuống dòng + flush; `'\n'` chỉ xuống dòng.
-- `cerr`: không có buffer; `clog`: có buffer; cả hai ghi ra stderr.
+### Program structure (section 5)
+- `#include <iostream>`: a **preprocessor** directive, processed before compilation; it pastes the header's contents in. `<...>` searches the system directories, `"..."` searches the current directory first.
+- Comments: `//` single line, `/* ... */` multi-line (cannot nest). Comments are stripped by the preprocessor.
+- `main()`: the entry point; `int main()` or `int main(int argc, char *argv[])`. `argv[0]` is the program name. A missing `return` in main means return 0; returning 0 means success.
+- Namespaces avoid name clashes. `std::cout`, `using std::cout;` (one name), `using namespace std;` (the whole namespace; avoid in headers).
+- `cout << ` (insertion operator), `cin >> ` (extraction operator). `cin >>` skips leading whitespace and stops at whitespace. `endl` = newline + flush; `'\n'` is just a newline.
+- `cerr`: unbuffered; `clog`: buffered; both write to stderr.
 
-### Biến và hằng (section 6)
-- Biến: tên + kiểu + vùng nhớ. Tên bắt đầu bằng chữ hoặc `_`, phân biệt hoa thường, không trùng từ khoá.
-- Ba cách khởi tạo: `int a = 5;` (C-like), `int a(5);` (constructor), `int a{5};` (list/uniform, C++11, **chặn narrowing**: `int x{3.5}` lỗi).
-- Biến local chưa khởi tạo chứa giá trị rác; biến global/static được khởi tạo về 0.
-- Biến global: khai báo ngoài mọi hàm, nhìn thấy ở mọi nơi sau khai báo. Nên tránh dùng.
-- Kiểu cơ bản: `char` (1 byte), `short` (≥ 2), `int` (≥ 2, thường 4), `long` (≥ 4; 8 trên Linux 64-bit), `long long` (≥ 8), `float` (4, ~7 chữ số), `double` (8, ~15 chữ số), `long double`, `bool` (thường 1 byte).
-- `signed`/`unsigned`: unsigned không có số âm, tràn thì quay vòng (định nghĩa rõ); signed tràn là UB.
-- `sizeof` là **toán tử** (tính lúc biên dịch), trả về `size_t`. Giới hạn kiểu: `<climits>` (`INT_MAX`), `<cfloat>`, `std::numeric_limits<int>::max()`.
-- Hằng: literal (`12`, `12U`, `12L`, `12.0f`, `'A'`, `"abc"`), `const` (không đổi được sau khởi tạo, phải khởi tạo ngay), `constexpr` (tính lúc biên dịch), `enum`, `#define` (thay thế text, không có kiểu, **không nên dùng** trong C++).
+### Variables and constants (section 6)
+- A variable: name + type + storage. Names start with a letter or `_`, are case-sensitive and cannot be keywords.
+- Three ways to initialize: `int a = 5;` (C-like), `int a(5);` (constructor), `int a{5};` (list/uniform, C++11, **blocks narrowing**: `int x{3.5}` is an error).
+- An uninitialized local holds garbage; globals/statics are zero-initialized.
+- Global variables: declared outside every function, visible everywhere after the declaration. Avoid them.
+- Fundamental types: `char` (1 byte), `short` (≥ 2), `int` (≥ 2, usually 4), `long` (≥ 4; 8 on 64-bit Linux), `long long` (≥ 8), `float` (4, ~7 digits), `double` (8, ~15 digits), `long double`, `bool` (usually 1 byte).
+- `signed`/`unsigned`: unsigned has no negative values and wraps around on overflow (well-defined); signed overflow is UB.
+- `sizeof` is an **operator** (evaluated at compile time) returning `size_t`. Type limits: `<climits>` (`INT_MAX`), `<cfloat>`, `std::numeric_limits<int>::max()`.
+- Constants: literals (`12`, `12U`, `12L`, `12.0f`, `'A'`, `"abc"`), `const` (cannot change after initialization, must be initialized immediately), `constexpr` (evaluated at compile time), `enum`, `#define` (text substitution, untyped, **avoid** in C++).
 
-### Mảng và vector (section 7)
-- Mảng: kích thước cố định, biết lúc biên dịch, phần tử liền nhau, chỉ số 0 … n-1, **không kiểm tra biên**. `int a[5] {1, 2};` → các phần tử còn lại là 0. `int a[] {1, 2, 3};` → tự suy ra kích thước 3.
-- Tên mảng là địa chỉ phần tử đầu. Không gán mảng cho mảng (`a = b` lỗi).
-- Mảng nhiều chiều: `int m[3][4];` lưu theo hàng (row-major).
-- `std::vector` (`#include <vector>`): mảng động, tự quản lý bộ nhớ. `vector<int> v(5);` = 5 phần tử 0; `vector<int> v{5};` = 1 phần tử có giá trị 5; `vector<int> v(5, 1);` = 5 phần tử 1.
-- `v[i]` không kiểm tra biên, `v.at(i)` kiểm tra và ném `std::out_of_range`. `push_back`, `size()`, `vector<vector<int>>` cho 2 chiều.
+### Arrays and vectors (section 7)
+- Arrays: fixed size known at compile time, contiguous elements, indexes 0 … n-1, **no bounds checking**. `int a[5] {1, 2};` → the rest are 0. `int a[] {1, 2, 3};` → size 3 deduced.
+- An array name is the address of its first element. Arrays cannot be assigned (`a = b` is an error).
+- Multidimensional arrays: `int m[3][4];` stored row by row (row-major).
+- `std::vector` (`#include <vector>`): a dynamic array that manages its own memory. `vector<int> v(5);` = 5 elements of 0; `vector<int> v{5};` = one element with value 5; `vector<int> v(5, 1);` = 5 elements of 1.
+- `v[i]` is unchecked, `v.at(i)` checks and throws `std::out_of_range`. `push_back`, `size()`, `vector<vector<int>>` for 2D.
 
-### Biểu thức và toán tử (section 8)
-- Expression: thứ tính ra giá trị. Statement: câu lệnh hoàn chỉnh kết thúc bằng `;`.
-- Toán tử gán `=` trả về lvalue vế trái → `a = b = 5` gán từ phải sang trái. `=` không phải `==`.
-- Số học `+ - * / %`. `int / int` là chia nguyên (cắt về 0). `%` chỉ dùng cho số nguyên.
-- `++i` (tăng rồi dùng) và `i++` (dùng rồi tăng). Không sửa cùng một biến hai lần trong một biểu thức (`i = i++ + 1` là UB trước C++17).
-- Mixed expression: kiểu nhỏ được nâng lên kiểu lớn hơn (promotion: `short`/`char` → `int`, `int` → `double`). Gán double vào int thì cắt phần thập phân (demotion). Ép kiểu tường minh: `static_cast<double>(x)`, kiểu C `(double)x`.
-- So sánh `== != < > <= >=` (C++20 có `<=>`). Không so sánh số thực bằng `==`.
-- Logic: `!` (cao nhất), `&&`, `||` (thấp nhất). **Short-circuit**: `&&` dừng khi gặp false, `||` dừng khi gặp true.
-- Gán kép `+= -= *= /= %= <<= >>= &= ^= |=`: `a *= b + c` là `a = a * (b + c)`.
-- Độ ưu tiên (cao → thấp): `::` → hậu tố `a++ a() a[] .` `->` → tiền tố `++a !a -a *p &a sizeof` cast → `* / %` → `+ -` → `<< >>` → `< <= > >=` → `== !=` → `&` → `^` → `|` → `&&` → `||` → `?:` và gán `= +=` … → `,`. Gán và `?:` kết hợp **phải sang trái**, hầu hết toán tử khác trái sang phải.
+### Expressions and operators (section 8)
+- Expression: something that computes a value. Statement: a complete instruction ending with `;`.
+- The assignment `=` returns the left-hand lvalue → `a = b = 5` assigns right to left. `=` is not `==`.
+- Arithmetic `+ - * / %`. `int / int` is integer division (truncates toward zero). `%` only works on integers.
+- `++i` (increment, then use) and `i++` (use, then increment). Do not modify the same variable twice in one expression (`i = i++ + 1` is UB before C++17).
+- Mixed expressions: smaller types are promoted to larger ones (promotion: `short`/`char` → `int`, `int` → `double`). Assigning a double to an int truncates the fraction (demotion). Explicit cast: `static_cast<double>(x)`, C-style `(double)x`.
+- Comparison `== != < > <= >=` (C++20 adds `<=>`). Do not compare floating-point numbers with `==`.
+- Logical: `!` (highest), `&&`, `||` (lowest). **Short-circuit**: `&&` stops at the first false, `||` stops at the first true.
+- Compound assignment `+= -= *= /= %= <<= >>= &= ^= |=`: `a *= b + c` is `a = a * (b + c)`.
+- Precedence (high → low): `::` → postfix `a++ a() a[] .` `->` → prefix `++a !a -a *p &a sizeof` casts → `* / %` → `+ -` → `<< >>` → `< <= > >=` → `== !=` → `&` → `^` → `|` → `&&` → `||` → `?:` and assignment `= +=` … → `,`. Assignment and `?:` associate **right to left**, most other operators left to right.
 
-### Điều khiển luồng (section 9)
-- `if`, `if-else`, if lồng nhau: `else` gắn với `if` gần nhất chưa có else (dangling else) → nên luôn dùng `{}`.
-- `switch (expr)`: expr phải là số nguyên, char hoặc enum (không string, không double). Nhãn `case` phải là hằng lúc biên dịch. Thiếu `break` → chạy tiếp xuống case sau (fall-through). `default` không bắt buộc. Không khai báo biến có khởi tạo trong case mà không có `{}`.
-- Toán tử ba ngôi: `cond ? a : b`, là **biểu thức** (có giá trị) nên dùng được trong `cout`.
-- `for (init; cond; update)`: init và update có thể có nhiều biến (dấu phẩy). `for (;;)` là vòng lặp vô hạn.
-- Range-based for (C++11): `for (auto x : v)` copy, `for (auto &x : v)` sửa được, `for (const auto &x : v)` đọc không copy.
-- `while` kiểm tra trước (có thể 0 lần); `do { } while (cond);` kiểm tra sau (ít nhất 1 lần, nhớ dấu `;` cuối).
-- `break` thoát vòng lặp/switch gần nhất; `continue` sang lần lặp tiếp của vòng gần nhất.
-- Vòng lặp vô hạn: `while (true)`, `for (;;)`; thoát bằng `break`. Hay dùng cho vòng menu, event loop.
+### Control flow (section 9)
+- `if`, `if-else`, nested ifs: an `else` binds to the nearest `if` without an else (dangling else) → always use `{}`.
+- `switch (expr)`: expr must be an integer, char or enum (not a string or double). `case` labels must be compile-time constants. A missing `break` falls through to the next case. `default` is optional. You cannot declare an initialized variable inside a case without `{}`.
+- The conditional operator `cond ? a : b` is an **expression** (it has a value), so it can be used inside `cout`.
+- `for (init; cond; update)`: init and update may handle several variables (comma). `for (;;)` is an infinite loop.
+- Range-based for (C++11): `for (auto x : v)` copies, `for (auto &x : v)` can modify, `for (const auto &x : v)` reads without copying.
+- `while` tests first (may run 0 times); `do { } while (cond);` tests last (runs at least once; note the final `;`).
+- `break` leaves the innermost loop/switch; `continue` jumps to the next iteration of the innermost loop.
+- Infinite loops: `while (true)`, `for (;;)`; leave with `break`. Common for menu loops and event loops.
 
-### Ký tự và chuỗi (section 10)
-- `<cctype>`: `isalpha`, `isdigit`, `isalnum`, `isspace`, `isupper`, `islower`, `ispunct`, `toupper`, `tolower`. Hàm `is...` trả về int khác 0 (không nhất thiết là 1).
-- C-style string: mảng `char` kết thúc bằng `'\0'`. `char s[] = "Hi";` có kích thước 3. String literal `"Hi"` là `const char[3]`, không được sửa.
-- `<cstring>`: `strlen` (không đếm `'\0'`), `strcpy`, `strcat` (không kiểm tra tràn), `strcmp` (0 = bằng, < 0, > 0), `strncpy`. `<cstdlib>`: `atoi`, `atof`.
-- `std::string` (`#include <string>`): tự quản lý bộ nhớ, so sánh bằng `== < >` theo thứ tự từ điển, nối bằng `+` (ít nhất một vế phải là `std::string`: `"a" + "b"` lỗi).
-- Hàm của string: `size()`/`length()`, `substr(pos, len)`, `find(s)` (không thấy → `string::npos`), `rfind`, `erase(pos, len)`, `insert(pos, s)`, `replace`, `clear()`, `empty()`, `at(i)` (kiểm tra biên), `c_str()` (lấy `const char*`), `std::stoi`, `std::to_string`.
-- `cin >> s` đọc một từ; `getline(cin, s)` đọc cả dòng (bỏ `'\n'`). Gọi `cin >> n` rồi `getline` ngay sau thì getline đọc phải `'\n'` còn sót → chuỗi rỗng; sửa bằng `cin.ignore()` hoặc `cin >> ws`.
+### Characters and strings (section 10)
+- `<cctype>`: `isalpha`, `isdigit`, `isalnum`, `isspace`, `isupper`, `islower`, `ispunct`, `toupper`, `tolower`. The `is...` functions return a non-zero int (not necessarily 1).
+- C-style string: a `char` array terminated by `'\0'`. `char s[] = "Hi";` has size 3. A string literal `"Hi"` is a `const char[3]` and must not be modified.
+- `<cstring>`: `strlen` (does not count `'\0'`), `strcpy`, `strcat` (no overflow checks), `strcmp` (0 = equal, < 0, > 0), `strncpy`. `<cstdlib>`: `atoi`, `atof`.
+- `std::string` (`#include <string>`): manages its own memory, compares with `== < >` lexicographically, concatenates with `+` (at least one side must be a `std::string`: `"a" + "b"` is an error).
+- String member functions: `size()`/`length()`, `substr(pos, len)`, `find(s)` (not found → `string::npos`), `rfind`, `erase(pos, len)`, `insert(pos, s)`, `replace`, `clear()`, `empty()`, `at(i)` (bounds-checked), `c_str()` (get a `const char*`), `std::stoi`, `std::to_string`.
+- `cin >> s` reads one word; `getline(cin, s)` reads a whole line (dropping the `'\n'`). Calling `cin >> n` and then `getline` reads the leftover `'\n'` → an empty string; fix with `cin.ignore()` or `cin >> ws`.
 
-## Trắc nghiệm
+## Quiz
 
-### Quên định nghĩa một hàm đã khai báo và có gọi, lỗi xuất hiện ở giai đoạn nào?
+### You forgot to define a function that is declared and called. At which stage does the error appear?
 - [ ] Preprocessor
-- [ ] Biên dịch (compiler error)
-- [x] Liên kết (linker error: undefined reference)
-- [ ] Lúc chạy
-> Khai báo đủ để compiler biên dịch lời gọi. Chỉ đến khi linker ghép các file object mới phát hiện không có định nghĩa.
+- [ ] Compilation (compiler error)
+- [x] Linking (linker error: undefined reference)
+- [ ] At run time
+> The declaration is enough for the compiler to compile the call. Only the linker, when combining the object files, finds that there is no definition.
 
-### Chương trình tính trung bình in ra 2 thay vì 2.33. Đây là loại lỗi gì?
+### An average-calculating program prints 2 instead of 2.33. What kind of error is this?
 ```cpp
 int a = 1, b = 2, c = 4;
 double avg = (a + b + c) / 3;
@@ -87,100 +87,100 @@ double avg = (a + b + c) / 3;
 - [ ] Runtime error
 - [x] Logic error
 - [ ] Linker error
-> Code hợp lệ và chạy bình thường, chỉ là kết quả sai vì chia nguyên. Sửa thành `/ 3.0` hoặc `static_cast<double>(a + b + c) / 3`.
+> The code is valid and runs fine; the result is just wrong because of integer division. Fix it with `/ 3.0` or `static_cast<double>(a + b + c) / 3`.
 
-### `#include` được xử lý bởi?
-- [x] Preprocessor, trước khi biên dịch
-- [ ] Compiler, trong lúc biên dịch
-- [ ] Linker
-- [ ] Hệ điều hành khi chạy chương trình
-> Preprocessor xử lý mọi dòng bắt đầu bằng `#` (include, define, ifdef) và xoá comment, rồi mới đưa kết quả cho compiler.
+### Who processes `#include`?
+- [x] The preprocessor, before compilation
+- [ ] The compiler, during compilation
+- [ ] The linker
+- [ ] The operating system when the program runs
+> The preprocessor handles every line starting with `#` (include, define, ifdef) and removes comments, then hands the result to the compiler.
 
-### Khác nhau giữa `#include <file>` và `#include "file"`?
-- [ ] Không khác gì
-- [x] `"file"` tìm ở thư mục của file nguồn trước, rồi mới tới thư mục hệ thống; `<file>` chỉ tìm ở thư mục hệ thống/thư mục -I
-- [ ] `<file>` dùng cho C, `"file"` dùng cho C++
-- [ ] `"file"` chỉ dùng cho file .cpp
-> Quy ước: header thư viện dùng `<>`, header của dự án dùng `""`.
+### How do `#include <file>` and `#include "file"` differ?
+- [ ] No difference
+- [x] `"file"` searches the source file's directory first, then the system directories; `<file>` only searches the system/-I directories
+- [ ] `<file>` is for C, `"file"` is for C++
+- [ ] `"file"` only works for .cpp files
+> Convention: library headers use `<>`, project headers use `""`.
 
-### Vì sao không nên viết `using namespace std;` trong file header?
-- [ ] Vì làm chương trình chạy chậm
-- [x] Vì mọi file include header đó đều bị kéo toàn bộ tên của std vào, dễ trùng tên
-- [ ] Vì header không được dùng namespace
-- [ ] Vì cú pháp đó chỉ hợp lệ trong main
-> `using` không tốn gì lúc chạy. Vấn đề là ô nhiễm namespace ở mọi nơi include header đó.
+### Why should you not write `using namespace std;` in a header file?
+- [ ] It makes the program slower
+- [x] Every file that includes the header gets all of std's names pulled in, which easily causes clashes
+- [ ] Headers cannot use namespaces
+- [ ] That syntax is only valid inside main
+> `using` costs nothing at run time. The problem is namespace pollution everywhere the header is included.
 
-### `std::endl` khác `'\n'` ở điểm nào?
-- [ ] `endl` xuống 2 dòng
-- [x] `endl` xuống dòng và flush buffer của stream
-- [ ] `'\n'` không xuống dòng trên Linux
-- [ ] Không khác gì
-> Flush liên tục làm chậm khi in nhiều. Dùng `'\n'` trừ khi cần đẩy output ra ngay.
+### How does `std::endl` differ from `'\n'`?
+- [ ] `endl` prints two newlines
+- [x] `endl` prints a newline and flushes the stream's buffer
+- [ ] `'\n'` does not produce a newline on Linux
+- [ ] No difference
+> Flushing all the time slows down heavy output. Use `'\n'` unless you need the output to appear immediately.
 
-### Khởi tạo nào báo lỗi biên dịch?
+### Which initialization is a compile error?
 - [ ] `int a = 3.7;`
 - [ ] `int a(3.7);`
 - [x] `int a{3.7};`
 - [ ] `double a{3};`
-> List initialization `{}` cấm narrowing (double → int mất dữ liệu). `=` và `()` chỉ cắt phần thập phân, cùng lắm là cảnh báo. `double a{3}` là mở rộng (int → double) nên hợp lệ.
+> List initialization `{}` forbids narrowing (double → int loses data). `=` and `()` just truncate, at most with a warning. `double a{3}` widens (int → double), so it is fine.
 
-### Giá trị của biến local `int x;` chưa khởi tạo là gì?
-- [ ] Luôn là 0
-- [x] Không xác định (rác); đọc nó là undefined behavior
+### What is the value of an uninitialized local `int x;`?
+- [ ] Always 0
+- [x] Indeterminate (garbage); reading it is undefined behavior
 - [ ] -1
-- [ ] Lỗi biên dịch
-> Chỉ biến global/static mới tự khởi tạo về 0. Compiler thường cảnh báo `-Wuninitialized`/`-Wmaybe-uninitialized`.
+- [ ] Compile error
+> Only globals/statics are zero-initialized automatically. Compilers usually warn with `-Wuninitialized`/`-Wmaybe-uninitialized`.
 
-### `sizeof` là gì?
-- [ ] Một hàm trong `<cstddef>`
-- [x] Một toán tử, kết quả có kiểu `size_t` và thường tính lúc biên dịch
-- [ ] Một macro
-- [ ] Một hàm của class
-> Vì là toán tử nên `sizeof x` (không ngoặc) hợp lệ với biến; với kiểu thì phải có ngoặc: `sizeof(int)`.
+### What is `sizeof`?
+- [ ] A function in `<cstddef>`
+- [x] An operator whose result has type `size_t` and is usually computed at compile time
+- [ ] A macro
+- [ ] A member function
+> Because it is an operator, `sizeof x` (no parentheses) is valid for variables; types need parentheses: `sizeof(int)`.
 
-### Điều nào ĐÚNG về `const` và `constexpr`? (chọn tất cả đáp án đúng)
-- [x] Biến `const` phải được khởi tạo khi khai báo
-- [x] `constexpr` bắt buộc giá trị tính được lúc biên dịch
-- [ ] `const int n = rand();` báo lỗi
-- [x] `constexpr int n = 10;` dùng được làm kích thước mảng
-> `const` chỉ cấm sửa, giá trị có thể có lúc chạy (`rand()` hợp lệ). `constexpr` mạnh hơn: phải là hằng lúc biên dịch.
+### Which statements about `const` and `constexpr` are TRUE? (select all that apply)
+- [x] A `const` variable must be initialized when declared
+- [x] `constexpr` requires a value computable at compile time
+- [ ] `const int n = rand();` is an error
+- [x] `constexpr int n = 10;` can be used as an array size
+> `const` only forbids modification; its value can come from run time (`rand()` is fine). `constexpr` is stronger: it must be a compile-time constant.
 
-### Vì sao C++ khuyên dùng `const`/`constexpr` thay cho `#define PI 3.14`?
-- [ ] `#define` chạy chậm hơn
-- [x] `#define` chỉ thay thế text: không có kiểu, không có phạm vi, không thấy được khi debug
-- [ ] `#define` không dùng được cho số thực
-- [ ] `const` được lưu trong thanh ghi
-> Macro bị thay thế trước khi compiler thấy, nên không có kiểm tra kiểu, không có scope và dễ dính lỗi do thiếu ngoặc.
+### Why does C++ recommend `const`/`constexpr` instead of `#define PI 3.14`?
+- [ ] `#define` is slower
+- [x] `#define` is pure text substitution: no type, no scope, invisible in the debugger
+- [ ] `#define` cannot be used for floating-point values
+- [ ] `const` is stored in a register
+> Macros are replaced before the compiler sees them, so there is no type checking, no scope, and missing parentheses cause bugs.
 
-### `int a[5] {1, 2};` thì `a[4]` bằng?
-- [ ] Rác
+### Given `int a[5] {1, 2};`, what is `a[4]`?
+- [ ] Garbage
 - [x] 0
 - [ ] 2
-- [ ] Lỗi biên dịch
-> Khi có initializer list, các phần tử không được ghi rõ được khởi tạo về 0.
+- [ ] Compile error
+> With an initializer list, elements that are not listed are initialized to 0.
 
-### Khác nhau giữa `vector<int> v(5);` và `vector<int> v{5};`?
-- [ ] Giống nhau: đều là 5 phần tử
-- [x] `(5)` là 5 phần tử giá trị 0; `{5}` là 1 phần tử giá trị 5
-- [ ] `(5)` là 1 phần tử giá trị 5; `{5}` là 5 phần tử
-- [ ] `{5}` lỗi biên dịch
-> Dấu `{}` ưu tiên constructor nhận `initializer_list`.
+### How do `vector<int> v(5);` and `vector<int> v{5};` differ?
+- [ ] They are the same: both have 5 elements
+- [x] `(5)` is 5 elements of value 0; `{5}` is one element with value 5
+- [ ] `(5)` is one element with value 5; `{5}` is 5 elements
+- [ ] `{5}` is a compile error
+> Braces prefer the constructor taking an `initializer_list`.
 
-### `v.at(10)` với vector có 3 phần tử sẽ?
-- [ ] Trả về 0
+### What does `v.at(10)` do on a vector with 3 elements?
+- [ ] Returns 0
 - [ ] Undefined behavior
-- [x] Ném `std::out_of_range`
-- [ ] Tự mở rộng vector
-> `at()` kiểm tra biên. `v[10]` thì không kiểm tra → UB.
+- [x] Throws `std::out_of_range`
+- [ ] Grows the vector
+> `at()` checks bounds. `v[10]` does not → UB.
 
-### Kết quả của `-7 / 2` và `-7 % 2` trong C++11?
-- [ ] -4 và 1
-- [x] -3 và -1
-- [ ] -3 và 1
-- [ ] -4 và -1
-> Chia nguyên cắt về 0, và `(a / b) * b + a % b == a` → `-7 % 2 = -7 - (-3 * 2) = -1`.
+### What are `-7 / 2` and `-7 % 2` in C++11?
+- [ ] -4 and 1
+- [x] -3 and -1
+- [ ] -3 and 1
+- [ ] -4 and -1
+> Integer division truncates toward zero, and `(a / b) * b + a % b == a` → `-7 % 2 = -7 - (-3 * 2) = -1`.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int i = 5;
 int j = i++ + 10;
@@ -190,23 +190,23 @@ cout << i << ' ' << j;
 - [x] 6 15
 - [ ] 6 16
 - [ ] 5 16
-> `i++` trả về giá trị cũ (5) để tính j = 15, sau đó i thành 6.
+> `i++` yields the old value (5) for computing j = 15, then i becomes 6.
 
-### `a *= 2 + 3;` với a = 4, a bằng?
+### With a = 4, what is a after `a *= 2 + 3;`?
 - [ ] 11
 - [x] 20
 - [ ] 8
 - [ ] 14
-> Gán kép có độ ưu tiên thấp nhất: `a = a * (2 + 3)` = 20.
+> Compound assignment has the lowest precedence: `a = a * (2 + 3)` = 20.
 
-### Kết quả của `(5 > 3 > 1)`?
-- [ ] true, vì 5 > 3 và 3 > 1
+### What is `(5 > 3 > 1)`?
+- [ ] true, because 5 > 3 and 3 > 1
 - [x] false
-- [ ] Lỗi biên dịch
+- [ ] Compile error
 - [ ] Undefined behavior
-> Tính trái sang phải: `(5 > 3)` = true = 1, rồi `1 > 1` = false.
+> Evaluated left to right: `(5 > 3)` = true = 1, then `1 > 1` = false.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int x = 0, y = 0;
 if (x != 0 && ++y > 0) {}
@@ -216,38 +216,38 @@ cout << y;
 - [x] 0
 - [ ] 1
 - [ ] 2
-- [ ] Không xác định
-> Cả hai lần đều short-circuit: vế trái của `&&` false, vế trái của `||` true → `++y` không lần nào chạy.
+- [ ] Undefined
+> Both short-circuit: the left side of `&&` is false, the left side of `||` is true → `++y` never runs.
 
-### `true || false && false` bằng?
+### What is `true || false && false`?
 - [x] true
 - [ ] false
-- [ ] Lỗi biên dịch
-- [ ] Phụ thuộc compiler
-> `&&` ưu tiên hơn `||`: `true || (false && false)` = true.
+- [ ] Compile error
+- [ ] Compiler-dependent
+> `&&` binds tighter than `||`: `true || (false && false)` = true.
 
-### `static_cast<double>(7 / 2)` bằng?
+### What is `static_cast<double>(7 / 2)`?
 - [ ] 3.5
 - [x] 3.0
 - [ ] 4.0
-- [ ] Lỗi biên dịch
-> Biểu thức trong ngoặc là chia nguyên (3), sau đó mới ép sang double. Muốn 3.5 thì ép trước: `static_cast<double>(7) / 2`.
+- [ ] Compile error
+> The parenthesized expression is integer division (3), which is then cast to double. For 3.5, cast first: `static_cast<double>(7) / 2`.
 
-### `cout << 'A' + 1;` in ra?
+### What does `cout << 'A' + 1;` print?
 - [ ] B
 - [x] 66
 - [ ] A1
-- [ ] Lỗi biên dịch
-> `char` được nâng lên `int` trong phép cộng → kết quả là số 66. Muốn in 'B' phải ép `char('A' + 1)`.
+- [ ] Compile error
+> `char` is promoted to `int` in the addition → the result is the number 66. To print 'B', cast back: `char('A' + 1)`.
 
-### Kiểu nào KHÔNG dùng được làm biểu thức điều kiện của `switch`?
+### Which type can NOT be used as a `switch` condition?
 - [ ] `char`
 - [ ] `enum`
 - [x] `std::string`
 - [ ] `long`
-> switch chỉ nhận kiểu số nguyên (gồm char, bool) và enum. String và số thực phải dùng chuỗi if-else.
+> switch only accepts integer types (including char and bool) and enums. Strings and floating-point values need an if-else chain.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int n = 2;
 switch (n) {
@@ -261,9 +261,9 @@ default: cout << "D";
 - [x] BC
 - [ ] BCD
 - [ ] BD
-> Không có `break` sau case 2 nên chạy tiếp vào case 3 (fall-through), rồi `break` ở case 3 dừng lại.
+> There is no `break` after case 2, so execution falls through into case 3, and the `break` in case 3 stops it.
 
-### Đoạn code in ra gì?
+### What does this print?
 ```cpp
 int x = 1, y = 0;
 if (x)
@@ -273,78 +273,78 @@ else
 ```
 - [ ] A
 - [x] B
-- [ ] Không in gì
+- [ ] Nothing
 - [ ] AB
-> `else` gắn với `if (y)` gần nhất, thụt lề không có ý nghĩa với compiler.
+> The `else` belongs to the nearest `if (y)`; indentation means nothing to the compiler.
 
-### Vòng lặp nào luôn chạy thân ít nhất một lần?
+### Which loop always runs its body at least once?
 - [ ] `for`
 - [ ] `while`
 - [x] `do-while`
 - [ ] range-based for
-> do-while kiểm tra điều kiện ở cuối mỗi lần lặp.
+> do-while tests the condition at the end of each iteration.
 
-### Sau đoạn code, v là gì?
+### What is v after this code?
 ```cpp
 vector<int> v{1, 2, 3};
 for (auto x : v) x *= 2;
 ```
 - [x] {1, 2, 3}
 - [ ] {2, 4, 6}
-- [ ] Lỗi biên dịch
+- [ ] Compile error
 - [ ] {1, 4, 9}
-> `auto x` là bản copy. Muốn sửa phần tử phải dùng `auto &x`.
+> `auto x` is a copy. To modify elements you need `auto &x`.
 
-### `break` trong vòng lặp lồng nhau thoát khỏi?
-- [x] Chỉ vòng lặp trong cùng chứa nó
-- [ ] Tất cả các vòng lặp
-- [ ] Cả hàm
-- [ ] Vòng lặp ngoài cùng
-> Muốn thoát nhiều vòng thì dùng cờ, tách thành hàm rồi `return`, hoặc `goto`.
+### In nested loops, `break` leaves:
+- [x] Only the innermost loop containing it
+- [ ] All loops
+- [ ] The whole function
+- [ ] The outermost loop
+> To leave several loops use a flag, move the loops into a function and `return`, or `goto`.
 
-### `sizeof` của `char s[] = "Hello";` và `strlen(s)` lần lượt là?
-- [ ] 5 và 5
-- [x] 6 và 5
-- [ ] 5 và 6
-- [ ] 8 và 5
-> Mảng chứa 5 ký tự + `'\0'`. strlen dừng trước `'\0'`.
+### For `char s[] = "Hello";`, what are `sizeof(s)` and `strlen(s)`?
+- [ ] 5 and 5
+- [x] 6 and 5
+- [ ] 5 and 6
+- [ ] 8 and 5
+> The array holds 5 characters + `'\0'`. strlen stops before `'\0'`.
 
-### Cách đúng để so sánh nội dung hai C-style string `s1` và `s2`?
+### What is the correct way to compare the contents of two C-style strings `s1` and `s2`?
 - [ ] `s1 == s2`
 - [x] `strcmp(s1, s2) == 0`
 - [ ] `strcmp(s1, s2) == 1`
 - [ ] `s1.compare(s2)`
-> `==` trên `char*`/mảng so sánh địa chỉ. strcmp trả về 0 khi bằng nhau, số âm/dương khi nhỏ hơn/lớn hơn.
+> `==` on `char*`/arrays compares addresses. strcmp returns 0 when equal, negative/positive when less/greater.
 
-### Dòng nào báo lỗi biên dịch?
+### Which line is a compile error?
 - [ ] `string s = string("a") + "b";`
 - [ ] `string s = "a"; s += "b";`
 - [x] `string s = "a" + "b";`
 - [ ] `string s = "a" + string("b");`
-> `"a" + "b"` là cộng hai con trỏ `const char*`, không được phép. Phải có ít nhất một vế là `std::string`.
+> `"a" + "b"` adds two `const char*` pointers, which is not allowed. At least one side must be a `std::string`.
 
-### `s.find("xyz")` khi không tìm thấy trả về?
-- [ ] -1 kiểu int
+### What does `s.find("xyz")` return when the text is not found?
+- [ ] -1 as an int
 - [ ] 0
 - [x] `std::string::npos`
-- [ ] Ném exception
-> `npos` là giá trị lớn nhất của `size_t`. Luôn so sánh `if (s.find(x) != string::npos)`.
+- [ ] Throws an exception
+> `npos` is the largest `size_t` value. Always compare `if (s.find(x) != string::npos)`.
 
-### `string("Zebra") < string("apple")` bằng?
+### What is `string("Zebra") < string("apple")`?
 - [x] true
 - [ ] false
-- [ ] Lỗi biên dịch
-- [ ] Không xác định
-> So sánh theo mã ASCII từng ký tự: 'Z' (90) < 'a' (97).
+- [ ] Compile error
+- [ ] Undefined
+> Characters are compared by ASCII code: 'Z' (90) < 'a' (97).
 
-### Người dùng nhập `42` rồi Enter. Đoạn code làm gì?
+### The user types `42` and presses Enter. What does this code do?
 ```cpp
 int n; string name;
 cin >> n;
 getline(cin, name);
 ```
-- [ ] Chờ nhập tên
-- [x] `name` là chuỗi rỗng, không chờ nhập
-- [ ] `name` là "42"
-- [ ] Lỗi lúc chạy
-> `cin >> n` để lại `'\n'` trong buffer, getline đọc ngay ký tự đó. Gọi `cin.ignore()` (hoặc `getline(cin >> ws, name)`) trước.
+- [ ] Waits for a name
+- [x] `name` is an empty string; it does not wait
+- [ ] `name` is "42"
+- [ ] Runtime error
+> `cin >> n` leaves the `'\n'` in the buffer and getline reads it immediately. Call `cin.ignore()` (or `getline(cin >> ws, name)`) first.

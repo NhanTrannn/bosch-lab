@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Backend cho web bosch-lab. Chỉ dùng thư viện chuẩn của Python 3.
+"""Backend for the bosch-lab web UI. Python 3 standard library only.
 
-    python3 web/backend/server.py [--port 8000]     (hoặc: make web / npm start)
+    python3 web/backend/server.py [--port 8000]     (or: make web / npm start)
 
-Phục vụ frontend (web/frontend) và JSON API:
-  GET  /api/labs                 danh sách bài + mã nguồn + đáp án
-  GET  /api/theory               lý thuyết + câu trắc nghiệm
-  POST /api/runs                 build & chạy một bài ({id}) hoặc mở bash ({terminal: true})
-  GET  /api/runs/<id>?from=N     output từ chunk thứ N
+Serves the frontend (web/frontend) and a JSON API:
+  GET  /api/labs                 labs + source code + answers
+  GET  /api/theory               theory + quiz questions
+  POST /api/runs                 build & run a lab ({id}) or open bash ({terminal: true})
+  GET  /api/runs/<id>?from=N     output starting at chunk N
   POST /api/runs/<id>/<action>   input | key | job | signal | ps | stop
-Chỉ lắng nghe 127.0.0.1 và kiểm tra Host/Origin vì có endpoint mở bash.
+Listens on 127.0.0.1 only and checks Host/Origin, because one endpoint opens bash.
 """
 import argparse
 import json
@@ -100,7 +100,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 lab = find_lab(body.get("id", ""))
                 if not lab or lab["kind"] == "readonly":
-                    return self.reply({"error": "bài không chạy được"}, 400)
+                    return self.reply({"error": "this lab cannot be run"}, 400)
                 run, log = start_run(lab)
                 if not run:
                     return self.reply({"ok": False, "build_log": log})
@@ -133,7 +133,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def reload_on_change():
-    """Code backend đổi → tự exec lại chính mình (frontend đọc lại mỗi request nên không cần)."""
+    """Backend code changed: re-exec ourselves (the frontend is re-read on every request, so it needs nothing)."""
     files = sorted(BACKEND.glob("*.py"))
     stamp = lambda: [f.stat().st_mtime for f in files]
     first = stamp()
@@ -144,7 +144,7 @@ def reload_on_change():
                 continue
         except OSError:
             continue
-        print("backend thay đổi → khởi động lại", flush=True)
+        print("backend changed, restarting", flush=True)
         kill_all_runs()
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
@@ -155,7 +155,7 @@ def main():
     args = ap.parse_args()
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     srv.daemon_threads = True
-    print(f"bosch-lab web: http://localhost:{args.port}  (Ctrl+C để tắt)", flush=True)
+    print(f"bosch-lab web: http://localhost:{args.port}  (Ctrl+C to stop)", flush=True)
     threading.Thread(target=reload_on_change, daemon=True).start()
     try:
         srv.serve_forever()

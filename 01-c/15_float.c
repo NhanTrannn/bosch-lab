@@ -1,9 +1,9 @@
 /*
- * Bài: Số thực: so sánh, làm tròn, chia nguyên
- * Chủ đề: C
- * Dự đoán trước khi chạy: 0.1 + 0.2 == 0.3? f == 0.1? x, y, z bằng mấy? (int)-3.99? 16777217.0f in ra gì?
- * Ý chính: double/float là nhị phân nên 0.1 không biểu diễn chính xác → so sánh bằng epsilon. float chỉ ~7 chữ số có nghĩa (24 bit mantissa). Ép kiểu sang int cắt phần thập phân về phía 0.
- * Thử thêm: In 0.1f với %.20f. Thử 1.0 / 0 và 0.0 / 0 rồi so sánh nan == nan.
+ * Lab: Floating point: comparison, rounding, integer division
+ * Topic: C
+ * Predict before running: Is 0.1 + 0.2 == 0.3? Is f == 0.1? What are x, y and z? (int)-3.99? What does 16777217.0f print?
+ * Key idea: double/float are binary, so 0.1 is not exact → compare with an epsilon. float has only ~7 significant digits (24-bit mantissa). Casting to int truncates toward zero.
+ * Try next: Print 0.1f with %.20f. Try 1.0 / 0 and 0.0 / 0, then compare nan == nan.
  */
 #include <stdio.h>
 

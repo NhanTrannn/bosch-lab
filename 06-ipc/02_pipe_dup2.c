@@ -1,9 +1,9 @@
 /*
- * Bài: Mô phỏng ls / | wc -l bằng dup2
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Chương trình in ra số nào (so với chạy ls / | wc -l trong shell)? Nếu cha quên đóng fd[1] thì sao?
- * Ý chính: dup2(old, new) làm new trỏ tới cùng file với old. Shell hiện thực pipe bằng: pipe → fork 2 lần → dup2 stdout/stdin → exec.
- * Thử thêm: Comment dòng close(fd[0]); close(fd[1]); của cha. Tiếp đó mở rộng thành ls / | sort -r | head -3.
+ * Lab: Implementing ls / | wc -l with dup2
+ * Topic: IPC
+ * Predict before running: What number does the program print (compared with running ls / | wc -l in the shell)? What if the parent forgets to close fd[1]?
+ * Key idea: dup2(old, new) makes new refer to the same file as old. A shell implements a pipeline as: pipe → fork twice → dup2 stdout/stdin → exec.
+ * Try next: Comment out the parent's close(fd[0]); close(fd[1]);. Then extend it to ls / | sort -r | head -3.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -39,6 +39,6 @@ int main(void)
     close(fd[1]);
     waitpid(p1, NULL, 0);
     waitpid(p2, NULL, 0);
-    printf("Xong: tuong duong  ls / | wc -l\n");
+    printf("Done: same as  ls / | wc -l\n");
     return 0;
 }

@@ -1,9 +1,9 @@
 /*
- * Bài: Rule of five: copy/move ctor và assignment
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Với các dòng đánh số 1–7, dòng nào gọi ctor, copy ctor, copy assign, move ctor, move assign? Thứ tự các dòng dtor ở cuối?
- * Ý chính: Khởi tạo mới → constructor; gán cho object đã tồn tại → operator=. std::move chỉ ép kiểu sang rvalue. C++17 bắt buộc copy elision khi trả về prvalue (RVO).
- * Thử thêm: Bỏ noexcept ở move ctor, cho vào vector<Str> rồi push_back nhiều lần: vector dùng copy hay move khi cấp phát lại?
+ * Lab: Rule of five: copy/move constructors and assignment
+ * Topic: C++
+ * Predict before running: For the numbered lines 1–7, which call the ctor, copy ctor, copy assignment, move ctor or move assignment? In what order are the dtor lines at the end?
+ * Key idea: Creating a new object → a constructor; assigning to an existing object → operator=. std::move is only a cast to an rvalue. C++17 guarantees copy elision when returning a prvalue (RVO).
+ * Try next: Remove noexcept from the move ctor, put Str objects in a vector<Str> and push_back many times: does vector copy or move when it reallocates?
  */
 #include <iostream>
 #include <cstring>

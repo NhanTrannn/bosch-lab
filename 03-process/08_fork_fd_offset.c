@@ -1,9 +1,9 @@
 /*
- * Bài: File descriptor sau fork(): dùng chung offset
- * Chủ đề: Process
- * Dự đoán trước khi chạy: File 1 chứa gì (cha và con dùng chung fd mở TRƯỚC fork)? File 2 chứa gì (mỗi bên tự open SAU fork)?
- * Ý chính: fork() nhân bản bảng fd, nhưng các fd trỏ tới CÙNG một "open file description" trong kernel → dùng chung offset và cờ. open() riêng lẻ tạo description riêng → offset riêng, ghi đè lên nhau.
- * Thử thêm: Mở file 2 với O_APPEND ở cả hai bên rồi chạy lại. Dùng dup() thay vì fork để thấy hiệu ứng offset chung tương tự.
+ * Lab: File descriptors after fork(): a shared offset
+ * Topic: Process
+ * Predict before running: What does file 1 contain (parent and child share an fd opened BEFORE fork)? What does file 2 contain (each side opens it on its own AFTER fork)?
+ * Key idea: fork() duplicates the fd table, but the fds point to the SAME "open file description" in the kernel → shared offset and flags. Separate open() calls create separate descriptions → separate offsets that overwrite each other.
+ * Try next: Open file 2 with O_APPEND on both sides and run again. Use dup() instead of fork to see the same shared-offset effect.
  */
 #define _GNU_SOURCE
 #include <fcntl.h>
@@ -18,7 +18,7 @@ static void dump(const char *path)
     int fd = open(path, O_RDONLY);
     ssize_t n = read(fd, buf, sizeof(buf) - 1);
     close(fd);
-    printf("%s (%zd byte):\n%s", path, n, buf);
+    printf("%s (%zd bytes):\n%s", path, n, buf);
 }
 
 int main(void)
@@ -27,11 +27,11 @@ int main(void)
 
     int fd = open(f1, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if (fork() == 0) {
-        write(fd, "con\n", 4);
+        write(fd, "child\n", 6);
         _exit(0);
     }
     wait(NULL);
-    write(fd, "cha\n", 4);
+    write(fd, "parent\n", 7);
     close(fd);
     dump(f1);
 
@@ -43,7 +43,7 @@ int main(void)
     }
     wait(NULL);
     int fd2 = open(f2, O_WRONLY);
-    write(fd2, "cha\n", 4);
+    write(fd2, "parent\n", 7);
     close(fd2);
     dump(f2);
 

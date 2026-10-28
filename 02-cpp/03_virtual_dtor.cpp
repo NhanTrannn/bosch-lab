@@ -1,9 +1,9 @@
 /*
- * Bài: Destructor virtual và không virtual
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Ở mỗi đoạn "---", destructor nào được gọi?
- * Ý chính: delete một object Derived qua con trỏ Base mà ~Base() không virtual là undefined behavior: thường chỉ chạy ~Base, rò rỉ tài nguyên của Derived.
- * Thử thêm: Chạy với valgrind --leak-check=full ./build/02-cpp/03_virtual_dtor để thấy 400 byte bị leak.
+ * Lab: Virtual and non-virtual destructors
+ * Topic: C++
+ * Predict before running: In each "---" section, which destructors are called?
+ * Key idea: Deleting a Derived object through a Base pointer when ~Base() is not virtual is undefined behavior: usually only ~Base runs and Derived's resources leak.
+ * Try next: Run valgrind --leak-check=full ./build/02-cpp/03_virtual_dtor to see the 400 leaked bytes.
  */
 #include <iostream>
 using namespace std;
@@ -26,14 +26,14 @@ struct DerivedV : BaseV {
 
 int main()
 {
-    cout << "--- delete qua BaseNV* ---\n";
+    cout << "--- delete through BaseNV* ---\n";
     BaseNV *p1 = new DerivedNV;
     delete p1;
 
-    cout << "--- delete qua BaseV* ---\n";
+    cout << "--- delete through BaseV* ---\n";
     BaseV *p2 = new DerivedV;
     delete p2;
 
-    cout << "--- object tren stack ---\n";
+    cout << "--- object on the stack ---\n";
     DerivedNV d;
 }

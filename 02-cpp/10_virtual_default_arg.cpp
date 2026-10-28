@@ -1,16 +1,16 @@
 /*
- * Bài: Tham số mặc định của hàm virtual và gọi virtual qua hàm thường
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Mỗi dòng in "Base::f" hay "Derived::f", và x bằng 1 hay 2?
- * Ý chính: Hàm nào được gọi quyết định lúc CHẠY (dynamic binding qua vtable), nhưng giá trị tham số mặc định lấy theo kiểu TĨNH lúc biên dịch. Vì vậy đừng định nghĩa lại tham số mặc định ở lớp con.
- * Thử thêm: Thêm final vào Derived::f rồi viết lớp kế thừa Derived và override f → lỗi biên dịch. Bỏ virtual ở Base::f rồi chạy lại.
+ * Lab: Default arguments of virtual functions, and virtual calls through a normal function
+ * Topic: C++
+ * Predict before running: Does each line print "Base::f" or "Derived::f", and is x 1 or 2?
+ * Key idea: Which function runs is decided at RUN TIME (dynamic binding through the vtable), but the default argument comes from the STATIC type at compile time. So never redefine default arguments in a derived class.
+ * Try next: Add final to Derived::f, then write a class deriving from Derived that overrides f → compile error. Remove virtual from Base::f and run again.
  */
 #include <iostream>
 using namespace std;
 
 struct Base {
     virtual void f(int x = 1) { cout << "Base::f x=" << x << '\n'; }
-    void run() { f(); } // hàm thường gọi hàm virtual (template method)
+    void run() { f(); } // a normal function calling a virtual one (template method)
     virtual ~Base() = default;
 };
 
@@ -23,7 +23,7 @@ int main()
     Derived d;
     Base *pb = &d;
     Base &rb = d;
-    Base b = d; // slicing: b là Base thật
+    Base b = d; // slicing: b is a real Base
 
     cout << "1: "; pb->f();
     cout << "2: "; rb.f();

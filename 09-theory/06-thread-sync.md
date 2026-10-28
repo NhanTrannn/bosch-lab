@@ -1,158 +1,158 @@
-# Thread và đồng bộ hoá
+# Threads and synchronization
 
-## Lý thuyết
+## Theory
 
-### Thread vs process
+### Threads vs processes
 | | Process | Thread |
 | --- | --- | --- |
-| Không gian địa chỉ | riêng | dùng chung trong process |
-| Tạo/huỷ, context switch | đắt hơn | rẻ hơn |
-| Giao tiếp | cần IPC | đọc/ghi biến chung (cần đồng bộ) |
-| Lỗi (segfault) | chỉ chết process đó | chết **cả process** |
+| Address space | private | shared within the process |
+| Create/destroy, context switch | more expensive | cheaper |
+| Communication | needs IPC | read/write shared variables (needs synchronization) |
+| A crash (segfault) | only that process dies | the **whole process** dies |
 
-- Thread chung: code, data/bss, heap, fd, signal handler, PID. Riêng: stack, thanh ghi/PC, TID, signal mask, errno, biến `thread_local`.
-- POSIX: `pthread_create`, `pthread_join` (chờ + lấy giá trị trả về), `pthread_detach` (tự dọn khi kết thúc, không join được nữa), `pthread_exit`, `pthread_self`. Biên dịch với `-pthread`.
-- C++11: `std::thread` (phải join hoặc detach trước khi huỷ, không thì `std::terminate`), `std::mutex`, `std::lock_guard`, `std::unique_lock`, `std::scoped_lock` (C++17, khoá nhiều mutex không deadlock), `std::condition_variable`, `std::atomic`, `std::async/future`.
+- Threads share: code, data/bss, heap, fds, signal handlers, PID. Private to each thread: stack, registers/PC, TID, signal mask, errno, `thread_local` variables.
+- POSIX: `pthread_create`, `pthread_join` (wait + get the return value), `pthread_detach` (cleans up by itself when it ends, can no longer be joined), `pthread_exit`, `pthread_self`. Compile with `-pthread`.
+- C++11: `std::thread` (must be joined or detached before it is destroyed, otherwise `std::terminate`), `std::mutex`, `std::lock_guard`, `std::unique_lock`, `std::scoped_lock` (C++17, locks several mutexes without deadlock), `std::condition_variable`, `std::atomic`, `std::async/future`.
 
-### Race condition và vùng găng
-- **Race condition**: kết quả phụ thuộc thứ tự xen kẽ của các thread. `counter++` không atomic: đọc → cộng → ghi.
-- **Critical section** cần: mutual exclusion, progress, bounded waiting.
-- **Atomic**: thao tác không thể bị chia cắt (`std::atomic<int>`, `__atomic_*`, `stdatomic.h`). Nhanh với biến đơn, không thay được mutex cho thao tác nhiều bước.
+### Race conditions and critical sections
+- **Race condition**: the result depends on how threads interleave. `counter++` is not atomic: read → add → write.
+- A **critical section** solution needs: mutual exclusion, progress, bounded waiting.
+- **Atomic**: an operation that cannot be split (`std::atomic<int>`, `__atomic_*`, `stdatomic.h`). Fast for single variables, cannot replace a mutex for multi-step operations.
 
-### Công cụ đồng bộ
-- **Mutex**: khoá có chủ sở hữu, chỉ thread đã lock mới được unlock. Thread chờ bị ngủ (sleep).
-- **Spinlock**: chờ bằng vòng lặp bận, không ngủ → hợp với vùng găng rất ngắn, trên đa nhân, trong kernel/ngắt (không được ngủ). Trên đơn nhân thì vô ích.
-- **Semaphore**: bộ đếm; `wait/P/sem_wait` giảm (chặn nếu 0), `post/V/sem_post` tăng. Binary semaphore (0/1) giống mutex nhưng **không có chủ sở hữu** (thread khác post được) → hợp cho báo hiệu (signaling) giữa thread/ISR. Counting semaphore giới hạn N tài nguyên.
-- **Condition variable**: chờ một điều kiện, luôn đi kèm mutex; `wait` nhả mutex và ngủ một cách atomic, thức dậy thì lấy lại mutex. Luôn kiểm tra điều kiện trong **vòng while** (spurious wakeup, nhiều thread cùng thức). `signal/notify_one` đánh thức một, `broadcast/notify_all` đánh thức tất cả.
-- **Read-write lock**: nhiều reader cùng lúc hoặc một writer.
-- **Recursive mutex**: cùng thread lock nhiều lần được.
-- **Barrier**: đợi đủ N thread mới cùng đi tiếp.
+### Synchronization tools
+- **Mutex**: a lock with an owner; only the thread that locked it may unlock it. Waiting threads sleep.
+- **Spinlock**: waits in a busy loop without sleeping → suits very short critical sections on multicore, and kernel/interrupt context (where sleeping is not allowed). Useless on a single core.
+- **Semaphore**: a counter; `wait/P/sem_wait` decrements (blocks at 0), `post/V/sem_post` increments. A binary semaphore (0/1) resembles a mutex but has **no owner** (another thread can post) → good for signaling between threads/ISRs. A counting semaphore limits access to N resources.
+- **Condition variable**: wait for a condition, always used with a mutex; `wait` atomically releases the mutex and sleeps, then re-acquires the mutex on wake-up. Always re-check the condition in a **while loop** (spurious wakeups, several threads woken). `signal/notify_one` wakes one, `broadcast/notify_all` wakes all.
+- **Read-write lock**: many readers at once, or a single writer.
+- **Recursive mutex**: the same thread can lock it several times.
+- **Barrier**: waits until N threads arrive, then lets them all continue.
 
 ### Deadlock
-Bốn điều kiện Coffman (cần **đủ cả bốn**):
-1. Mutual exclusion — tài nguyên không chia sẻ được.
-2. Hold and wait — giữ một tài nguyên trong khi chờ cái khác.
-3. No preemption — không giật được tài nguyên.
-4. Circular wait — chờ vòng tròn.
+The four Coffman conditions (**all four** are needed):
+1. Mutual exclusion — the resource cannot be shared.
+2. Hold and wait — holding one resource while waiting for another.
+3. No preemption — resources cannot be taken away.
+4. Circular wait — a cycle of waiting threads.
 
-Phòng tránh: khoá theo **thứ tự cố định** (phá circular wait), `trylock` rồi nhả nếu thất bại, khoá tất cả cùng lúc (`std::lock`, `scoped_lock`), timeout. Tránh (avoidance): thuật toán Banker. **Livelock**: các thread vẫn chạy nhưng liên tục nhường nhau, không tiến triển. **Starvation**: một thread không bao giờ được tài nguyên.
+Prevention: lock in a **fixed order** (breaks circular wait), `trylock` and release on failure, lock everything at once (`std::lock`, `scoped_lock`), timeouts. Avoidance: the Banker's algorithm. **Livelock**: threads keep running but keep yielding to each other and make no progress. **Starvation**: one thread never gets the resource.
 
-### Khái niệm khác
-- **Thread-safe**: gọi đồng thời từ nhiều thread vẫn đúng. **Reentrant**: có thể gọi lại khi đang chạy dở (ví dụ từ signal handler/ISR) — không dùng biến static/global, không gọi hàm không reentrant. `strtok` không reentrant → `strtok_r`.
-- Producer–consumer (bounded buffer): mutex + 2 condition variable, hoặc 2 semaphore (empty, full) + mutex.
-- Công cụ: `valgrind --tool=helgrind`, `-fsanitize=thread`.
+### Other concepts
+- **Thread-safe**: correct when called concurrently from several threads. **Reentrant**: can be interrupted and called again while still running (e.g. from a signal handler/ISR) — no static/global state, no non-reentrant calls. `strtok` is not reentrant → `strtok_r`.
+- Producer–consumer (bounded buffer): mutex + 2 condition variables, or 2 semaphores (empty, full) + a mutex.
+- Tools: `valgrind --tool=helgrind`, `-fsanitize=thread`.
 
-## Trắc nghiệm
+## Quiz
 
-### Thứ nào các thread trong cùng process KHÔNG dùng chung?
-- [ ] Heap
-- [ ] Biến toàn cục
-- [x] Stack
-- [ ] File descriptor
-> Mỗi thread có stack, thanh ghi và PC riêng.
+### What do threads of the same process NOT share?
+- [ ] The heap
+- [ ] Global variables
+- [x] The stack
+- [ ] File descriptors
+> Each thread has its own stack, registers and PC.
 
-### Vì sao `counter++` từ hai thread không có khoá cho kết quả sai?
-- [ ] Vì compiler bỏ qua lệnh
-- [x] Vì đó là ba bước đọc–cộng–ghi, các thread có thể xen kẽ làm mất lần cộng
-- [ ] Vì biến không phải volatile
-- [ ] Vì mỗi thread có bản copy riêng của counter
-> volatile cũng không sửa được. Dùng mutex hoặc std::atomic.
+### Why does `counter++` from two threads without a lock give a wrong result?
+- [ ] Because the compiler skips the instruction
+- [x] Because it is three steps (read–add–write) and the threads can interleave, losing increments
+- [ ] Because the variable is not volatile
+- [ ] Because each thread has its own copy of counter
+> volatile does not fix it either. Use a mutex or std::atomic.
 
-### Bốn điều kiện cần để xảy ra deadlock là? (chọn tất cả đáp án đúng)
+### Which are the four necessary conditions for deadlock? (select all that apply)
 - [x] Mutual exclusion
 - [x] Hold and wait
 - [x] No preemption
 - [x] Circular wait
 - [ ] Priority inversion
-> Phá một trong bốn là đủ ngăn deadlock. Cách phổ biến nhất: luôn khoá theo cùng thứ tự.
+> Breaking any one of the four prevents deadlock. The most common way: always lock in the same order.
 
-### Cách đơn giản và phổ biến nhất để tránh deadlock khi cần khoá hai mutex A và B?
-- [ ] Dùng volatile
-- [x] Mọi thread luôn khoá theo cùng một thứ tự (A rồi B)
-- [ ] Tăng ưu tiên thread
-- [ ] Dùng sleep giữa hai lần khoá
-> Hoặc dùng std::lock / std::scoped_lock để khoá cả hai cùng lúc.
+### What is the simplest and most common way to avoid deadlock when two mutexes A and B are needed?
+- [ ] Use volatile
+- [x] Every thread always locks in the same order (A then B)
+- [ ] Raise the thread priority
+- [ ] Sleep between the two locks
+> Or use std::lock / std::scoped_lock to lock both at once.
 
-### Khác biệt chính giữa mutex và binary semaphore?
-- [ ] Không có khác biệt
-- [x] Mutex có chủ sở hữu (thread nào lock thì thread đó unlock); semaphore không có, thread khác có thể post
-- [ ] Semaphore chỉ dùng được giữa các process
-- [ ] Mutex có thể đếm lớn hơn 1
-> Vì vậy semaphore hợp với báo hiệu sự kiện (ví dụ ISR báo cho task), mutex hợp với bảo vệ vùng găng. Một số mutex hỗ trợ priority inheritance.
+### What is the main difference between a mutex and a binary semaphore?
+- [ ] There is no difference
+- [x] A mutex has an owner (the thread that locks it must unlock it); a semaphore has none, so another thread can post it
+- [ ] Semaphores only work between processes
+- [ ] A mutex can count above 1
+> That is why semaphores suit event signaling (e.g. an ISR notifying a task) and mutexes suit protecting critical sections. Some mutexes support priority inheritance.
 
-### Counting semaphore khởi tạo bằng 3. Bốn thread lần lượt gọi sem_wait (chưa ai post). Kết quả?
-- [ ] Cả bốn đi qua
-- [x] Ba thread đi qua, thread thứ tư bị chặn
-- [ ] Chỉ một thread đi qua
-- [ ] Lỗi
-> Mỗi sem_wait giảm 1; khi giá trị là 0 thì sem_wait chặn tới khi có sem_post.
+### A counting semaphore starts at 3. Four threads call sem_wait in turn (no one posts). What happens?
+- [ ] All four pass
+- [x] Three threads pass, the fourth blocks
+- [ ] Only one thread passes
+- [ ] Error
+> Each sem_wait decrements by 1; at 0, sem_wait blocks until someone posts.
 
-### Vì sao phải gọi `pthread_cond_wait` trong vòng `while (!dieu_kien)` thay vì `if`?
-- [ ] Để chạy nhanh hơn
-- [x] Vì có thể bị đánh thức giả (spurious wakeup) hoặc thread khác đã làm điều kiện sai trước khi thread này chạy lại
-- [ ] Vì cond_wait không nhả mutex
-- [ ] Chuẩn POSIX cấm dùng if
-> Sau khi thức dậy phải kiểm tra lại điều kiện.
+### Why must `pthread_cond_wait` be called in a `while (!condition)` loop rather than an `if`?
+- [ ] To be faster
+- [x] Because of spurious wakeups, or another thread may have made the condition false again before this one runs
+- [ ] Because cond_wait does not release the mutex
+- [ ] POSIX forbids `if`
+> Always re-check the condition after waking up.
 
-### `pthread_cond_wait(&cond, &mutex)` làm gì với mutex?
-- [ ] Không đụng tới mutex
-- [x] Nhả mutex và ngủ một cách atomic; khi thức dậy thì lấy lại mutex trước khi trả về
-- [ ] Huỷ mutex
-- [ ] Khoá mutex lần nữa
-> Phải đang giữ mutex trước khi gọi.
+### What does `pthread_cond_wait(&cond, &mutex)` do with the mutex?
+- [ ] Nothing
+- [x] Atomically releases the mutex and sleeps; on wake-up it re-acquires the mutex before returning
+- [ ] Destroys the mutex
+- [ ] Locks it a second time
+> You must hold the mutex before calling it.
 
-### Spinlock phù hợp trong trường hợp nào?
-- [ ] Vùng găng dài, có I/O
-- [x] Vùng găng rất ngắn trên hệ đa nhân, hoặc ngữ cảnh không được ngủ (xử lý ngắt trong kernel)
-- [ ] Hệ đơn nhân không preemption
-- [ ] Đồng bộ giữa hai process qua mạng
-> Spinlock chờ bận tốn CPU; nếu vùng găng dài thì mutex (ngủ khi chờ) tốt hơn.
+### When is a spinlock appropriate?
+- [ ] Long critical sections with I/O
+- [x] Very short critical sections on multicore systems, or contexts that cannot sleep (interrupt handling in the kernel)
+- [ ] Single-core systems without preemption
+- [ ] Synchronizing two processes over a network
+> A spinlock burns CPU while waiting; for long critical sections a mutex (which sleeps) is better.
 
-### `std::thread t(f);` rồi để t bị huỷ mà chưa join hay detach thì sao?
-- [ ] Thread tự detach
-- [ ] Thread tự join
-- [x] Gọi std::terminate, chương trình bị huỷ
-- [ ] Không sao cả
-> C++20 có std::jthread tự join trong destructor.
+### `std::thread t(f);` is destroyed without join or detach. What happens?
+- [ ] The thread detaches itself
+- [ ] The thread is joined automatically
+- [x] std::terminate is called and the program aborts
+- [ ] Nothing
+> C++20's std::jthread joins in its destructor.
 
-### `std::lock_guard<std::mutex> lk(m);` mang lại lợi ích gì?
-- [ ] Tự khoá lại sau mỗi lệnh
-- [x] RAII: mutex tự được unlock khi lk ra khỏi scope, kể cả khi có exception
-- [ ] Cho phép nhiều thread cùng vào
-- [ ] Nhanh hơn atomic
-> unique_lock linh hoạt hơn (unlock sớm, dùng với condition_variable), scoped_lock khoá được nhiều mutex.
+### What does `std::lock_guard<std::mutex> lk(m);` give you?
+- [ ] It re-locks after every statement
+- [x] RAII: the mutex is unlocked automatically when lk leaves scope, even on an exception
+- [ ] It lets several threads in at once
+- [ ] It is faster than atomic
+> unique_lock is more flexible (early unlock, works with condition_variable); scoped_lock locks several mutexes.
 
-### Hàm reentrant là hàm:
-- [ ] Chỉ được gọi bởi một thread
-- [x] Có thể bị ngắt giữa chừng và gọi lại (ví dụ từ ISR/signal handler) mà vẫn đúng
-- [ ] Gọi đệ quy chính nó
-- [ ] Luôn dùng mutex bên trong
-> Không dùng dữ liệu static/global không được bảo vệ, không giữ khoá. Hàm dùng mutex có thể thread-safe nhưng không reentrant (gọi lại từ signal handler sẽ deadlock).
+### A reentrant function is one that:
+- [ ] May only be called by one thread
+- [x] Can be interrupted midway and called again (e.g. from an ISR/signal handler) and still be correct
+- [ ] Calls itself recursively
+- [ ] Always uses a mutex internally
+> No unprotected static/global data, no locks held. A function using a mutex can be thread-safe but not reentrant (calling it again from a signal handler deadlocks).
 
-### Livelock khác deadlock ở chỗ:
-- [ ] Livelock chỉ xảy ra trên đơn nhân
-- [x] Các thread vẫn hoạt động (đổi trạng thái liên tục) nhưng không tiến triển được
-- [ ] Livelock tự hết sau một thời gian chắc chắn
-- [ ] Không khác gì
-> Ví dụ hai thread cùng trylock thất bại, cùng nhả rồi cùng thử lại mãi.
+### How is livelock different from deadlock?
+- [ ] Livelock only happens on a single core
+- [x] The threads stay active (keep changing state) but make no progress
+- [ ] Livelock always resolves itself after some time
+- [ ] There is no difference
+> E.g. two threads both fail trylock, both release, and both retry forever.
 
-### Bài producer–consumer với bộ đệm N ô dùng semaphore cần những gì?
-- [ ] Một mutex là đủ
-- [x] Semaphore empty = N, semaphore full = 0, và một mutex bảo vệ bộ đệm
+### What does a producer–consumer solution with an N-slot buffer and semaphores need?
+- [ ] One mutex is enough
+- [x] Semaphore empty = N, semaphore full = 0, and a mutex protecting the buffer
 - [ ] Semaphore empty = 0, full = N
-- [ ] Hai mutex
-> Producer: wait(empty) → lock → đặt → unlock → post(full). Consumer: wait(full) → lock → lấy → unlock → post(empty).
+- [ ] Two mutexes
+> Producer: wait(empty) → lock → put → unlock → post(full). Consumer: wait(full) → lock → take → unlock → post(empty).
 
-### `std::atomic<int> x; x++;` từ nhiều thread thì:
-- [ ] Vẫn bị race condition
-- [x] Mỗi lần tăng là atomic, kết quả cuối đúng
-- [ ] Không biên dịch được
-- [ ] Cần thêm volatile
-> Nhưng chuỗi thao tác `if (x == 0) x = 1;` vẫn không atomic → dùng compare_exchange hoặc mutex.
+### `std::atomic<int> x; x++;` from many threads:
+- [ ] Still has a race condition
+- [x] Each increment is atomic, so the final result is correct
+- [ ] Does not compile
+- [ ] Needs volatile too
+> But a sequence like `if (x == 0) x = 1;` is still not atomic → use compare_exchange or a mutex.
 
-### Biên dịch chương trình pthread bằng gcc cần thêm tuỳ chọn nào?
+### Which option does gcc need to build a pthread program?
 - [ ] -lthread
 - [x] -pthread
 - [ ] -fthread
 - [ ] -D_THREAD
-> -pthread vừa định nghĩa macro cần thiết vừa link thư viện pthread (glibc 2.34+ đã gộp vào libc nhưng vẫn nên dùng).
+> -pthread both defines the needed macros and links the pthread library (glibc 2.34+ merged it into libc, but you should still use it).

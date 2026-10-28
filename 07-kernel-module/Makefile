@@ -1,4 +1,4 @@
-# Makefile riêng cho kernel module (dùng Kbuild của kernel đang chạy)
+# Separate Makefile for the kernel module (uses the running kernel's Kbuild)
 obj-m += hello.o
 KDIR := /lib/modules/$(shell uname -r)/build
 

@@ -1,10 +1,10 @@
 /*
- * Bài: Thứ tự constructor / destructor
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Thứ tự các dòng ctor/dtor? m1 hay m2 được tạo trước? a bằng bao nhiêu?
- * Ý chính: Thứ tự khởi tạo: base → member THEO THỨ TỰ KHAI BÁO (không theo initializer list) → thân ctor. Destructor theo thứ tự ngược lại.
- * Thử thêm: Đổi khai báo thành int b, a; rồi chạy lại: a có còn là rác không?
- * Cảnh báo biên dịch cố ý: -Wreorder (initializer list khác thứ tự khai báo); bật -O2 sẽ có thêm -Wuninitialized (a dùng b chưa khởi tạo).
+ * Lab: Constructor / destructor order
+ * Topic: C++
+ * Predict before running: In what order do the ctor/dtor lines appear? Is m1 or m2 created first? What is a?
+ * Key idea: Initialization order: base → members IN DECLARATION ORDER (not initializer-list order) → constructor body. Destructors run in reverse.
+ * Try next: Change the declaration to int b, a; and run again: is a still garbage?
+ * Intentional compiler warning: -Wreorder (the initializer list differs from the declaration order); with -O2 you also get -Wuninitialized (a uses b before it is initialized).
  */
 #include <iostream>
 using namespace std;
@@ -33,10 +33,10 @@ struct Derived : Base {
 
 int main()
 {
-    cout << "--- tao d ---\n";
+    cout << "--- create d ---\n";
     {
         Derived d;
-        cout << "--- ra khoi scope ---\n";
+        cout << "--- leaving scope ---\n";
     }
-    cout << "--- het ---\n";
+    cout << "--- end of main ---\n";
 }

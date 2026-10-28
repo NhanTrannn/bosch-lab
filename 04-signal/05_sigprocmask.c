@@ -1,9 +1,9 @@
 /*
- * Bài: Chặn signal (sigprocmask), signal đang chờ và việc signal không xếp hàng
- * Chủ đề: Signal
- * Dự đoán trước khi chạy: Gửi SIGUSR1 3 lần khi đang chặn → bỏ chặn thì handler chạy mấy lần? Còn với signal real-time SIGRTMIN?
- * Ý chính: Signal bị chặn (blocked) thì nằm ở trạng thái pending, chưa được giao. Signal chuẩn (1–31) chỉ là MỘT bit pending → gửi nhiều lần khi đang chặn chỉ nhận một lần. Signal real-time (SIGRTMIN..SIGRTMAX) được xếp hàng, nhận đủ số lần.
- * Thử thêm: Chặn SIGINT, ngủ 5 giây và nhấn Ctrl+C liên tục; sau khi bỏ chặn chương trình mới chết. Thử chặn SIGKILL — sigprocmask lặng lẽ bỏ qua.
+ * Lab: Blocking signals (sigprocmask), pending signals, and why signals are not queued
+ * Topic: Signal
+ * Predict before running: SIGUSR1 is sent 3 times while blocked → after unblocking, how many times does the handler run? And with the real-time signal SIGRTMIN?
+ * Key idea: A blocked signal stays pending and is not delivered yet. A standard signal (1–31) is ONE pending bit → sending it several times while blocked delivers it once. Real-time signals (SIGRTMIN..SIGRTMAX) are queued and delivered every time.
+ * Try next: Block SIGINT, sleep 5 seconds and press Ctrl+C repeatedly; the program only dies after unblocking. Try blocking SIGKILL — sigprocmask silently ignores it.
  */
 #define _GNU_SOURCE
 #include <signal.h>
@@ -36,11 +36,11 @@ int main(void)
     }
 
     sigpending(&pending);
-    printf("dang chan: SIGUSR1 pending? %d, SIGRTMIN pending? %d\n",
+    printf("blocked: SIGUSR1 pending? %d, SIGRTMIN pending? %d\n",
            sigismember(&pending, SIGUSR1), sigismember(&pending, SIGRTMIN));
-    printf("truoc khi bo chan: usr1 = %d, rt = %d\n", usr1, rt);
+    printf("before unblocking: usr1 = %d, rt = %d\n", usr1, rt);
 
     sigprocmask(SIG_UNBLOCK, &set, NULL);
-    printf("sau khi bo chan:   usr1 = %d, rt = %d\n", usr1, rt);
+    printf("after unblocking:  usr1 = %d, rt = %d\n", usr1, rt);
     return 0;
 }

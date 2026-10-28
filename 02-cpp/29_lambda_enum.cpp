@@ -1,9 +1,9 @@
 /*
- * Bài: Lambda (capture, mutable, dùng với thuật toán) và enum / enum class
- * Chủ đề: C++ hiện đại (Udemy section 21, 23)
- * Dự đoán trước khi chạy: Gọi by_val() sau khi x = 100 in ra gì, by_ref() thì sao? counter() mutable gọi 3 lần, biến n bên ngoài đổi không? Giá trị của Color::Blue, Status::Error? Red == 0 với enum thường và enum class?
- * Ý chính: [=] chụp giá trị LÚC TẠO lambda, [&] đọc giá trị lúc GỌI. Lambda capture theo giá trị là const, cần mutable để sửa bản copy riêng (biến ngoài không đổi). Mỗi lambda có kiểu riêng; lưu bằng auto hoặc std::function. enum thường: tên tràn ra phạm vi ngoài và tự chuyển sang int; enum class: phải ghi Color::Red, không tự chuyển sang int, cần static_cast.
- * Thử thêm: Viết if (Color2::Red == 0) để thấy lỗi biên dịch. Trả về lambda [&] chụp biến local rồi gọi sau khi hàm kết thúc (dangling).
+ * Lab: Lambdas (captures, mutable, use with algorithms) and enum / enum class
+ * Topic: Modern C++ (Udemy sections 21, 23)
+ * Predict before running: After x = 100, what do by_val() and by_ref() print? A mutable counter() called 3 times: does the outer n change? What are Color::Blue and Status::Error? Red == 0 with a plain enum and with enum class?
+ * Key idea: [=] captures the value WHEN THE LAMBDA IS CREATED, [&] reads the value WHEN IT IS CALLED. By-value captures are const; mutable lets the lambda modify its own copy (the outer variable does not change). Every lambda has its own type; store it with auto or std::function. Plain enum: names leak into the enclosing scope and convert to int implicitly; enum class: you must write Color::Red, there is no implicit conversion to int, use static_cast.
+ * Try next: Write if (Color2::Red == 0) to see the compile error. Return a [&] lambda capturing a local and call it after the function has returned (dangling).
  */
 #include <algorithm>
 #include <functional>
@@ -30,7 +30,7 @@ int main()
     int c1 = counter();
     int c2 = counter();
     int c3 = counter();
-    cout << "counter mutable: " << c1 << ' ' << c2 << ' ' << c3 << ", n ngoai = " << n << '\n';
+    cout << "counter mutable: " << c1 << ' ' << c2 << ' ' << c3 << ", outer n = " << n << '\n';
 
     auto copy = counter;
     cout << "copy() = " << copy() << ", counter() = " << counter() << '\n';
@@ -39,7 +39,7 @@ int main()
     int threshold = 3, total = 0;
     for_each(v.begin(), v.end(), [&total](int e) { total += e; });
     auto big = count_if(v.begin(), v.end(), [threshold](int e) { return e > threshold; });
-    cout << "total = " << total << ", so phan tu > " << threshold << " = " << big << '\n';
+    cout << "total = " << total << ", elements > " << threshold << " = " << big << '\n';
 
     auto add5 = make_adder(5);
     auto square = [](auto a) { return a * a; };
@@ -48,7 +48,7 @@ int main()
 
     cout << "Red = " << Red << ", Green = " << Green << ", Blue = " << Blue << ", Red == 0 ? " << (Red == 0) << '\n';
     Color c = Blue;
-    int as_int = c;   // enum thường tự chuyển sang int
+    int as_int = c;   // a plain enum converts to int implicitly
     cout << "int as_int = Blue -> " << as_int << '\n';
 
     Status st = Status::Error;

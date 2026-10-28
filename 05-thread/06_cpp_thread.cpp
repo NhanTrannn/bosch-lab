@@ -1,9 +1,9 @@
 /*
- * Bài: std::thread, std::mutex, lock_guard, std::atomic
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: plain, guarded, atomic lần lượt bằng bao nhiêu? Cái nào có thể sai?
- * Ý chính: std::lock_guard tự unlock khi ra khỏi scope (RAII). std::atomic<int>::operator++ là thao tác nguyên tử, không cần mutex.
- * Thử thêm: Xoá một dòng join() rồi chạy: chương trình kết thúc thế nào (std::terminate)?
+ * Lab: std::thread, std::mutex, lock_guard, std::atomic
+ * Topic: Thread
+ * Predict before running: What are plain, guarded and atomic? Which one can be wrong?
+ * Key idea: std::lock_guard unlocks automatically when it leaves scope (RAII). std::atomic<int>::operator++ is an atomic operation that needs no mutex.
+ * Try next: Delete one join() line and run: how does the program end (std::terminate)?
  */
 #include <atomic>
 #include <iostream>
@@ -39,5 +39,5 @@ int main()
     cout << "plain   = " << plain << '\n';
     cout << "guarded = " << guarded << '\n';
     cout << "atomic  = " << atom << '\n';
-    cout << "so nhan CPU = " << thread::hardware_concurrency() << '\n';
+    cout << "CPU cores = " << thread::hardware_concurrency() << '\n';
 }

@@ -1,9 +1,9 @@
 /*
- * Bài: Thread chia sẻ gì, riêng gì: global, thread-local, PID/TID
- * Chủ đề: Thread
- * Dự đoán trước khi chạy: Mỗi thread in mine và shared bằng mấy? Cuối cùng main thấy mine, shared bằng mấy? PID của thread có bằng PID của main không?
- * Ý chính: Các thread trong một tiến trình dùng chung heap, global, fd, signal handler, PID; mỗi thread có stack, thanh ghi, TID và biến _Thread_local riêng. Trên Linux thread là task có TID riêng (ps -L), getpid() trả về TGID chung.
- * Thử thêm: Chạy và xem ps -eLf | grep 08_thread trong lúc chạy (thêm sleep). Bỏ _Thread_local và đoán lại.
+ * Lab: What threads share and what they own: globals, thread-locals, PID/TID
+ * Topic: Thread
+ * Predict before running: What mine and shared values does each thread print? What does main see at the end? Is a thread's PID equal to main's?
+ * Key idea: Threads of a process share the heap, globals, fds, signal handlers and the PID; each thread has its own stack, registers, TID and _Thread_local variables. On Linux a thread is a task with its own TID (ps -L); getpid() returns the shared TGID.
+ * Try next: Add a sleep and look at ps -eLf | grep 08_thread while it runs. Remove _Thread_local and predict again.
  */
 #define _GNU_SOURCE
 #include <pthread.h>
@@ -30,7 +30,7 @@ static void *worker(void *arg)
 int main(void)
 {
     main_pid = getpid();
-    for (long i = 0; i < 2; i++) { /* tạo rồi join ngay → chạy tuần tự, output cố định */
+    for (long i = 0; i < 2; i++) { /* create then join right away → runs sequentially, fixed output */
         pthread_t t;
         pthread_create(&t, NULL, worker, (void *)i);
         pthread_join(t, NULL);

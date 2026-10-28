@@ -1,9 +1,9 @@
 /*
- * Bài: Tiến trình mồ côi (orphan)
- * Chủ đề: Process
- * Dự đoán trước khi chạy: PPID mà con in ra ở dòng "truoc" và dòng "sau" khác nhau thế nào? Dấu nhắc shell xuất hiện ở đâu?
- * Ý chính: Khi cha thoát trước, con được tiến trình init (PID 1) hoặc một "subreaper" (vd systemd --user) nhận nuôi.
- * Thử thêm: Chạy ps -o pid,cmd -p <PPID mới> để xem ai đã nhận nuôi tiến trình con.
+ * Lab: Orphan processes
+ * Topic: Process
+ * Predict before running: How do the PPIDs the child prints on the "before" and "after" lines differ? Where does the shell prompt appear?
+ * Key idea: When the parent exits first, the child is adopted by init (PID 1) or a "subreaper" (e.g. systemd --user).
+ * Try next: Run ps -o pid,cmd -p <new PPID> to see who adopted the child.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -13,13 +13,13 @@ int main(void)
 {
     pid_t pid = fork();
     if (pid > 0) {
-        printf("Cha %d: thoat sau 1s\n", getpid());
+        printf("Parent %d: exiting after 1s\n", getpid());
         sleep(1);
         return 0;
     }
 
-    printf("Con %d: truoc, PPID = %d\n", getpid(), getppid());
+    printf("Child %d: before, PPID = %d\n", getpid(), getppid());
     sleep(3);
-    printf("Con %d: sau,   PPID = %d\n", getpid(), getppid());
+    printf("Child %d: after,  PPID = %d\n", getpid(), getppid());
     return 0;
 }

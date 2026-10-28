@@ -1,9 +1,9 @@
 /*
- * Bài: Con trỏ và tham chiếu: trỏ lại, gán qua reference, pointer arithmetic, truyền con trỏ vào hàm
- * Chủ đề: C++ cơ bản (Udemy section 12)
- * Dự đoán trước khi chạy: a, b sau r = b và *p = 99? *(q+2), q[3], *q+1, &arr[3]-q? reset_val có làm p trong main thành nullptr không, còn reset_ref? sizeof(p) và sizeof(r)?
- * Ý chính: Reference phải khởi tạo và KHÔNG trỏ lại được: r = b là gán GIÁ TRỊ của b vào a. Con trỏ truyền vào hàm theo giá trị: đổi địa chỉ bên trong hàm không ảnh hưởng bên ngoài (cần int*& hoặc int**). new đi với delete, new[] đi với delete[]. delete nullptr là an toàn.
- * Thử thêm: Trả về int& tới biến local trong một hàm (gcc cảnh báo dangling). Bỏ delete[] rồi chạy với valgrind --leak-check=full.
+ * Lab: Pointers and references: reseating, assigning through a reference, pointer arithmetic, passing pointers to functions
+ * Topic: C++ basics (Udemy section 12)
+ * Predict before running: a and b after r = b and *p = 99? *(q+2), q[3], *q+1, &arr[3]-q? Does reset_val make main's p a nullptr, and reset_ref? sizeof(p) and sizeof(r)?
+ * Key idea: A reference must be initialized and can NOT be reseated: r = b assigns b's VALUE to a. A pointer is passed to a function by value: changing the address inside the function does not affect the caller (use int*& or int**). new goes with delete, new[] with delete[]. delete nullptr is safe.
+ * Try next: Return an int& to a local variable from a function (gcc warns about dangling). Remove the delete[] and run under valgrind --leak-check=full.
  */
 #include <iostream>
 #include <string>
@@ -19,29 +19,29 @@ int main()
     int a = 10, b = 20;
     int &r = a;
     r = b;
-    cout << "sau r = b: a = " << a << ", b = " << b << ", &r == &a ? " << (&r == &a) << '\n';
+    cout << "after r = b: a = " << a << ", b = " << b << ", &r == &a ? " << (&r == &a) << '\n';
     r = 30;
-    cout << "sau r = 30: a = " << a << ", b = " << b << '\n';
+    cout << "after r = 30: a = " << a << ", b = " << b << '\n';
 
     int *p = &a;
     p = &b;
     *p = 99;
-    cout << "sau p = &b; *p = 99: a = " << a << ", b = " << b << '\n';
+    cout << "after p = &b; *p = 99: a = " << a << ", b = " << b << '\n';
 
     int arr[] = {10, 20, 30, 40};
     int *q = arr;
     cout << "*(q+2) = " << *(q + 2) << ", q[3] = " << q[3] << ", *q+1 = " << *q + 1 << ", &arr[3]-q = " << &arr[3] - q << '\n';
     ++q;
-    cout << "sau ++q: *q = " << *q << ", q[-1] = " << q[-1] << '\n';
+    cout << "after ++q: *q = " << *q << ", q[-1] = " << q[-1] << '\n';
 
     int *pa = &a;
-    reset_val(pa); cout << "reset_val: pa la nullptr ? " << (pa == nullptr) << '\n';
-    reset_ref(pa); cout << "reset_ref: pa la nullptr ? " << (pa == nullptr) << '\n';
+    reset_val(pa); cout << "reset_val: pa is nullptr ? " << (pa == nullptr) << '\n';
+    reset_ref(pa); cout << "reset_ref: pa is nullptr ? " << (pa == nullptr) << '\n';
 
     cout << "sizeof(p) = " << sizeof(p) << ", sizeof(r) = " << sizeof(r) << ", sizeof(arr) = " << sizeof(arr) << '\n';
 
-    const int *pc = &a;   // không sửa được *pc, đổi được pc
-    int *const cp = &a;   // sửa được *cp, không đổi được cp
+    const int *pc = &a;   // cannot modify *pc, can change pc
+    int *const cp = &a;   // can modify *cp, cannot change cp
     pc = &b;
     *cp = 1;
     cout << "*pc = " << *pc << ", *cp = " << *cp << '\n';

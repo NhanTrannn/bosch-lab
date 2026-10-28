@@ -1,9 +1,9 @@
 /*
- * Bài: Dọn zombie bằng SIGCHLD
- * Chủ đề: Signal
- * Dự đoán trước khi chạy: Chương trình có in đủ "Da don du 5 con" không? Nếu handler chỉ gọi waitpid một lần (không có while) thì có thể sai ở đâu?
- * Ý chính: Khi con thoát, kernel gửi SIGCHLD cho cha. Signal thường KHÔNG xếp hàng: nhiều con thoát gần nhau có thể chỉ sinh 1 lần gọi handler → phải lặp waitpid(-1, ..., WNOHANG).
- * Thử thêm: Bỏ vòng while trong handler (chỉ gọi waitpid 1 lần), cho các con thoát cùng lúc (bỏ usleep) và chạy vài lần.
+ * Lab: Reaping zombies with SIGCHLD
+ * Topic: Signal
+ * Predict before running: Does the program print "Reaped all 5 children"? If the handler called waitpid only once (no while loop), what could go wrong?
+ * Key idea: When a child exits, the kernel sends SIGCHLD to the parent. Standard signals are NOT queued: several children exiting close together may trigger the handler only once → loop on waitpid(-1, ..., WNOHANG).
+ * Try next: Remove the while loop in the handler (call waitpid once), make the children exit at the same time (remove usleep) and run it a few times.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -41,9 +41,9 @@ int main(void)
     }
 
     while (reaped < 5) {
-        printf("cha dang lam viec... da don %d con\n", (int)reaped);
+        printf("parent working... reaped %d children\n", (int)reaped);
         sleep(1);
     }
-    printf("Da don du %d con, khong con zombie\n", (int)reaped);
+    printf("Reaped all %d children, no zombies left\n", (int)reaped);
     return 0;
 }

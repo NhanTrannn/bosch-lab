@@ -1,9 +1,9 @@
 /*
- * Bài: POSIX message queue và độ ưu tiên
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Con gửi 3 tin với độ ưu tiên 1, 5, 3. Cha nhận theo thứ tự nào? mq_curmsgs trước khi nhận bằng mấy?
- * Ý chính: Message queue giữ RANH GIỚI tin nhắn (khác pipe là luồng byte) và nhận tin có độ ưu tiên cao nhất trước, cùng ưu tiên thì FIFO. Queue tồn tại trong kernel (/dev/mqueue) tới khi mq_unlink, kể cả khi không còn tiến trình nào mở.
- * Thử thêm: Bỏ mq_unlink rồi ls /dev/mqueue sau khi chạy. Gửi quá mq_maxmsg tin → mq_send chặn.
+ * Lab: POSIX message queues and priorities
+ * Topic: IPC
+ * Predict before running: The child sends 3 messages with priorities 1, 5 and 3. In what order does the parent receive them? What is mq_curmsgs before receiving?
+ * Key idea: A message queue keeps message BOUNDARIES (unlike a pipe, which is a byte stream) and delivers the highest-priority message first, FIFO within a priority. The queue lives in the kernel (/dev/mqueue) until mq_unlink, even when no process has it open.
+ * Try next: Remove mq_unlink and ls /dev/mqueue after running it. Send more than mq_maxmsg messages → mq_send blocks.
  */
 #define _GNU_SOURCE
 #include <fcntl.h>
@@ -26,7 +26,7 @@ int main(void)
     }
 
     if (fork() == 0) {
-        const char *msg[] = {"thap", "cao", "vua"};
+        const char *msg[] = {"low", "high", "medium"};
         unsigned prio[] = {1, 5, 3};
         for (int i = 0; i < 3; i++)
             mq_send(q, msg[i], strlen(msg[i]) + 1, prio[i]);
@@ -35,12 +35,12 @@ int main(void)
     wait(NULL);
 
     mq_getattr(q, &attr);
-    printf("so tin dang cho: %ld\n", attr.mq_curmsgs);
+    printf("messages waiting: %ld\n", attr.mq_curmsgs);
     char buf[64];
     unsigned prio;
     for (int i = 0; i < 3; i++) {
         mq_receive(q, buf, sizeof(buf), &prio);
-        printf("nhan \"%s\" (prio %u)\n", buf, prio);
+        printf("received \"%s\" (prio %u)\n", buf, prio);
     }
     mq_close(q);
     mq_unlink(NAME);

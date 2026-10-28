@@ -1,9 +1,9 @@
 /*
- * Bài: Ba kiểu const với con trỏ
- * Chủ đề: C
- * Dự đoán trước khi chạy: Chương trình in gì? Lần lượt bỏ comment từng dòng đang bị comment trong main: dòng nào biên dịch được, dòng nào lỗi và lỗi gì?
- * Ý chính: Đọc từ phải sang trái: const đứng trước * khoá dữ liệu được trỏ tới, const đứng sau * khoá chính con trỏ.
- * Thử thêm: Thử gán int *q = p1; (bỏ const) và xem compiler cảnh báo gì.
+ * Lab: The three kinds of const with pointers
+ * Topic: C
+ * Predict before running: What does the program print? Uncomment the commented-out lines in main one at a time: which compile, which fail, and with what error?
+ * Key idea: Read right to left: a const before the * locks the pointed-to data, a const after the * locks the pointer itself.
+ * Try next: Try int *q = p1; (dropping const) and see what the compiler warns.
  */
 #include <stdio.h>
 

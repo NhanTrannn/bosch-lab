@@ -1,9 +1,9 @@
 /*
- * Bài: Biến, kiểu cơ bản, chia nguyên và chuyển kiểu
- * Chủ đề: C++ cơ bản (Udemy section 6, 8)
- * Dự đoán trước khi chạy: 7/2, 7%2, -7/2, -7%2? avg = (1+2+4)/3 bằng mấy? 'A'+1 in ra gì? unsigned 0 trừ 1? 10/3*3 và 10*3/3?
- * Ý chính: int / int là chia nguyên (cắt về 0), phải có ít nhất một toán hạng double mới chia thực. static_cast áp dụng TRƯỚC hay SAU phép chia cho kết quả khác nhau. char là số: 'A' + 1 lên int. {} (list init) chặn narrowing, = thì không.
- * Thử thêm: Bỏ comment dòng int bad{3.99}; để xem lỗi narrowing. Đổi avg thành (1+2+4)/3.0.
+ * Lab: Variables, fundamental types, integer division and conversions
+ * Topic: C++ basics (Udemy sections 6, 8)
+ * Predict before running: 7/2, 7%2, -7/2, -7%2? What is avg = (1+2+4)/3? What does 'A'+1 print? unsigned 0 minus 1? 10/3*3 and 10*3/3?
+ * Key idea: int / int is integer division (truncates toward zero); at least one double operand is needed for real division. Whether static_cast is applied BEFORE or AFTER the division changes the result. char is a number: 'A' + 1 becomes an int. {} (list init) blocks narrowing, = does not.
+ * Try next: Uncomment int bad{3.99}; to see the narrowing error. Change avg to (1+2+4)/3.0.
  */
 #include <iostream>
 using namespace std;
@@ -19,8 +19,8 @@ int main()
     cout << "avg = " << avg << '\n';
     cout << "10/3*3 = " << 10 / 3 * 3 << ", 10*3/3 = " << 10 * 3 / 3 << '\n';
 
-    int t = 3.99;                    // = cho phép cắt (không lỗi)
-    // int bad{3.99};                // {} báo lỗi narrowing
+    int t = 3.99;                    // = allows truncation (no error)
+    // int bad{3.99};                // {} reports a narrowing error
     cout << "int t = 3.99 -> " << t << ", (int)-3.99 = " << (int)-3.99 << '\n';
 
     char c = 'A';
@@ -38,8 +38,8 @@ int main()
          << ", double " << sizeof(double) << ", bool " << sizeof(bool) << '\n';
 
     const double PI = 3.14159;
-    // PI = 3;                       // lỗi: gán cho biến const
-    constexpr int SIZE = 2 * 5;     // tính lúc biên dịch
+    // PI = 3;                       // error: assigning to a const variable
+    constexpr int SIZE = 2 * 5;     // computed at compile time
     int arr[SIZE] = {};
     cout << "PI = " << PI << ", SIZE = " << SIZE << ", sizeof(arr) = " << sizeof(arr) << '\n';
     return 0;

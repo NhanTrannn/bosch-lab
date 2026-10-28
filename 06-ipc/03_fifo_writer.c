@@ -1,9 +1,9 @@
 /*
- * Bài: Named pipe — phía ghi (đi cùng 03_fifo_reader.c)
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: xem 03_fifo_reader.c
- * Ý chính: open(O_WRONLY) chặn cho tới khi có tiến trình mở FIFO để đọc.
- * Thử thêm: chạy writer trước reader và quan sát dòng nào bị chặn.
+ * Lab: Named pipe — the writing side (goes with 03_fifo_reader.c)
+ * Topic: IPC
+ * Predict before running: see 03_fifo_reader.c
+ * Key idea: open(O_WRONLY) blocks until some process opens the FIFO for reading.
+ * Try next: run the writer before the reader and see which line blocks.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -21,15 +21,15 @@ int main(void)
         perror("mkfifo");
         return 1;
     }
-    printf("Writer: dang mo FIFO...\n");
+    printf("Writer: opening the FIFO...\n");
     fflush(stdout);
     int fd = open(FIFO, O_WRONLY);
-    printf("Writer: da mo. Go vai dong roi Ctrl+D de ket thuc\n");
+    printf("Writer: opened. Type a few lines, then Ctrl+D to finish\n");
 
     char line[128];
     while (fgets(line, sizeof(line), stdin))
         write(fd, line, strlen(line));
     close(fd);
-    printf("Writer: da dong FIFO\n");
+    printf("Writer: closed the FIFO\n");
     return 0;
 }

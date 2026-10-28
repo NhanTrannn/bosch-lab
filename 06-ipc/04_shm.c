@@ -1,9 +1,9 @@
 /*
- * Bài: POSIX shared memory giữa cha và con
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Cha đọc được chuỗi nào trong mem? Biến local ở cha bằng mấy?
- * Ý chính: Vùng mmap MAP_SHARED được chia sẻ thật giữa các tiến trình; còn biến thường sau fork là bản copy (copy-on-write).
- * Thử thêm: Bỏ dòng shm_unlink rồi chạy, sau đó ls -l /dev/shm. Đổi MAP_SHARED thành MAP_PRIVATE và đoán lại.
+ * Lab: POSIX shared memory between a parent and a child
+ * Topic: IPC
+ * Predict before running: Which string does the parent read in mem? What is the local variable in the parent?
+ * Key idea: A MAP_SHARED mmap region is really shared between processes; a normal variable after fork is a copy (copy-on-write).
+ * Try next: Remove the shm_unlink line, run it, then ls -l /dev/shm. Change MAP_SHARED to MAP_PRIVATE and predict again.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -27,18 +27,18 @@ int main(void)
         perror("ftruncate");
     char *mem = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
-    strcpy(mem, "ban dau");
+    strcpy(mem, "initial");
 
     int local = 1;
     pid_t pid = fork();
     if (pid == 0) {
-        strcpy(mem, "con da ghi vao shm");
+        strcpy(mem, "child wrote to shm");
         local = 99;
-        printf("Con: mem = \"%s\", local = %d\n", mem, local);
+        printf("Child:  mem = \"%s\", local = %d\n", mem, local);
         return 0;
     }
     waitpid(pid, NULL, 0);
-    printf("Cha: mem = \"%s\", local = %d\n", mem, local);
+    printf("Parent: mem = \"%s\", local = %d\n", mem, local);
 
     munmap(mem, SIZE);
     shm_unlink(NAME);

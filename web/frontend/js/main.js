@@ -1,12 +1,12 @@
-// Khởi động: tải dữ liệu từ backend rồi định tuyến theo #hash.
+// Startup: load data from the backend, then route by #hash.
 "use strict";
 
-// ---------- khởi động
+// ---------- startup
 (async () => {
   const [d, th] = await Promise.all([api("/api/labs"), api("/api/theory")]);
   ROOT = d.root; LABS = d.labs; TOPICS = th.topics || [];
   route();
-})().catch(e => { $("#main").innerHTML = `<div class="empty">Không kết nối được server: ${esc(e.message)}</div>`; });
+})().catch(e => { $("#main").innerHTML = `<div class="empty">Cannot reach the server: ${esc(e.message)}</div>`; });
 function route() {
   const hsh = decodeURIComponent(location.hash.slice(1));
   if (hsh.startsWith("theory/") && TOPICS.length) return showTopic(hsh.slice(7));

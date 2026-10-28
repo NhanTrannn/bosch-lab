@@ -1,9 +1,9 @@
 /*
- * Bài: sizeof và padding của struct
- * Chủ đề: C
- * Dự đoán trước khi chạy: sizeof(struct A), sizeof(struct B), sizeof(struct C) là bao nhiêu? Offset từng member?
- * Ý chính: Compiler chèn padding để mỗi member nằm đúng alignment của nó; cả struct cũng được làm tròn lên bội số alignment lớn nhất.
- * Thử thêm: Đổi int thành double (alignment 8) hoặc thêm một member short rồi đoán lại.
+ * Lab: sizeof and struct padding
+ * Topic: C
+ * Predict before running: What are sizeof(struct A), sizeof(struct B) and sizeof(struct C)? What is the offset of each member?
+ * Key idea: The compiler inserts padding so each member sits at its own alignment; the whole struct is also rounded up to a multiple of its largest alignment.
+ * Try next: Change int to double (alignment 8) or add a short member, then predict again.
  */
 #include <stdio.h>
 #include <stddef.h>

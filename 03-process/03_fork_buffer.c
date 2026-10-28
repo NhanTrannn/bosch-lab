@@ -1,10 +1,10 @@
 /*
- * Bài: Buffer của stdio khi fork
- * Chủ đề: Process
- * Dự đoán trước khi chạy: Màn hình hiện gì? Chữ A xuất hiện mấy lần?
- * Ý chính: printf ghi vào buffer trong user space; fork() nhân bản cả buffer chưa flush. stdout ra terminal là line-buffered, ra file/pipe là fully-buffered.
- * Thử thêm: Thêm fflush(stdout); ngay sau printf("A"). Sau đó đổi thành printf("A
-") và chạy cả ./build/03-process/03_fork_buffer > out.txt; cat out.txt.
+ * Lab: stdio buffers and fork
+ * Topic: Process
+ * Predict before running: What appears on screen? How many times does the letter A appear?
+ * Key idea: printf writes into a user-space buffer; fork() duplicates any unflushed buffer too. stdout to a terminal is line-buffered, to a file/pipe fully buffered.
+ * Try next: Add fflush(stdout); right after printf("A"). Then change it to printf("A
+") and also run ./build/03-process/03_fork_buffer > out.txt; cat out.txt.
  */
 #define _GNU_SOURCE
 #include <stdio.h>

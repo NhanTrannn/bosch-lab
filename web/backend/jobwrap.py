@@ -1,16 +1,16 @@
-"""Chạy một lệnh như shell chạy foreground job trên terminal (pty).
+"""Run a command the way a shell runs a foreground job on a terminal (pty).
 
     python3 jobwrap.py STATUS_FD CTL_FD prog [args...]
 
-stdin/stdout/stderr phải là slave của pty. Wrapper làm session leader + nhận
-pty làm controlling terminal, rồi fork con vào process group riêng và đưa nhóm
-đó lên foreground — giống bash. Nhờ vậy:
-  - Ctrl+C / Ctrl+Z / Ctrl+\\ (ghi \\x03 \\x1a \\x1c vào master) đi tới đúng job,
-  - stdout của bài là line-buffered (vì là terminal),
-  - khi job thoát, tiến trình con mồ côi KHÔNG bị SIGHUP (wrapper giữ session).
+stdin/stdout/stderr must be the pty slave. The wrapper becomes session leader, takes
+the pty as its controlling terminal, then forks the child into its own process group
+and puts that group in the foreground, like bash does. As a result:
+  - Ctrl+C / Ctrl+Z / Ctrl+\\ (writing \\x03 \\x1a \\x1c to the master) reach the right job,
+  - the lab's stdout is line-buffered (it is a terminal),
+  - when the job exits, orphaned children do NOT get SIGHUP (the wrapper keeps the session).
 
-STATUS_FD nhận các dòng: "pid N", "stopped SIG", "continued", "exit C", "signal S".
-CTL_FD nhận lệnh: "fg" (đưa job lên foreground + SIGCONT), "bg" (chỉ SIGCONT).
+STATUS_FD receives lines: "pid N", "stopped SIG", "continued", "exit C", "signal S".
+CTL_FD receives commands: "fg" (bring the job to the foreground + SIGCONT), "bg" (SIGCONT only).
 """
 import fcntl
 import os
@@ -46,7 +46,7 @@ def main():
             os.write(2, f"exec {argv[0]}: {e.strerror}\n".encode())
             os._exit(127)
 
-    # Gọi lại ở cha để không phụ thuộc thứ tự chạy cha/con
+    # Also called in the parent so we do not depend on whether parent or child runs first
     try:
         os.setpgid(pid, pid)
         os.tcsetpgrp(0, pid)
@@ -78,7 +78,7 @@ def main():
                 report("continued")
             else:
                 report(f"exit {os.WEXITSTATUS(st)}" if os.WIFEXITED(st) else f"signal {os.WTERMSIG(st)}")
-                # Lấy lại terminal rồi thoát: SIGHUP của session leader chỉ tới nhóm của wrapper
+                # Take the terminal back, then exit: the session leader's SIGHUP only reaches the wrapper's group
                 try:
                     os.tcsetpgrp(0, os.getpgrp())
                 except OSError:

@@ -1,9 +1,9 @@
 /*
- * Bài: unique_ptr, shared_ptr, weak_ptr
- * Chủ đề: C++
- * Dự đoán trước khi chạy: use_count in ra bao nhiêu ở mỗi chỗ? Node A, Node B có được huỷ không? Fixed X/Y thì sao, theo thứ tự nào?
- * Ý chính: unique_ptr chỉ move được, không copy. shared_ptr đếm tham chiếu; vòng shared_ptr trỏ nhau không bao giờ về 0 → leak. weak_ptr không tăng use_count, dùng để phá vòng.
- * Thử thêm: Đổi Node::next thành weak_ptr<Node> và chạy lại; thử lock() một weak_ptr sau khi object đã huỷ.
+ * Lab: unique_ptr, shared_ptr, weak_ptr
+ * Topic: C++
+ * Predict before running: What does use_count print at each point? Are Node A and Node B destroyed? What about Fixed X/Y, and in which order?
+ * Key idea: unique_ptr can only be moved, not copied. shared_ptr counts references; a cycle of shared_ptrs never reaches 0 → leak. weak_ptr does not increase use_count and is used to break cycles.
+ * Try next: Change Node::next to weak_ptr<Node> and run again; try lock() on a weak_ptr after the object is gone.
  */
 #include <iostream>
 #include <memory>
@@ -28,15 +28,15 @@ int main()
 {
     unique_ptr<int> u1 = make_unique<int>(42);
     unique_ptr<int> u2 = move(u1);
-    cout << "u1 " << (u1 ? "co" : "rong") << ", *u2 = " << *u2 << '\n';
+    cout << "u1 " << (u1 ? "has a value" : "is empty") << ", *u2 = " << *u2 << '\n';
 
     shared_ptr<int> s1 = make_shared<int>(7);
     {
         shared_ptr<int> s2 = s1;
         auto s3 = s1;
-        cout << "use_count trong block = " << s1.use_count() << '\n';
+        cout << "use_count inside block = " << s1.use_count() << '\n';
     }
-    cout << "use_count sau block = " << s1.use_count() << '\n';
+    cout << "use_count after block = " << s1.use_count() << '\n';
 
     {
         auto a = make_shared<Node>("A");
@@ -45,7 +45,7 @@ int main()
         b->next = a;
         cout << "a.use_count = " << a.use_count() << '\n';
     }
-    cout << "--- sau block Node ---\n";
+    cout << "--- after the Node block ---\n";
 
     {
         auto x = make_shared<Fixed>("X");
@@ -54,5 +54,5 @@ int main()
         y->other = x;
         cout << "x.use_count = " << x.use_count() << '\n';
     }
-    cout << "--- het ---\n";
+    cout << "--- end of main ---\n";
 }

@@ -1,9 +1,9 @@
 /*
- * Bài: std::move, const và noexcept khi vector cấp phát lại
- * Chủ đề: C++
- * Dự đoán trước khi chạy: Khi vector tăng capacity, phần tử cũ được copy hay move với A và B? std::move(ca) gọi gì? s sau khi bị move còn gì?
- * Ý chính: std::move chỉ là ép kiểu sang rvalue reference, bản thân nó không di chuyển gì. Object const không move được → rơi về copy. vector chỉ dùng move khi cấp phát lại nếu move constructor là noexcept (để giữ strong exception guarantee), nếu không sẽ copy.
- * Thử thêm: Thêm noexcept cho A(A&&) rồi chạy lại. Thử return std::move(local); và xem cảnh báo -Wpessimizing-move.
+ * Lab: std::move, const and noexcept when a vector reallocates
+ * Topic: C++
+ * Predict before running: When the vector grows its capacity, are the old elements copied or moved for A and for B? What does std::move(ca) call? What is left in s after it is moved from?
+ * Key idea: std::move is only a cast to an rvalue reference; by itself it moves nothing. A const object cannot be moved → it falls back to copying. vector only moves elements when reallocating if the move constructor is noexcept (to keep the strong exception guarantee); otherwise it copies.
+ * Try next: Add noexcept to A(A&&) and run again. Try return std::move(local); and look at the -Wpessimizing-move warning.
  */
 #include <iostream>
 #include <string>
@@ -28,7 +28,7 @@ int main()
     va.reserve(2);
     va.emplace_back();
     va.emplace_back();
-    cout << "A, tang capacity: ";
+    cout << "A, growing capacity: ";
     va.emplace_back();
     cout << '\n';
 
@@ -36,7 +36,7 @@ int main()
     vb.reserve(2);
     vb.emplace_back();
     vb.emplace_back();
-    cout << "B, tang capacity: ";
+    cout << "B, growing capacity: ";
     vb.emplace_back();
     cout << '\n';
 

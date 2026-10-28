@@ -1,10 +1,10 @@
 /*
- * !!! Chạy liên tục cho tới khi nhấn Ctrl+C đủ 3 lần (hoặc Ctrl+\ để thoát ngay).
- * Bài: Bắt Ctrl+C bằng sigaction
- * Chủ đề: Signal
- * Dự đoán trước khi chạy: Nhấn Ctrl+C lần 1, 2 thì sao? Lần thứ mấy chương trình thoát, và dòng cuối in gì?
- * Ý chính: Handler chỉ nên đặt cờ kiểu volatile sig_atomic_t và dùng hàm async-signal-safe (write, không printf). Vòng lặp chính kiểm tra cờ để thoát sạch.
- * Thử thêm: Trong lúc chạy, từ terminal khác gửi kill -INT <PID>; rồi thử kill -QUIT <PID> (Ctrl+\).
+ * !!! Runs until you press Ctrl+C 3 times (or Ctrl+\ to quit immediately).
+ * Lab: Catching Ctrl+C with sigaction
+ * Topic: Signal
+ * Predict before running: What happens on the 1st and 2nd Ctrl+C? On which press does the program exit, and what does the last line print?
+ * Key idea: A handler should only set a volatile sig_atomic_t flag and use async-signal-safe functions (write, not printf). The main loop checks the flag and exits cleanly.
+ * Try next: While it runs, send kill -INT <PID> from another terminal; then try kill -QUIT <PID> (Ctrl+\).
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -21,7 +21,7 @@ static void on_sigint(int sig)
     count++;
     if (count >= 3)
         stop = 1;
-    const char msg[] = " [handler: nhan SIGINT]\n";
+    const char msg[] = " [handler: got SIGINT]\n";
     write(STDOUT_FILENO, msg, sizeof(msg) - 1);
 }
 
@@ -34,11 +34,11 @@ int main(void)
     sa.sa_flags = SA_RESTART;
     sigaction(SIGINT, &sa, NULL);
 
-    printf("PID %d. Nhan Ctrl+C 3 lan de thoat.\n", getpid());
+    printf("PID %d. Press Ctrl+C 3 times to quit.\n", getpid());
     while (!stop) {
-        printf("dang chay... count = %d\n", (int)count);
+        printf("running... count = %d\n", (int)count);
         sleep(1);
     }
-    printf("Thoat sach se sau %d lan Ctrl+C\n", (int)count);
+    printf("Clean exit after %d Ctrl+C presses\n", (int)count);
     return 0;
 }

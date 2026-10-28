@@ -1,9 +1,9 @@
 /*
- * Bài: Ánh xạ file vào bộ nhớ bằng mmap
- * Chủ đề: IPC
- * Dự đoán trước khi chạy: Dòng "Sau" in gì? Kích thước file là bao nhiêu byte?
- * Ý chính: mmap MAP_SHARED trên file: ghi vào bộ nhớ = ghi vào file (qua page cache). msync ép ghi xuống đĩa.
- * Thử thêm: Đổi MAP_SHARED thành MAP_PRIVATE; thử ghi p[st.st_size + 100] (ngoài file nhưng trong trang) và p[8192].
+ * Lab: Mapping a file into memory with mmap
+ * Topic: IPC
+ * Predict before running: What does the "After" line print? How many bytes is the file?
+ * Key idea: mmap with MAP_SHARED on a file: writing to the memory = writing to the file (through the page cache). msync forces it to disk.
+ * Try next: Change MAP_SHARED to MAP_PRIVATE; try writing p[st.st_size + 100] (past the file but inside the page) and p[8192].
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -31,7 +31,7 @@ int main(void)
     }
     close(fd);
 
-    printf("Truoc: %.*s", (int)st.st_size, p);
+    printf("Before: %.*s", (int)st.st_size, p);
     for (int i = 0; i < 5; i++)
         p[i] = toupper((unsigned char)p[i]);
     memcpy(p + 6, "MMAP", 4);
@@ -42,7 +42,7 @@ int main(void)
     f = fopen(path, "r");
     fgets(line, sizeof(line), f);
     fclose(f);
-    printf("Sau  : %s", line);
-    printf("File size = %ld byte\n", (long)st.st_size);
+    printf("After : %s", line);
+    printf("File size = %ld bytes\n", (long)st.st_size);
     return 0;
 }

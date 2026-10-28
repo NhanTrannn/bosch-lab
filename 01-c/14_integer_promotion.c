@@ -1,10 +1,10 @@
 /*
- * Bài: Integer promotion: char/short tự lên int
- * Chủ đề: C
- * Dự đoán trước khi chạy: a + b bằng bao nhiêu, còn c? sc == uc? Dòng ~x == 0xF0 in "bang" hay "khac"? sizeof(a + b)?
- * Ý chính: Trong biểu thức, char/short (kể cả unsigned) được nâng lên int TRƯỚC khi tính. Kết quả chỉ bị cắt lại khi gán về kiểu nhỏ. Bẫy kinh điển với ~ trên uint8_t trong code driver/thanh ghi.
- * Cảnh báo biên dịch cố ý: -Wsign-compare ở dòng ~x == 0xF0 (gcc nhận ra đúng cái bẫy này).
- * Thử thêm: Sửa điều kiện ~x thành (uint8_t)~x == 0xF0. Thử char c = 200; printf("%d", c); (char có dấu hay không là implementation-defined; x86 có dấu, ARM thường không dấu).
+ * Lab: Integer promotion: char/short automatically become int
+ * Topic: C
+ * Predict before running: What is a + b, and c? Is sc == uc? Does the ~x == 0xF0 line print "equal" or "different"? What is sizeof(a + b)?
+ * Key idea: In expressions, char/short (signed or unsigned) are promoted to int BEFORE the arithmetic. The result is only truncated when assigned back to a small type. A classic trap with ~ on uint8_t in driver/register code.
+ * Intentional compiler warning: -Wsign-compare on the ~x == 0xF0 line (gcc spots exactly this trap).
+ * Try next: Change the condition to (uint8_t)~x == 0xF0. Try char c = 200; printf("%d", c); (whether char is signed is implementation-defined; signed on x86, usually unsigned on ARM).
  */
 #include <stdio.h>
 #include <stdint.h>
@@ -23,16 +23,16 @@ int main(void)
 
     uint8_t x = 0x0F;
     if (~x == 0xF0)
-        printf("bang\n");
+        printf("equal\n");
     else
-        printf("khac: ~x = 0x%X\n", ~x);
+        printf("different: ~x = 0x%X\n", ~x);
 
     uint8_t hi = 0x80;
     printf("hi << 1 = %d, (uint8_t)(hi << 1) = %d\n", hi << 1, (uint8_t)(hi << 1));
 
     unsigned int un = 0;
     un--;
-    printf("un-- tu 0 = %u\n", un);
+    printf("un-- from 0 = %u\n", un);
 
     short s1 = 30000, s2 = 30000;
     int sum = s1 + s2;

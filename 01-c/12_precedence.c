@@ -1,16 +1,16 @@
 /*
- * Bài: Độ ưu tiên toán tử và short-circuit
- * Chủ đề: C
- * Dự đoán trước khi chạy: Giá trị từng dòng? Sau dòng || và && thì i, k bằng bao nhiêu? arr[1] cuối cùng bằng mấy?
- * Ý chính: == và != ưu tiên CAO hơn & | ^; + - ưu tiên cao hơn << >>; ?: kết hợp từ phải. && và || dừng sớm (short-circuit) và có sequence point.
- * Cảnh báo biên dịch cố ý: -Wparentheses (a & 4 == 4, 1 << 2 + 1) và -Wunused-value (toán tử phẩy).
- * Thử thêm: Viết lại mọi dòng có cảnh báo bằng dấu ngoặc cho đúng ý định. Thử in i++ + ++i (UB — đừng viết thế trong code thật).
+ * Lab: Operator precedence and short-circuit evaluation
+ * Topic: C
+ * Predict before running: What is the value on each line? After the || and && lines, what are i and k? What is arr[1] at the end?
+ * Key idea: == and != bind TIGHTER than & | ^; + - bind tighter than << >>; ?: associates right to left. && and || stop early (short-circuit) and contain a sequence point.
+ * Intentional compiler warning: -Wparentheses (a & 4 == 4, 1 << 2 + 1) and -Wunused-value (the comma operator).
+ * Try next: Rewrite every line that warns with parentheses that express the intent. Try printing i++ + ++i (UB — never write that in real code).
  */
 #include <stdio.h>
 
 int main(void)
 {
-    int a = 6; /* 110b: bit 2 bật */
+    int a = 6; /* 110b: bit 2 is set */
     printf("a & 4 == 4   -> %d\n", a & 4 == 4);
     printf("(a & 4) == 4 -> %d\n", (a & 4) == 4);
     printf("1 << 2 + 1   -> %d\n", 1 << 2 + 1);
@@ -20,13 +20,13 @@ int main(void)
     int arr[] = {10, 20, 30};
     int *p = arr;
     int v = *p++;  /* *(p++) */
-    int w = ++*p;  /* ++(*p): tăng arr[1] */
+    int w = ++*p;  /* ++(*p): increments arr[1] */
     int y = (*p)++;
     printf("v = %d, w = %d, y = %d, arr[1] = %d\n", v, w, y, arr[1]);
 
     int q = 5;
     int r = q > 3 ? q < 10 ? 1 : 2 : 3;
-    printf("?: long nhau -> %d\n", r);
+    printf("nested ?:   -> %d\n", r);
 
     int comma = (1, 2, 3);
     printf("(1, 2, 3)    -> %d\n", comma);

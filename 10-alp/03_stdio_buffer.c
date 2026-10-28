@@ -1,9 +1,10 @@
 /*
- * Bài: Buffer của stdio: full, line, không buffer; stderr không buffer; exit và _exit (ALP 2.1.4)
- * Chủ đề: ALP chương 2
- * Dự đoán trước khi chạy: Với stdout đặt full buffering, các dòng [stdout] và [stderr] hiện theo thứ tự nào? Ở phần hai, chữ A/B/C/D/E hiện theo thứ tự nào? Dòng cuối có hiện ra không?
- * Ý chính: stdout có buffer: ra terminal thì line-buffered (đẩy khi gặp '\n'), ra file/pipe thì full-buffered (đẩy khi đầy buffer, fflush, exit hoặc fclose). stderr không buffer, ghi ra ngay. exit() flush các stream; _exit() thì không → dữ liệu trong buffer bị mất.
- * Thử thêm: Chạy ./build/10-alp/03_stdio_buffer | cat và ./build/10-alp/03_stdio_buffer 2>/dev/null. Viết vòng while (1) { printf("."); sleep(1); } rồi đổi thành fprintf(stderr, ".").
+ * Lab: stdio buffering: full, line, unbuffered; stderr is unbuffered; exit vs _exit (ALP 2.1.4)
+ * Topic: ALP chapter 2
+ * Predict before running: With stdout set to full buffering, in what order do the [stdout] and [stderr] parts appear? In the second part, in what order do A/B/C/D/E appear? Does the last line appear?
+ * Key idea: stdout is buffered: to a terminal it is line-buffered (flushed at '
+'), to a file/pipe fully buffered (flushed when the buffer fills, on fflush, exit or fclose). stderr is unbuffered and written immediately. exit() flushes the streams; _exit() does not → data still in a buffer is lost.
+ * Try next: Run ./build/10-alp/03_stdio_buffer | cat and ./build/10-alp/03_stdio_buffer 2>/dev/null. Write the loop while (1) { printf("."); sleep(1); } and then change it to fprintf(stderr, ".").
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -11,7 +12,7 @@
 
 int main(void)
 {
-    setvbuf(stdout, NULL, _IOFBF, BUFSIZ);   /* full buffering kể cả khi ra terminal */
+    setvbuf(stdout, NULL, _IOFBF, BUFSIZ);   /* full buffering even on a terminal */
     printf("[stdout 1] ");
     fprintf(stderr, "[stderr 2] ");
     printf("[stdout 3]\n");
@@ -34,6 +35,6 @@ int main(void)
     fclose(line);
     fclose(none);
 
-    printf("dong nay nam trong buffer cua stdout va se bi mat vi _exit\n");
+    printf("this line sits in the stdout buffer and is lost because of _exit\n");
     _exit(0);
 }

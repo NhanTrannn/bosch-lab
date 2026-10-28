@@ -1,9 +1,9 @@
 /*
- * Bài: fork + exec + waitpid
- * Chủ đề: Process
- * Dự đoán trước khi chạy: Mã thoát (WEXITSTATUS) mà cha in ra là bao nhiêu? Dòng perror("execlp") có chạy không?
- * Ý chính: exec thay thế toàn bộ image của tiến trình (giữ PID); thành công thì KHÔNG trả về. Cha dùng waitpid + WIFEXITED/WEXITSTATUS để lấy mã thoát.
- * Thử thêm: Đổi "/khong_ton_tai" thành "." (mã 0), rồi đổi "ls" thành "lsx" (lệnh không tồn tại).
+ * Lab: fork + exec + waitpid
+ * Topic: Process
+ * Predict before running: What exit code (WEXITSTATUS) does the parent print? Does the perror("execlp") line run?
+ * Key idea: exec replaces the whole process image (keeping the PID); on success it does NOT return. The parent uses waitpid + WIFEXITED/WEXITSTATUS to get the exit code.
+ * Try next: Change "/does_not_exist" to "." (exit code 0), then change "ls" to "lsx" (a command that does not exist).
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -20,9 +20,9 @@ int main(void)
     }
 
     if (pid == 0) {
-        printf("Con (pid %d) se chay ls\n", getpid());
+        printf("Child (pid %d) will run ls\n", getpid());
         fflush(stdout);
-        execlp("ls", "ls", "-l", "/khong_ton_tai", (char *)NULL);
+        execlp("ls", "ls", "-l", "/does_not_exist", (char *)NULL);
         perror("execlp");
         exit(127);
     }
@@ -30,8 +30,8 @@ int main(void)
     int status;
     waitpid(pid, &status, 0);
     if (WIFEXITED(status))
-        printf("Cha: con %d thoat voi ma %d\n", pid, WEXITSTATUS(status));
+        printf("Parent: child %d exited with code %d\n", pid, WEXITSTATUS(status));
     else if (WIFSIGNALED(status))
-        printf("Cha: con %d bi signal %d\n", pid, WTERMSIG(status));
+        printf("Parent: child %d killed by signal %d\n", pid, WTERMSIG(status));
     return 0;
 }

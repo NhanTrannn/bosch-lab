@@ -1,9 +1,9 @@
 /*
- * Bài: Thao tác bit
- * Chủ đề: C
- * Dự đoán trước khi chạy: Viết ra 4 dòng nhị phân đầu tiên và các giá trị ở 4 dòng cuối.
- * Ý chính: set: x | (1<<n), clear: x & ~(1<<n), toggle: x ^ (1<<n), read: (x>>n) & 1. x & (x-1) xoá bit 1 thấp nhất.
- * Thử thêm: Viết hàm đảo thứ tự bit của 1 byte (reverse bits) và hàm swap 2 nibble.
+ * Lab: Bit manipulation
+ * Topic: C
+ * Predict before running: Write down the first 4 binary lines and the values on the last 4 lines.
+ * Key idea: set: x | (1<<n), clear: x & ~(1<<n), toggle: x ^ (1<<n), read: (x>>n) & 1. x & (x-1) clears the lowest set bit.
+ * Try next: Write a function that reverses the bits of a byte and one that swaps its two nibbles.
  */
 #include <stdio.h>
 
@@ -39,7 +39,7 @@ int main(void)
     print_bin(clear_bit(x, 3));
     print_bin(toggle_bit(x, 7));
     printf("bit 2 = %d, bit 4 = %d\n", read_bit(x, 2), read_bit(x, 4));
-    printf("so bit 1 = %d\n", count_ones(x));
+    printf("set bits = %d\n", count_ones(x));
     printf("is_pow2: 0=%d 1=%d 6=%d 64=%d\n", is_pow2(0), is_pow2(1), is_pow2(6), is_pow2(64));
     printf("~x & 0xFF = 0x%X, x >> 2 = %u, x << 1 = %u\n", ~x & 0xFF, x >> 2, x << 1);
     return 0;

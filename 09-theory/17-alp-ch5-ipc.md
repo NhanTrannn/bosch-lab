@@ -1,258 +1,258 @@
-# ALP ch.5: Giao tiếp giữa các process (IPC)
+# ALP ch.5: Interprocess communication (IPC)
 
-## Lý thuyết
+## Theory
 
-Theo *Advanced Linux Programming*, chương 5 "Interprocess Communication". Lab: `10-alp/12` … `10-alp/15`, xem thêm `06-ipc/*`. Chủ đề "Signal và IPC" ở trên có bảng so sánh các cơ chế.
+Follows *Advanced Linux Programming*, chapter 5 "Interprocess Communication". Labs: `10-alp/12` … `10-alp/15`; see also `06-ipc/*`. The "Signals and IPC" topic above has a comparison table.
 
-Sách bàn năm loại IPC: **shared memory**, **mapped memory**, **pipe**, **FIFO**, **socket**, cùng với **process semaphore** để đồng bộ. Ba tiêu chí phân loại:
-- Có giới hạn giữa các process **có quan hệ họ hàng** (cha/con) không (pipe thì có).
-- Chỉ đọc hoặc chỉ ghi, hay cả hai chiều.
-- Số process có thể tham gia.
+The book covers five kinds of IPC: **shared memory**, **mapped memory**, **pipes**, **FIFOs** and **sockets**, plus **process semaphores** for synchronization. Three ways to classify them:
+- Whether they are limited to **related** processes (parent/child) — pipes are.
+- Whether they are read-only or write-only, or both directions.
+- How many processes can take part.
 
 ### Shared memory, System V (5.1)
-- IPC **nhanh nhất**: các process truy cập cùng vùng nhớ vật lý, đọc ghi không cần system call hay copy. Nhưng kernel **không đồng bộ** gì cả → phải tự dùng semaphore/khoá.
-- Mô hình: một process **cấp phát** segment, các process khác **attach**. Segment là bội số của **page size** (`getpagesize()`, thường 4 KB).
-- `shmget(key, size, flags)`: tạo hoặc lấy segment. key = `IPC_PRIVATE` → luôn tạo segment mới. flags: `IPC_CREAT` (tạo nếu chưa có), `IPC_EXCL` (cùng IPC_CREAT: lỗi nếu đã tồn tại), quyền `S_IRUSR | S_IWUSR`. Trả về **segment id**.
-- `shmat(id, addr, flags)`: gắn vào không gian địa chỉ (addr = NULL để kernel chọn), trả về địa chỉ (`SHM_RDONLY` = chỉ đọc). fork thì con kế thừa các segment đã gắn. `shmdt(addr)`: gỡ. exit/exec tự gỡ.
-- `shmctl(id, IPC_STAT, &ds)`: thông tin (`shm_segsz`, `shm_nattch` = số lần đang được gắn). `shmctl(id, IPC_RMID, NULL)`: đánh dấu xoá; segment bị huỷ khi process cuối cùng gỡ ra.
-- Segment **không tự mất** khi mọi process đã thoát. Phải IPC_RMID, nếu không sẽ rò rỉ cho tới khi reboot. Lệnh: `ipcs -m` (liệt kê), `ipcrm shm <id>` (cú pháp cũ) hoặc `ipcrm -m <id>`.
-- Ưu/nhược: nhanh, nhiều process dùng chung được; nhưng phải tự đồng bộ, dùng chung một quy ước về key và bố cục dữ liệu, và dễ để lại segment mồ côi.
+- The **fastest** IPC: processes access the same physical memory, reading and writing without system calls or copies. But the kernel does **no synchronization** → use semaphores/locks yourself.
+- Model: one process **allocates** a segment, the others **attach** to it. A segment is a multiple of the **page size** (`getpagesize()`, usually 4 KB).
+- `shmget(key, size, flags)`: create or get a segment. key = `IPC_PRIVATE` → always a new segment. flags: `IPC_CREAT` (create if missing), `IPC_EXCL` (with IPC_CREAT: fail if it already exists), permissions `S_IRUSR | S_IWUSR`. Returns the **segment id**.
+- `shmat(id, addr, flags)`: attach it to the address space (addr = NULL lets the kernel choose), returns the address (`SHM_RDONLY` = read-only). After fork the child inherits attached segments. `shmdt(addr)`: detach. exit/exec detach automatically.
+- `shmctl(id, IPC_STAT, &ds)`: information (`shm_segsz`, `shm_nattch` = number of current attachments). `shmctl(id, IPC_RMID, NULL)`: mark for deletion; the segment is destroyed when the last process detaches.
+- A segment does **not disappear** when every process has exited. You must IPC_RMID it, otherwise it leaks until reboot. Commands: `ipcs -m` (list), `ipcrm shm <id>` (old syntax) or `ipcrm -m <id>`.
+- Pros/cons: fast, many processes can share; but you must synchronize yourself, agree on a key and a data layout, and orphaned segments are easy to leave behind.
 
-### Process semaphore, System V (5.2)
-- Được cấp phát theo **tập** (set) gồm nhiều semaphore: `semget(key, nsems, flags)` → id. Xoá: `semctl(id, 0, IPC_RMID)` (phải tự xoá, không tự mất). Lệnh: `ipcs -s`, `ipcrm sem <id>`.
-- Khởi tạo: `semctl(id, 0, SETALL, arg)` hoặc `SETVAL`; phải tự khai báo `union semun { int val; struct semid_ds *buf; unsigned short *array; };`. Mới tạo thì giá trị chưa xác định, nên luôn khởi tạo.
-- Thao tác: `semop(id, ops, nops)` với mảng `struct sembuf { sem_num, sem_op, sem_flg }`. `sem_op` dương = post (cộng vào), âm = wait (chặn tới khi đủ để trừ mà không âm), 0 = chờ tới khi bằng 0. Mọi thao tác trong một lần semop là **nguyên tử**.
-- `sem_flg`: `IPC_NOWAIT` (không chặn, trả về EAGAIN), **`SEM_UNDO`** (kernel tự hoàn tác khi process kết thúc, tránh semaphore bị kẹt khi process chết giữa vùng găng).
-- (POSIX semaphore `sem_open`/`sem_wait` có API gọn hơn; xem `06-ipc`.)
+### Process semaphores, System V (5.2)
+- Allocated as **sets** of semaphores: `semget(key, nsems, flags)` → an id. Delete with `semctl(id, 0, IPC_RMID)` (you must delete it; it does not go away by itself). Commands: `ipcs -s`, `ipcrm sem <id>`.
+- Initialize with `semctl(id, 0, SETALL, arg)` or `SETVAL`; you must declare `union semun { int val; struct semid_ds *buf; unsigned short *array; };` yourself. A new semaphore's value is undefined, so always initialize it.
+- Operations: `semop(id, ops, nops)` with an array of `struct sembuf { sem_num, sem_op, sem_flg }`. Positive `sem_op` = post (add), negative = wait (block until it can subtract without going negative), 0 = wait until the value is 0. All operations in one semop call are **atomic**.
+- `sem_flg`: `IPC_NOWAIT` (do not block, return EAGAIN), **`SEM_UNDO`** (the kernel undoes the change when the process exits, so a semaphore does not stay stuck when a process dies inside a critical section).
+- (POSIX semaphores `sem_open`/`sem_wait` have a simpler API; see `06-ipc`.)
 
 ### Mapped memory (5.3)
-- `mmap` ánh xạ **file** vào bộ nhớ: đọc ghi file như một mảng, không cần read/write. Nhiều process map cùng file thì dùng chung dữ liệu → IPC (có file đi kèm, dữ liệu còn lại sau khi process thoát).
-- `mmap(addr, length, prot, flags, fd, offset)`: addr thường NULL; offset là bội số page size. prot: `PROT_READ`, `PROT_WRITE`, `PROT_EXEC`. flags: `MAP_SHARED` (ghi được đưa xuống file và process khác thấy) **hoặc** `MAP_PRIVATE` (copy-on-write, ghi chỉ thấy trong process mình, không ghi xuống file), `MAP_FIXED` (bắt buộc dùng đúng addr, phải căn trang). Lỗi trả về `MAP_FAILED`. `munmap(addr, length)` để gỡ (exit cũng tự gỡ).
-- File phải đủ dài trước khi map: sách dùng `lseek(fd, FILE_LENGTH + 1, SEEK_SET); write(fd, "", 1);` (nay hay dùng `ftruncate`). Truy cập phần vượt cuối file → **SIGBUS**.
-- `msync(addr, length, flags)`: đẩy thay đổi xuống đĩa. `MS_ASYNC` (lên lịch ghi rồi return ngay), `MS_SYNC` (chờ ghi xong), `MS_INVALIDATE` (bỏ các bản map khác để đọc lại từ file). Linux có thể giữ thay đổi trong buffer, nên phải msync khi cần chắc dữ liệu đã nằm trên đĩa.
-- Dùng chung qua mmap cũng cần đồng bộ (semaphore hoặc khoá file `fcntl`).
-- Ứng dụng khác: map `/dev/zero` (hoặc `MAP_ANONYMOUS`) để có vùng nhớ khởi tạo bằng 0, chia sẻ được giữa cha và con sau fork; đọc file nhanh.
+- `mmap` maps a **file** into memory: read and write the file like an array, without read/write calls. Several processes mapping the same file share the data → IPC (backed by a file, so the data outlives the processes).
+- `mmap(addr, length, prot, flags, fd, offset)`: addr is usually NULL; offset is a multiple of the page size. prot: `PROT_READ`, `PROT_WRITE`, `PROT_EXEC`. flags: `MAP_SHARED` (writes go to the file and other processes see them) **or** `MAP_PRIVATE` (copy-on-write: writes are only seen by this process and are not written to the file), `MAP_FIXED` (must use exactly addr, page-aligned). Errors return `MAP_FAILED`. `munmap(addr, length)` unmaps it (exit unmaps too).
+- The file must be long enough before mapping: the book does `lseek(fd, FILE_LENGTH + 1, SEEK_SET); write(fd, "", 1);` (today `ftruncate` is usual). Accessing past the end of the file → **SIGBUS**.
+- `msync(addr, length, flags)`: push changes to disk. `MS_ASYNC` (schedule the write and return immediately), `MS_SYNC` (wait until written), `MS_INVALIDATE` (invalidate other mappings so they re-read the file). Linux may keep changes in buffers, so msync when you must be sure the data is on disk.
+- Sharing through mmap also needs synchronization (semaphores or `fcntl` file locks).
+- Other uses: mapping `/dev/zero` (or `MAP_ANONYMOUS`) gives zero-filled memory that parent and child share after fork; fast file reading.
 
-### Pipe (5.4)
-- **Một chiều**: `int fds[2]; pipe(fds);` → `fds[0]` là **đầu đọc**, `fds[1]` là **đầu ghi**. Dữ liệu đi theo thứ tự FIFO. Chỉ dùng được giữa các process **có quan hệ họ hàng** (tạo pipe rồi fork; con kế thừa fd).
-- Dung lượng có hạn: ghi khi pipe đầy thì chặn; đọc khi pipe rỗng (và đầu ghi còn mở) thì chặn. Mọi đầu ghi đã đóng → read trả về 0 (**EOF**). Ghi khi mọi đầu đọc đã đóng → **SIGPIPE** (hoặc EPIPE).
-- Mỗi process phải **đóng đầu không dùng**. Nếu không, bên đọc không bao giờ thấy EOF (vì chính nó còn giữ một đầu ghi).
-- `fdopen(fd, "r"/"w")` bọc fd thành `FILE*` để dùng fprintf/fgets (listing 5.7). Nhớ fflush hoặc fclose để dữ liệu thật sự đi vào pipe.
-- **Chuyển hướng** (listing 5.8): trong con, `dup2(fds[0], STDIN_FILENO)` rồi exec `sort` → sort đọc từ pipe như stdin. `dup2(old, new)` đóng new (nếu đang mở) rồi cho new trỏ vào cùng file với old.
-- **`popen(command, "r"/"w")`** (listing 5.9): tạo pipe + fork + exec `sh -c command`; "w" thì ta ghi vào stdin của lệnh, "r" thì đọc stdout của lệnh. **`pclose`** đóng pipe, chờ con và trả về wait status. Có cùng rủi ro bảo mật với system().
-- Ghi tối đa **PIPE_BUF** byte (4 KB trên Linux) là **nguyên tử**: dữ liệu từ nhiều process ghi cùng lúc không bị trộn lẫn trong một lần ghi nhỏ như vậy.
+### Pipes (5.4)
+- **One-way**: `int fds[2]; pipe(fds);` → `fds[0]` is the **read end**, `fds[1]` the **write end**. Data flows in FIFO order. Only usable between **related** processes (create the pipe, then fork; the child inherits the fds).
+- Limited capacity: writing to a full pipe blocks; reading an empty pipe (with a write end still open) blocks. When all write ends are closed, read returns 0 (**EOF**). Writing when all read ends are closed → **SIGPIPE** (or EPIPE).
+- Each process must **close the ends it does not use**. Otherwise the reader never sees EOF (because it still holds a write end itself).
+- `fdopen(fd, "r"/"w")` wraps an fd in a `FILE*` so you can use fprintf/fgets (listing 5.7). Remember fflush or fclose so the data actually enters the pipe.
+- **Redirection** (listing 5.8): in the child, `dup2(fds[0], STDIN_FILENO)` and then exec `sort` → sort reads the pipe as its stdin. `dup2(old, new)` closes new (if open) and makes new refer to the same file as old.
+- **`popen(command, "r"/"w")`** (listing 5.9): pipe + fork + exec `sh -c command`; with "w" you write to the command's stdin, with "r" you read its stdout. **`pclose`** closes the pipe, waits for the child and returns its wait status. It has the same security risks as system().
+- Writes of at most **PIPE_BUF** bytes (4 KB on Linux) are **atomic**: data from several processes writing at once is not interleaved within such a small write.
 
-### FIFO (5.4.5)
-- **Named pipe**: pipe có tên trong filesystem (`ls -l` hiện ký tự `p`). Process **không có quan hệ họ hàng** cũng dùng được. Tạo bằng lệnh `mkfifo /tmp/fifo` hoặc hàm `mkfifo(path, mode)`.
-- Mở như file thường: `open` để đọc thì chặn tới khi có process mở để ghi, và ngược lại. Nhiều process có thể cùng ghi; ghi ≤ PIPE_BUF byte thì nguyên tử.
-- Khác Windows named pipe: FIFO trên Linux chỉ dùng trên một máy và là một chiều (không phải kiểu client-server).
+### FIFOs (5.4.5)
+- A **named pipe**: a pipe with a name in the filesystem (`ls -l` shows type `p`). **Unrelated** processes can use it too. Create it with the command `mkfifo /tmp/fifo` or the function `mkfifo(path, mode)`.
+- Open it like a normal file: opening for reading blocks until some process opens it for writing, and vice versa. Several processes may write; writes ≤ PIPE_BUF bytes are atomic.
+- Unlike Windows named pipes, Linux FIFOs only work on one machine and are one-way (not client–server).
 
-### Socket (5.5)
-- Kênh **hai chiều**, dùng được giữa các process trên cùng máy hoặc **qua mạng**.
-- Tham số khi tạo `socket(namespace, style, protocol)`:
-  - **Namespace**: `PF_LOCAL`/`PF_UNIX` (cùng máy, địa chỉ là đường dẫn file), `PF_INET` (IPv4: địa chỉ IP + port).
-  - **Style**: `SOCK_STREAM` (như cuộc gọi điện thoại: có kết nối, dữ liệu đúng thứ tự, không mất, như TCP), `SOCK_DGRAM` (như gửi thư: từng gói riêng, có thể mất hoặc đảo thứ tự, như UDP).
-  - **Protocol**: thường là 0 (giao thức mặc định).
-- System call: `socket` (tạo), `close` (huỷ), `connect` (client nối tới server), `bind` (gán địa chỉ cho socket server), `listen` (cho phép nhận kết nối, kèm độ dài hàng đợi), `accept` (nhận một kết nối, trả về **socket mới** cho kết nối đó; socket lắng nghe vẫn tiếp tục nhận client khác).
-- Server: socket → bind → listen → accept (lặp) → read/write → close. Client: socket → connect → write/read → close. Dùng `read`/`write` (hoặc `send`/`recv`) như với file.
-- **Local socket** (listing 5.10, 5.11): `struct sockaddr_un`, `sun_family = AF_LOCAL`, `sun_path` = đường dẫn (tối đa 108 byte). File socket phải được `unlink` khi xong. Process cần quyền ghi vào thư mục để tạo socket.
-- **Internet socket** (listing 5.12): `struct sockaddr_in`, `sin_family = AF_INET`, `sin_port = htons(80)`, `sin_addr`. Phân giải tên máy bằng `gethostbyname` (nay dùng `getaddrinfo`). **Byte order**: số trên mạng là big-endian ("network byte order") → `htons`/`htonl` (host to network), `ntohs`/`ntohl`. Port < 1024 chỉ root mới bind được. Dịch vụ chuẩn có port cố định (`/etc/services`: HTTP 80...).
-- **`socketpair(PF_LOCAL, SOCK_STREAM, 0, fds)`**: tạo một cặp socket đã nối sẵn, giống pipe nhưng **hai chiều** (mỗi fd vừa đọc vừa ghi). Chỉ dùng với local namespace và giữa các process có quan hệ họ hàng.
+### Sockets (5.5)
+- A **two-way** channel, usable between processes on the same machine or **over a network**.
+- Parameters of `socket(namespace, style, protocol)`:
+  - **Namespace**: `PF_LOCAL`/`PF_UNIX` (same machine, the address is a file path), `PF_INET` (IPv4: IP address + port).
+  - **Style**: `SOCK_STREAM` (like a phone call: connected, ordered, no loss, like TCP), `SOCK_DGRAM` (like mailing letters: separate packets that may be lost or reordered, like UDP).
+  - **Protocol**: usually 0 (the default protocol).
+- System calls: `socket` (create), `close` (destroy), `connect` (a client connects to a server), `bind` (give a server socket an address), `listen` (accept connections, with a queue length), `accept` (take one connection, returning a **new socket** for it; the listening socket keeps accepting other clients).
+- Server: socket → bind → listen → accept (loop) → read/write → close. Client: socket → connect → write/read → close. Use `read`/`write` (or `send`/`recv`) like with files.
+- **Local sockets** (listings 5.10, 5.11): `struct sockaddr_un`, `sun_family = AF_LOCAL`, `sun_path` = a path (at most 108 bytes). The socket file must be `unlink`ed when done. The process needs write permission on the directory to create the socket.
+- **Internet sockets** (listing 5.12): `struct sockaddr_in`, `sin_family = AF_INET`, `sin_port = htons(80)`, `sin_addr`. Resolve host names with `gethostbyname` (today `getaddrinfo`). **Byte order**: numbers on the network are big-endian ("network byte order") → `htons`/`htonl` (host to network), `ntohs`/`ntohl`. Only root can bind ports below 1024. Standard services have fixed ports (`/etc/services`: HTTP 80...).
+- **`socketpair(PF_LOCAL, SOCK_STREAM, 0, fds)`**: creates a pair of already-connected sockets, like a pipe but **two-way** (each fd both reads and writes). Only for the local namespace and related processes.
 
-## Trắc nghiệm
+## Quiz
 
-### Cơ chế IPC nào nhanh nhất theo sách?
+### Which IPC mechanism does the book call the fastest?
 - [ ] Pipe
 - [ ] Socket
 - [x] Shared memory
 - [ ] FIFO
-> Sau khi attach, đọc ghi là truy cập bộ nhớ bình thường, không có system call hay copy qua kernel. Cái giá là phải tự đồng bộ.
+> Once attached, reading and writing are ordinary memory accesses with no system calls or copies through the kernel. The price is that you must synchronize yourself.
 
-### Gọi `shmget(IPC_PRIVATE, size, IPC_CREAT | 0600)` thì?
-- [ ] Lấy segment chung của cả hệ thống
-- [x] Luôn tạo một segment mới; các process khác chỉ dùng được nếu biết id (ví dụ con sau fork)
-- [ ] Segment chỉ dùng được bởi thread
-- [ ] Lỗi vì thiếu key
-> IPC_PRIVATE bảo đảm không đụng segment có sẵn. Process không quan hệ muốn dùng chung thì phải thống nhất một key (thường tạo bằng `ftok`).
+### What does `shmget(IPC_PRIVATE, size, IPC_CREAT | 0600)` do?
+- [ ] Gets the system-wide shared segment
+- [x] Always creates a new segment; other processes can only use it if they know the id (e.g. a child after fork)
+- [ ] Creates a segment usable only by threads
+- [ ] Fails because the key is missing
+> IPC_PRIVATE guarantees it does not clash with an existing segment. Unrelated processes that want to share must agree on a key (usually made with `ftok`).
 
-### Tất cả các process dùng một shared memory segment đã thoát mà không gọi IPC_RMID. Segment thế nào?
-- [ ] Tự bị xoá khi process cuối thoát
-- [x] Vẫn tồn tại trong hệ thống (xem bằng `ipcs -m`) tới khi bị xoá bằng IPC_RMID/ipcrm hoặc reboot
-- [ ] Bị ghi xuống đĩa
-- [ ] Trở thành file trong /tmp
-> Đây là rò rỉ tài nguyên hay gặp với System V IPC. Semaphore set cũng vậy.
+### Every process using a shared memory segment has exited without calling IPC_RMID. What happens to the segment?
+- [ ] It is deleted when the last process exits
+- [x] It stays in the system (visible with `ipcs -m`) until removed with IPC_RMID/ipcrm or a reboot
+- [ ] It is written to disk
+- [ ] It becomes a file in /tmp
+> A common resource leak with System V IPC. Semaphore sets behave the same way.
 
-### Hàm nào gắn một shared memory segment vào không gian địa chỉ của process?
+### Which function attaches a shared memory segment to a process's address space?
 - [ ] `shmget`
 - [x] `shmat`
 - [ ] `shmctl`
 - [ ] `mmap`
-> shmget tạo/lấy id; shmat gắn và trả về địa chỉ; shmdt gỡ; shmctl lấy thông tin hoặc xoá.
+> shmget creates/gets the id; shmat attaches and returns the address; shmdt detaches; shmctl gets information or deletes.
 
-### `shm_nattch` trong `struct shmid_ds` cho biết gì?
-- [ ] Kích thước segment
-- [x] Số lần segment đang được attach
-- [ ] PID của người tạo
-- [ ] Số semaphore liên quan
-> Sau IPC_RMID, segment chỉ thật sự bị huỷ khi nattch về 0.
+### What does `shm_nattch` in `struct shmid_ds` tell you?
+- [ ] The segment's size
+- [x] How many times the segment is currently attached
+- [ ] The creator's PID
+- [ ] The number of related semaphores
+> After IPC_RMID, the segment is only really destroyed when nattch reaches 0.
 
-### Kích thước shared memory segment nên là gì?
-- [ ] Số nguyên tố
-- [x] Bội số của page size (getpagesize(), thường 4096)
-- [ ] Đúng bằng sizeof dữ liệu
-- [ ] Lũy thừa của 10
-> Kernel cấp phát theo trang; xin 100 byte thì thực tế vẫn chiếm một trang.
+### What size should a shared memory segment be?
+- [ ] A prime number
+- [x] A multiple of the page size (getpagesize(), usually 4096)
+- [ ] Exactly sizeof the data
+- [ ] A power of 10
+> The kernel allocates whole pages; asking for 100 bytes still takes a page.
 
-### Cờ `SEM_UNDO` trong semop dùng để làm gì?
-- [ ] Hoàn tác thao tác semop vừa thực hiện ngay lập tức
-- [x] Kernel tự hoàn tác thay đổi của process khi nó kết thúc, để semaphore không bị kẹt nếu process chết giữa vùng găng
-- [ ] Cho phép giá trị âm
-- [ ] Không chặn khi không đủ giá trị
-> Không chặn là IPC_NOWAIT.
+### What is the `SEM_UNDO` flag in semop for?
+- [ ] Undoing the semop just performed, immediately
+- [x] The kernel undoes the process's changes when it exits, so the semaphore does not get stuck if the process dies inside a critical section
+- [ ] Allowing negative values
+- [ ] Not blocking when the value is too low
+> Not blocking is IPC_NOWAIT.
 
-### Trong semop, `sem_op = -1` có ý nghĩa gì?
-- [ ] Xoá semaphore
-- [x] Wait (P): trừ 1, chặn nếu giá trị hiện tại bằng 0
-- [ ] Post (V): cộng 1
-- [ ] Chờ giá trị bằng 0
-> sem_op dương = post; sem_op = 0 = chờ tới khi semaphore bằng 0.
+### In semop, what does `sem_op = -1` mean?
+- [ ] Delete the semaphore
+- [x] Wait (P): subtract 1, blocking if the current value is 0
+- [ ] Post (V): add 1
+- [ ] Wait until the value is 0
+> A positive sem_op is a post; sem_op = 0 waits until the semaphore is 0.
 
-### Khác nhau chính giữa MAP_SHARED và MAP_PRIVATE?
-- [ ] MAP_SHARED chỉ đọc, MAP_PRIVATE đọc ghi
-- [x] MAP_SHARED ghi xuống file và process khác map cùng file thấy được; MAP_PRIVATE là copy-on-write, ghi chỉ thấy trong process đó
-- [ ] MAP_PRIVATE nhanh hơn vì không có page cache
-- [ ] MAP_SHARED chỉ dùng với /dev/zero
-> Hai cờ loại trừ nhau, phải chọn đúng một. IPC qua mmap dùng MAP_SHARED.
+### What is the main difference between MAP_SHARED and MAP_PRIVATE?
+- [ ] MAP_SHARED is read-only, MAP_PRIVATE is read-write
+- [x] MAP_SHARED writes go to the file and other processes mapping it see them; MAP_PRIVATE is copy-on-write, so writes are only seen by that process
+- [ ] MAP_PRIVATE is faster because there is no page cache
+- [ ] MAP_SHARED only works with /dev/zero
+> The two flags are mutually exclusive; exactly one must be chosen. IPC through mmap uses MAP_SHARED.
 
-### mmap thất bại trả về gì?
+### What does mmap return on failure?
 - [ ] NULL
-- [ ] -1 kiểu int
-- [x] `MAP_FAILED` (tức `(void *)-1`)
+- [ ] -1 as an int
+- [x] `MAP_FAILED` (i.e. `(void *)-1`)
 - [ ] 0
-> Kiểm tra `if (p == MAP_FAILED)`, không kiểm tra NULL.
+> Check `if (p == MAP_FAILED)`, not NULL.
 
-### Vì sao trước khi mmap một file mới tạo, sách gọi `lseek` tới cuối rồi `write` một byte?
-- [ ] Để mở file ở chế độ ghi
-- [x] Để file có đủ kích thước; truy cập vùng map vượt quá cuối file gây SIGBUS
-- [ ] Để xoá nội dung cũ
-- [ ] Vì mmap chỉ hoạt động với file có dữ liệu
-> Cách hiện đại: `ftruncate(fd, length)`.
+### Before mmap'ing a newly created file, why does the book `lseek` past the end and `write` one byte?
+- [ ] To open the file for writing
+- [x] To make the file long enough; accessing the mapping past the end of the file causes SIGBUS
+- [ ] To erase the old contents
+- [ ] Because mmap only works on non-empty files
+> The modern way: `ftruncate(fd, length)`.
 
-### `msync(addr, len, MS_SYNC)` làm gì?
-- [ ] Đồng bộ hai process
-- [x] Ghi các thay đổi trong vùng map xuống file trên đĩa và chờ ghi xong
-- [ ] Khoá vùng nhớ
-- [ ] Gỡ ánh xạ
-> MS_ASYNC chỉ lên lịch ghi rồi return ngay; MS_INVALIDATE làm các bản map khác đọc lại dữ liệu mới.
+### What does `msync(addr, len, MS_SYNC)` do?
+- [ ] Synchronizes two processes
+- [x] Writes the mapping's changes to the file on disk and waits until they are written
+- [ ] Locks the memory
+- [ ] Unmaps it
+> MS_ASYNC only schedules the write and returns immediately; MS_INVALIDATE makes other mappings re-read the new data.
 
-### Sau `pipe(fds)`, đầu nào dùng để đọc?
+### After `pipe(fds)`, which end is for reading?
 - [x] `fds[0]`
 - [ ] `fds[1]`
-- [ ] Cả hai
-- [ ] Tuỳ thuộc ai gọi read trước
-> Mẹo nhớ: 0 giống stdin (đọc), 1 giống stdout (ghi).
+- [ ] Both
+- [ ] Whichever calls read first
+> Mnemonic: 0 is like stdin (read), 1 like stdout (write).
 
-### Process con đọc pipe nhưng không bao giờ nhận được EOF dù cha đã đóng đầu ghi. Nguyên nhân thường gặp?
-- [ ] Pipe bị đầy
-- [x] Chính process con (hoặc một process khác) vẫn còn giữ fd đầu ghi chưa đóng
-- [ ] Cha phải gửi ký tự '\0'
-- [ ] Phải dùng FIFO
-> EOF chỉ xuất hiện khi mọi fd trỏ tới đầu ghi đều đã đóng. Sau fork, mỗi process phải đóng đầu mình không dùng.
+### A child reading a pipe never gets EOF even though the parent closed its write end. A common cause?
+- [ ] The pipe is full
+- [x] The child itself (or another process) still holds an open write-end fd
+- [ ] The parent must send a '\0'
+- [ ] You must use a FIFO
+> EOF only appears when every fd referring to the write end is closed. After fork, each process must close the end it does not use.
 
-### Ghi vào pipe mà mọi đầu đọc đều đã đóng thì sao?
-- [ ] Ghi thành công, dữ liệu bị bỏ
-- [ ] Chặn mãi mãi
-- [x] Process nhận SIGPIPE (mặc định bị giết); nếu bỏ qua SIGPIPE thì write trả về -1 với errno = EPIPE
-- [ ] Trả về 0
-> Ví dụ `yes | head -1`: head thoát, yes nhận SIGPIPE và kết thúc.
+### What happens when writing to a pipe whose read ends are all closed?
+- [ ] The write succeeds and the data is dropped
+- [ ] It blocks forever
+- [x] The process gets SIGPIPE (killed by default); if SIGPIPE is ignored, write returns -1 with errno = EPIPE
+- [ ] It returns 0
+> E.g. `yes | head -1`: head exits, yes gets SIGPIPE and terminates.
 
-### Hàm nào bọc một file descriptor thành `FILE *` để dùng fprintf/fgets?
+### Which function wraps a file descriptor in a `FILE *` so you can use fprintf/fgets?
 - [ ] `fopen`
 - [x] `fdopen`
 - [ ] `fileno`
 - [ ] `freopen`
-> fileno làm ngược lại: lấy fd từ FILE*.
+> fileno does the opposite: gets the fd from a FILE*.
 
-### Để chương trình `sort` (chạy bằng exec trong con) đọc dữ liệu từ pipe, con cần làm gì trước exec?
+### For `sort` (run with exec in a child) to read data from a pipe, what must the child do before exec?
 - [ ] `dup2(STDIN_FILENO, fds[0])`
-- [x] `dup2(fds[0], STDIN_FILENO)`, đóng các fd pipe thừa, rồi exec
-- [ ] `close(STDIN_FILENO)` là đủ
-- [ ] Truyền fds[0] làm đối số dòng lệnh
-> `dup2(old, new)` làm new trỏ vào cùng file với old. Fd được giữ nguyên qua exec, nên sort đọc fd 0 là đọc từ pipe.
+- [x] `dup2(fds[0], STDIN_FILENO)`, close the extra pipe fds, then exec
+- [ ] `close(STDIN_FILENO)` is enough
+- [ ] Pass fds[0] as a command-line argument
+> `dup2(old, new)` makes new refer to the same file as old. fds survive exec, so sort reading fd 0 reads the pipe.
 
-### `popen("sort", "w")` trả về gì?
-- [ ] PID của sort
-- [x] `FILE *` để ghi vào stdin của sort
-- [ ] `FILE *` để đọc output của sort
-- [ ] fd của pipe
-> Đóng bằng `pclose`, không dùng fclose. pclose chờ lệnh kết thúc và trả về wait status của nó.
+### What does `popen("sort", "w")` return?
+- [ ] sort's PID
+- [x] A `FILE *` for writing to sort's stdin
+- [ ] A `FILE *` for reading sort's output
+- [ ] The pipe's fd
+> Close it with `pclose`, not fclose. pclose waits for the command to finish and returns its wait status.
 
-### Điều nào ĐÚNG về FIFO (named pipe)? (chọn tất cả đáp án đúng)
-- [x] Có tên trong filesystem, tạo bằng mkfifo
-- [x] Process không có quan hệ họ hàng dùng được
-- [x] open để đọc chặn tới khi có process mở để ghi
-- [ ] Dữ liệu được lưu trên đĩa sau khi process thoát
-> Dữ liệu đi qua kernel, không lưu trên đĩa; file FIFO chỉ là một điểm hẹn có tên.
+### Which statements about FIFOs (named pipes) are TRUE? (select all that apply)
+- [x] They have a name in the filesystem and are created with mkfifo
+- [x] Unrelated processes can use them
+- [x] Opening for reading blocks until some process opens it for writing
+- [ ] The data is kept on disk after the processes exit
+> The data goes through the kernel and is never stored on disk; the FIFO file is just a named meeting point.
 
-### Ghi vào pipe/FIFO bao nhiêu byte thì được đảm bảo nguyên tử (không bị trộn với dữ liệu của process khác)?
-- [ ] Bất kỳ kích thước nào
-- [x] Tối đa PIPE_BUF byte (4 KB trên Linux)
-- [ ] Tối đa 1 byte
-- [ ] Tối đa 64 KB
-> Lần ghi lớn hơn PIPE_BUF có thể bị chia nhỏ và xen kẽ với dữ liệu của người ghi khác.
+### Up to how many bytes is a write to a pipe/FIFO guaranteed to be atomic (not interleaved with other processes' data)?
+- [ ] Any size
+- [x] Up to PIPE_BUF bytes (4 KB on Linux)
+- [ ] Up to 1 byte
+- [ ] Up to 64 KB
+> Writes larger than PIPE_BUF may be split and interleaved with other writers' data.
 
-### Khác nhau giữa SOCK_STREAM và SOCK_DGRAM?
-- [x] STREAM có kết nối, dữ liệu đúng thứ tự và không mất (như TCP); DGRAM gửi từng gói độc lập, có thể mất hoặc đảo thứ tự (như UDP)
-- [ ] STREAM chỉ dùng cho file, DGRAM cho mạng
-- [ ] STREAM một chiều, DGRAM hai chiều
-- [ ] Không khác, chỉ khác tên
-> Sách ví SOCK_STREAM như cuộc gọi điện thoại, SOCK_DGRAM như gửi thư.
+### How do SOCK_STREAM and SOCK_DGRAM differ?
+- [x] STREAM is connected, ordered and lossless (like TCP); DGRAM sends independent packets that may be lost or reordered (like UDP)
+- [ ] STREAM is for files, DGRAM for networks
+- [ ] STREAM is one-way, DGRAM two-way
+- [ ] No difference except the name
+> The book compares SOCK_STREAM to a phone call and SOCK_DGRAM to mailing letters.
 
-### Thứ tự gọi đúng ở phía server với SOCK_STREAM?
+### What is the correct call order on a SOCK_STREAM server?
 - [ ] socket → connect → accept
 - [ ] socket → listen → bind → accept
 - [x] socket → bind → listen → accept
 - [ ] bind → socket → accept → listen
-> Client: socket → connect. accept trả về socket mới cho từng kết nối.
+> Client: socket → connect. accept returns a new socket for each connection.
 
-### `accept` trả về gì?
-- [ ] 0 khi thành công
-- [x] Một socket mới dành riêng cho kết nối vừa nhận; socket lắng nghe vẫn tiếp tục dùng được
-- [ ] Địa chỉ IP của client
-- [ ] Socket lắng nghe ban đầu
-> Server thường lặp accept, rồi xử lý từng kết nối (có thể fork hoặc tạo thread cho mỗi kết nối).
+### What does `accept` return?
+- [ ] 0 on success
+- [x] A new socket dedicated to the accepted connection; the listening socket stays usable
+- [ ] The client's IP address
+- [ ] The original listening socket
+> Servers usually loop on accept and handle each connection (possibly forking or creating a thread per connection).
 
-### Vì sao phải gọi `htons(port)` khi gán `sin_port`?
-- [ ] Để kiểm tra port hợp lệ
-- [x] Để đổi số từ thứ tự byte của máy (x86: little-endian) sang network byte order (big-endian)
-- [ ] Để mã hoá port
-- [ ] Vì sin_port là chuỗi
-> htons/htonl (host to network short/long), ntohs/ntohl (chiều ngược lại). Trên máy big-endian các hàm này không làm gì cả.
+### Why call `htons(port)` when setting `sin_port`?
+- [ ] To validate the port
+- [x] To convert the number from the machine's byte order (x86: little-endian) to network byte order (big-endian)
+- [ ] To encrypt the port
+- [ ] Because sin_port is a string
+> htons/htonl (host to network short/long), ntohs/ntohl (the other way). On big-endian machines these functions do nothing.
 
-### Địa chỉ của local socket (PF_LOCAL) là gì?
-- [ ] IP 127.0.0.1 và một port
-- [x] Một đường dẫn trong filesystem (sun_path), cần unlink sau khi dùng xong
-- [ ] PID của server
-- [ ] Tên máy
-> Local socket chỉ dùng trên cùng một máy và nhanh hơn socket qua loopback.
+### What is the address of a local socket (PF_LOCAL)?
+- [ ] IP 127.0.0.1 and a port
+- [x] A path in the filesystem (sun_path), which should be unlinked when done
+- [ ] The server's PID
+- [ ] The host name
+> Local sockets only work on one machine and are faster than sockets over loopback.
 
-### Port nào chỉ process root mới bind được?
-- [x] Dưới 1024
-- [ ] Trên 49152
+### Which ports can only a root process bind?
+- [x] Below 1024
+- [ ] Above 49152
 - [ ] Port 0
-- [ ] Mọi port đều cần root
-> Port 0 trong bind nghĩa là để kernel tự chọn một port trống.
+- [ ] Every port needs root
+> Port 0 in bind means "let the kernel choose a free port".
 
-### Điều nào ĐÚNG về socketpair? (chọn tất cả đáp án đúng)
-- [x] Tạo hai socket đã được nối với nhau
-- [x] Giao tiếp hai chiều: mỗi đầu vừa đọc vừa ghi
-- [x] Chỉ dùng với local namespace (PF_LOCAL)
-- [ ] Dùng được giữa hai máy qua mạng
-> Giống một pipe hai chiều; thường tạo trước fork để cha và con nói chuyện với nhau.
+### Which statements about socketpair are TRUE? (select all that apply)
+- [x] It creates two sockets that are already connected
+- [x] It is two-way: each end both reads and writes
+- [x] It only works with the local namespace (PF_LOCAL)
+- [ ] It works between two machines over a network
+> Like a two-way pipe; usually created before fork so parent and child can talk.
 
-### Cơ chế nào yêu cầu các process phải có quan hệ họ hàng (cha/con, cùng tổ tiên)?
-- [x] Pipe (không tên)
-- [ ] FIFO
-- [ ] Shared memory dùng key chung
-- [ ] Socket Internet
-> Pipe chỉ tồn tại dưới dạng fd, nên chỉ truyền được qua fork. FIFO, shared memory với key, và socket có tên/địa chỉ để process bất kỳ tìm đến.
+### Which mechanism requires the processes to be related (parent/child, common ancestor)?
+- [x] An (unnamed) pipe
+- [ ] A FIFO
+- [ ] Shared memory with a shared key
+- [ ] An Internet socket
+> A pipe exists only as fds, which can only be passed on through fork. FIFOs, keyed shared memory and sockets have names/addresses any process can find.

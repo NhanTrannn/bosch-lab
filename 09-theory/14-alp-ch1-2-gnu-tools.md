@@ -1,300 +1,300 @@
-# ALP ch.1–2: Công cụ GNU và viết phần mềm Linux tốt
+# ALP ch.1–2: GNU tools and writing good Linux software
 
-## Lý thuyết
+## Theory
 
-Theo *Advanced Linux Programming* (Mitchell, Oldham, Samuel), chương 1 "Getting Started" và chương 2 "Writing Good GNU/Linux Software". Lab: `10-alp/01` … `10-alp/06`. Xem thêm chủ đề "Build, link và debug".
+Follows *Advanced Linux Programming* (Mitchell, Oldham, Samuel), chapter 1 "Getting Started" and chapter 2 "Writing Good GNU/Linux Software". Labs: `10-alp/01` … `10-alp/06`. See also the "Build, link and debug" topic.
 
-### Biên dịch bằng GCC (1.2)
-- `gcc` cho C, `g++` cho C++. Biên dịch một file thành object: `gcc -c main.c` → `main.o`. Link: `g++ -o reciprocal main.o reciprocal.o` (có code C++ thì link bằng g++ để kéo libstdc++).
-- Tùy chọn hay dùng: `-I dir` (thêm thư mục tìm header), `-D NAME=value` (định nghĩa macro, ví dụ `-DNDEBUG` tắt assert), `-O2` (tối ưu), `-g` (thông tin debug), `-o file` (tên output), `-Wall` (bật cảnh báo), `-L dir` và `-l name` (thư mục và tên thư viện: `-lm` → `libm.so`/`libm.a`), `-static`, `-shared`, `-fPIC`, `-pg` (gprof).
-- Tối ưu (`-O2`) làm debug khó hơn (biến bị bỏ đi, dòng code bị sắp xếp lại); khi debug dùng `-g` và không tối ưu.
+### Compiling with GCC (1.2)
+- `gcc` for C, `g++` for C++. Compile one file to an object: `gcc -c main.c` → `main.o`. Link: `g++ -o reciprocal main.o reciprocal.o` (link with g++ when there is C++ code, so libstdc++ is pulled in).
+- Common options: `-I dir` (add a header search directory), `-D NAME=value` (define a macro, e.g. `-DNDEBUG` disables assert), `-O2` (optimize), `-g` (debug info), `-o file` (output name), `-Wall` (warnings), `-L dir` and `-l name` (library directory and name: `-lm` → `libm.so`/`libm.a`), `-static`, `-shared`, `-fPIC`, `-pg` (gprof).
+- Optimization (`-O2`) makes debugging harder (variables optimized away, code reordered); debug with `-g` and no optimization.
 
 ### GNU Make (1.3)
-- Makefile gồm các **rule**: `target: dependencies` rồi dòng lệnh bắt đầu bằng **TAB**. Make chỉ build lại target khi một dependency **mới hơn** target (so thời gian sửa đổi).
-- Target mặc định là target đầu tiên. Target giả như `clean` không tạo ra file (nên khai báo `.PHONY`).
-- Biến: `CFLAGS = -O2`; ghi đè từ dòng lệnh: `make CFLAGS=-g`. Make có sẵn rule ngầm (implicit rule) để build `.o` từ `.c`.
-- `make -j4`: chạy song song; `make -n`: chỉ in lệnh, không chạy.
+- A Makefile consists of **rules**: `target: dependencies`, then command lines starting with a **TAB**. Make only rebuilds a target when a dependency is **newer** than the target (comparing modification times).
+- The default target is the first one. Phony targets like `clean` produce no file (declare them `.PHONY`).
+- Variables: `CFLAGS = -O2`; override from the command line: `make CFLAGS=-g`. Make has built-in implicit rules to build `.o` from `.c`.
+- `make -j4`: build in parallel; `make -n`: print the commands without running them.
 
 ### GDB (1.4)
-- Biên dịch với `-g`. `gdb ./prog` → `run args` → khi crash: `where`/`backtrace` (xem call stack), `up`/`down` (chuyển frame), `print expr`.
-- `break main` / `break file.c:20`, `next` (chạy dòng tiếp, bước qua hàm), `step` (đi vào hàm), `continue`, `finish`, `info locals`, `quit`.
-- Sách lưu ý: chương trình crash nhưng không có `-g` thì backtrace chỉ có địa chỉ, không có số dòng.
+- Compile with `-g`. `gdb ./prog` → `run args` → after a crash: `where`/`backtrace` (show the call stack), `up`/`down` (move between frames), `print expr`.
+- `break main` / `break file.c:20`, `next` (run the next line, stepping over calls), `step` (step into calls), `continue`, `finish`, `info locals`, `quit`.
+- The book's point: a crashing program built without `-g` gives a backtrace with addresses only, no line numbers.
 
-### Tìm thông tin (1.5)
-- **man**: section 1 (lệnh người dùng), **2 (system call)**, **3 (hàm thư viện C)**, 8 (lệnh quản trị). `man 2 open`, `man 3 printf`, `man sleep` vs `man 3 sleep`. `man -k keyword` (= `apropos`), `whatis`.
-- **info**: tài liệu GNU dạng siêu văn bản (gcc, libc, make, emacs).
-- Header: `/usr/include`, `/usr/include/sys`, `/usr/include/bits` (định nghĩa phụ thuộc kiến trúc), `/usr/include/linux`. Source của Linux và glibc là tài liệu chính xác nhất.
+### Finding information (1.5)
+- **man**: section 1 (user commands), **2 (system calls)**, **3 (C library functions)**, 8 (admin commands). `man 2 open`, `man 3 printf`, `man sleep` vs `man 3 sleep`. `man -k keyword` (= `apropos`), `whatis`.
+- **info**: GNU hypertext documentation (gcc, libc, make, emacs).
+- Headers: `/usr/include`, `/usr/include/sys`, `/usr/include/bits` (architecture-specific definitions), `/usr/include/linux`. The Linux and glibc sources are the most accurate documentation.
 
-### Tương tác với môi trường thực thi (2.1)
-- `int main(int argc, char *argv[])`: `argc` = số phần tử, `argv[0]` = tên chương trình, `argv[argc]` = NULL.
-- **Quy ước dòng lệnh GNU**: tùy chọn ngắn `-h` (gộp được `-vo`), tùy chọn dài `--help`, `--output=file`. Nên có `--help` và `--version`. `--` kết thúc phần tùy chọn.
-- **getopt_long** (`<getopt.h>`): chuỗi short options `"ho:v"` (`:` = cần đối số), mảng `struct option {const char *name; int has_arg; int *flag; int val;}` kết thúc bằng `{NULL, 0, NULL, 0}`. Gọi lặp tới khi trả về -1; `optarg` = đối số của tùy chọn; `optind` = chỉ số của đối số thường đầu tiên; `'?'` = tùy chọn sai (lỗi in ra stderr). GNU getopt hoán vị argv để đối số thường nằm cuối.
-- **stdin/stdout/stderr** = fd 0/1/2. Thông báo lỗi ghi ra stderr để tách khỏi output. **stdout có buffer** (line-buffered với terminal, full-buffered với file/pipe), **stderr không buffer**. `fflush(stdout)` để đẩy ngay. C++: `cout` có buffer, `cerr` không; `endl` flush, `'\n'` không.
-- Gộp stderr vào stdout: `prog > out.txt 2>&1` (2>&1 đứng sau redirect file), `prog 2>&1 | filter` (đứng trước pipe).
-- **Exit code**: 0 = thành công, khác 0 = lỗi; shell lưu trong `$?`. Chỉ 8 bit thấp được giữ → dùng 0–127; bị signal giết thì shell báo **128 + số hiệu signal**.
-- **Môi trường**: các cặp `TEN=giatri` (tên viết hoa theo quy ước): `USER`, `HOME`, `PATH`, `DISPLAY`. Shell: `printenv`, `echo $HOME`, `export EDITOR=emacs`. C: `getenv` (NULL nếu không có), `setenv`, `unsetenv`, duyệt `extern char **environ;` (không sửa trực tiếp). Process con nhận **bản copy** môi trường của cha. Hay dùng để cấu hình (ví dụ `SERVER_NAME`, có giá trị mặc định khi biến không tồn tại).
-- **File tạm** (thường trong `/tmp`): phải tránh trùng tên giữa nhiều instance, quyền chỉ cho chủ sở hữu, tên không đoán trước được. `mkstemp("/tmp/x.XXXXXX")` → fd, quyền 0600, tạo bằng O_EXCL; nên `unlink` ngay nếu chỉ dùng nội bộ (file tự mất khi đóng fd, kể cả khi crash). `tmpfile()` → `FILE*` đã unlink. **Không** dùng `mktemp`, `tmpnam`, `tempnam`.
+### Interacting with the execution environment (2.1)
+- `int main(int argc, char *argv[])`: `argc` = number of elements, `argv[0]` = the program name, `argv[argc]` = NULL.
+- **GNU command-line conventions**: short options `-h` (can be combined, `-vo`), long options `--help`, `--output=file`. Provide `--help` and `--version`. `--` ends the options.
+- **getopt_long** (`<getopt.h>`): a short-options string `"ho:v"` (`:` = needs an argument), an array of `struct option {const char *name; int has_arg; int *flag; int val;}` ending with `{NULL, 0, NULL, 0}`. Call it in a loop until it returns -1; `optarg` = the option's argument; `optind` = the index of the first non-option argument; `'?'` = an invalid option (the error goes to stderr). GNU getopt permutes argv so non-options end up last.
+- **stdin/stdout/stderr** = fds 0/1/2. Error messages go to stderr so they stay separate from the output. **stdout is buffered** (line-buffered on a terminal, fully buffered on a file/pipe), **stderr is not**. `fflush(stdout)` pushes it out now. C++: `cout` is buffered, `cerr` is not; `endl` flushes, `'\n'` does not.
+- Merging stderr into stdout: `prog > out.txt 2>&1` (2>&1 after a file redirection), `prog 2>&1 | filter` (before a pipe).
+- **Exit code**: 0 = success, non-zero = error; the shell keeps it in `$?`. Only the low 8 bits survive → use 0–127; when killed by a signal the shell reports **128 + the signal number**.
+- **Environment**: `NAME=value` pairs (upper-case names by convention): `USER`, `HOME`, `PATH`, `DISPLAY`. Shell: `printenv`, `echo $HOME`, `export EDITOR=emacs`. C: `getenv` (NULL if missing), `setenv`, `unsetenv`, iterate `extern char **environ;` (do not modify it directly). A child gets a **copy** of its parent's environment. Often used for configuration (e.g. `SERVER_NAME`, with a default when the variable is missing).
+- **Temporary files** (usually in `/tmp`): avoid name collisions between instances, give only the owner access, use unpredictable names. `mkstemp("/tmp/x.XXXXXX")` → an fd, mode 0600, created with O_EXCL; `unlink` it right away if it is internal (the file disappears when the fd is closed, even on a crash). `tmpfile()` → an already-unlinked `FILE*`. **Do not** use `mktemp`, `tmpnam`, `tempnam`.
 
-### Lập trình phòng thủ (2.2)
-- **assert(expr)** (`<assert.h>`): sai thì in file, dòng, biểu thức rồi `abort()`. `-DNDEBUG` xoá mọi assert → biểu thức trong assert **không được có tác dụng phụ** (gọi hàm, gán, `++`). Dùng cho kiểm tra nội bộ (con trỏ NULL, điều kiện tham số), không dùng để kiểm tra input của người dùng.
-- **System call có thể lỗi** vì: hết tài nguyên (bộ nhớ, giới hạn số file mở), không có quyền, tham số sai, lỗi bên ngoài (đĩa hỏng, mạng), hoặc bị **signal ngắt** giữa chừng.
-- Lỗi: thường trả về -1 (hàm trả con trỏ thì NULL) và đặt **errno** (`<errno.h>`, giá trị như `ENOENT`, `EACCES`, `EINVAL`, `EINTR`, `ENOMEM`). errno chỉ có nghĩa ngay sau lời gọi thất bại; lời gọi thành công không xoá nó → lưu errno vào biến trước khi gọi hàm khác. Mỗi thread có errno riêng.
-- `strerror(errno)` → chuỗi mô tả; `perror("msg")` in `msg: mô tả` ra stderr.
-- **EINTR**: system call chặn (read, sleep, wait...) bị signal ngắt → gọi lại.
-- Sách phân loại cách xử lý: lỗi do bug (dùng assert/abort), lỗi do môi trường hay input (báo lỗi rõ ràng, thoát với exit code khác 0 hoặc khôi phục). Khi lỗi giữa chừng phải **giải phóng tài nguyên đã cấp** (bộ nhớ, fd) trước khi return.
+### Coding defensively (2.2)
+- **assert(expr)** (`<assert.h>`): if false, prints the file, line and expression, then calls `abort()`. `-DNDEBUG` removes every assert → assert expressions **must not have side effects** (function calls, assignments, `++`). Use them for internal checks (NULL pointers, parameter conditions), not to validate user input.
+- **System calls can fail** because of: exhausted resources (memory, the open-file limit), missing permissions, invalid arguments, external failures (a bad disk, the network), or being **interrupted by a signal**.
+- Errors: usually -1 is returned (NULL for functions returning pointers) and **errno** is set (`<errno.h>`, values like `ENOENT`, `EACCES`, `EINVAL`, `EINTR`, `ENOMEM`). errno is only meaningful right after a failed call; successful calls do not clear it → save errno in a variable before calling anything else. Each thread has its own errno.
+- `strerror(errno)` → a description string; `perror("msg")` prints `msg: description` to stderr.
+- **EINTR**: a blocking system call (read, sleep, wait...) was interrupted by a signal → call it again.
+- The book's classification: errors caused by bugs (use assert/abort), errors caused by the environment or input (report them clearly, exit with a non-zero code or recover). When failing midway, **release what was already allocated** (memory, fds) before returning.
 
-### Thư viện (2.3)
-- **Archive (static library)** `.a`: tập hợp các `.o`. Tạo: `ar cr libtest.a test1.o test2.o`. Link: `gcc -o app app.o -L. -ltest`. Linker chỉ lấy các object trong archive cần cho **symbol chưa giải quyết tính tới lúc đó** → thư viện phải đứng **sau** file dùng nó trên dòng lệnh (`gcc -L. -ltest app.o` sẽ lỗi undefined reference).
-- **Shared library** `.so`: biên dịch với `-fPIC` (position-independent code: nạp ở địa chỉ nào cũng chạy được), tạo bằng `gcc -shared -fPIC -o libtest.so test1.o test2.o`. Code của thư viện không bị copy vào file chạy; được nạp lúc chạy và **dùng chung** trong bộ nhớ giữa các process.
-- Có cả `libtest.a` và `libtest.so` → linker **ưu tiên .so**, trừ khi dùng `-static`.
-- Lúc chạy, dynamic loader tìm `.so` trong `/lib`, `/usr/lib`, các thư mục trong `/etc/ld.so.conf` (chạy `ldconfig`), `LD_LIBRARY_PATH` (khi phát triển), hoặc đường dẫn ghi sẵn bằng `-Wl,-rpath,/opt/lib`. `ldd app` liệt kê thư viện động mà app cần.
-- Thư viện chuẩn: `libc` (tự link), `libm` (toán, phải `-lm`), `libstdc++` (g++ tự link), `libpthread` (`-lpthread`).
-- **Phụ thuộc**: shared library tự ghi nó cần thư viện nào; archive thì không → khi link `-static` phải tự liệt kê đủ (ví dụ `-ltiff -ljpeg -lz`).
-- **Ưu nhược điểm**: shared tiết kiệm đĩa/RAM và cập nhật thư viện không cần link lại, nhưng phải cài đúng phiên bản ở máy chạy và một bản cập nhật lỗi có thể làm hỏng mọi chương trình dùng nó. Static thì độc lập, file lớn hơn; sách khuyên dùng static cho chương trình setuid hoặc khi phân phối mà không kiểm soát được máy đích.
-- **Nạp động** (`<dlfcn.h>`, link `-ldl`): `dlopen("libtest.so", RTLD_LAZY)` → handle, `dlsym(handle, "my_function")` → địa chỉ, `dlclose(handle)`, `dlerror()` → chuỗi lỗi. Dùng cho plugin. Hàm C++ cần `extern "C"` để dlsym tìm được tên (tránh name mangling).
+### Libraries (2.3)
+- **Archive (static library)** `.a`: a collection of `.o` files. Create: `ar cr libtest.a test1.o test2.o`. Link: `gcc -o app app.o -L. -ltest`. The linker only takes the objects from an archive that resolve **symbols still undefined at that point** → the library must come **after** the files that use it on the command line (`gcc -L. -ltest app.o` fails with undefined references).
+- **Shared library** `.so`: compile with `-fPIC` (position-independent code: runs wherever it is loaded), create with `gcc -shared -fPIC -o libtest.so test1.o test2.o`. The library's code is not copied into the executable; it is loaded at run time and **shared** in memory between processes.
+- With both `libtest.a` and `libtest.so` available, the linker **prefers the .so** unless you pass `-static`.
+- At run time the dynamic loader looks for `.so` files in `/lib`, `/usr/lib`, the directories in `/etc/ld.so.conf` (run `ldconfig`), `LD_LIBRARY_PATH` (during development), or a path baked in with `-Wl,-rpath,/opt/lib`. `ldd app` lists the shared libraries app needs.
+- Standard libraries: `libc` (linked automatically), `libm` (math, needs `-lm`), `libstdc++` (linked automatically by g++), `libpthread` (`-lpthread`).
+- **Dependencies**: a shared library records which libraries it needs; an archive does not → when linking `-static` you must list them all yourself (e.g. `-ltiff -ljpeg -lz`).
+- **Pros and cons**: shared libraries save disk/RAM and can be updated without relinking, but the right version must be installed on the target and a broken update can break every program using it. Static linking is self-contained but bigger; the book recommends it for setuid programs or when you cannot control the target machine.
+- **Dynamic loading** (`<dlfcn.h>`, link `-ldl`): `dlopen("libtest.so", RTLD_LAZY)` → a handle, `dlsym(handle, "my_function")` → an address, `dlclose(handle)`, `dlerror()` → an error string. Used for plugins. C++ functions need `extern "C"` so dlsym can find the name (no name mangling).
 
-## Trắc nghiệm
+## Quiz
 
-### Lệnh nào chỉ biên dịch `main.c` thành file object mà không link?
+### Which command compiles `main.c` into an object file without linking?
 - [ ] `gcc main.c`
 - [x] `gcc -c main.c`
 - [ ] `gcc -o main.c`
 - [ ] `gcc -S main.c`
-> `-c` dừng sau bước biên dịch, tạo `main.o`. `-S` dừng ở mã assembly (`main.s`). Không có tùy chọn thì gcc biên dịch và link luôn thành `a.out`.
+> `-c` stops after compilation and produces `main.o`. `-S` stops at assembly (`main.s`). With no option gcc compiles and links into `a.out`.
 
-### Chương trình gồm `main.c` và `reciprocal.cpp`. Nên link bằng lệnh nào?
+### A program consists of `main.c` and `reciprocal.cpp`. Which command should link it?
 - [ ] `gcc -o reciprocal main.o reciprocal.o`
 - [x] `g++ -o reciprocal main.o reciprocal.o`
 - [ ] `ld -o reciprocal main.o reciprocal.o`
 - [ ] `ar cr reciprocal main.o reciprocal.o`
-> Có code C++ thì link bằng g++ để tự kéo thư viện chuẩn C++ (libstdc++). Dùng gcc thường bị undefined reference tới các symbol của std.
+> With C++ code, link with g++ so the C++ standard library (libstdc++) is pulled in. gcc usually fails with undefined references to std symbols.
 
-### Tùy chọn `-D NDEBUG` khi biên dịch có tác dụng gì?
-- [ ] Bật chế độ debug
-- [x] Định nghĩa macro NDEBUG, làm mọi `assert` bị xoá khỏi chương trình
-- [ ] Tắt mọi cảnh báo
-- [ ] Không sinh thông tin debug
-> `-D` định nghĩa macro như `#define`. assert.h kiểm tra NDEBUG để quyết định có sinh code kiểm tra hay không.
+### What does the `-D NDEBUG` compiler option do?
+- [ ] Turns on debug mode
+- [x] Defines the NDEBUG macro, which removes every `assert` from the program
+- [ ] Turns off all warnings
+- [ ] Omits debug info
+> `-D` defines a macro like `#define`. assert.h checks NDEBUG to decide whether to generate the check.
 
-### Dòng lệnh trong một rule của Makefile phải bắt đầu bằng gì?
-- [ ] 4 dấu cách
-- [x] Một ký tự TAB
-- [ ] Dấu `$`
-- [ ] Dấu `@`
-> Thiếu TAB thì make báo "missing separator". `@` đứng đầu lệnh (sau TAB) chỉ để không in lệnh ra trước khi chạy.
+### What must a command line in a Makefile rule start with?
+- [ ] 4 spaces
+- [x] A TAB character
+- [ ] A `$`
+- [ ] An `@`
+> Without a TAB, make reports "missing separator". An `@` at the start of the command (after the TAB) just hides the command.
 
-### Make quyết định build lại một target khi nào?
-- [ ] Mỗi lần chạy make
-- [x] Khi target chưa tồn tại hoặc có dependency mới hơn target (theo thời gian sửa đổi)
-- [ ] Khi nội dung file nguồn thay đổi (so sánh hash)
-- [ ] Chỉ khi chạy `make clean` trước
-> Make so sánh timestamp, không so nội dung. `touch file.c` đủ để buộc build lại.
+### When does make rebuild a target?
+- [ ] On every run
+- [x] When the target does not exist or a dependency is newer than the target (by modification time)
+- [ ] When the source contents change (by hash)
+- [ ] Only after `make clean`
+> Make compares timestamps, not contents. `touch file.c` is enough to force a rebuild.
 
-### Trong gdb, chương trình vừa crash vì segfault. Lệnh nào xem chuỗi lời gọi hàm dẫn tới chỗ crash?
+### In gdb, the program just crashed with a segfault. Which command shows the chain of calls that led there?
 - [ ] `print`
 - [ ] `next`
-- [x] `where` (hoặc `backtrace`)
+- [x] `where` (or `backtrace`)
 - [ ] `list`
-> Sau đó dùng `up`/`down` để chuyển giữa các frame và `print` để xem biến ở frame đó. Cần biên dịch với `-g` mới có tên hàm và số dòng.
+> Then use `up`/`down` to move between frames and `print` to inspect variables there. You need `-g` for function names and line numbers.
 
-### Trong gdb, khác nhau giữa `next` và `step`?
-- [ ] Không khác
-- [x] `next` chạy hết lời gọi hàm trên dòng hiện tại như một bước; `step` đi vào bên trong hàm
-- [ ] `step` chạy tới breakpoint tiếp theo
-- [ ] `next` chạy ngược lại một dòng
-> `finish` chạy tới khi hàm hiện tại return; `continue` chạy tới breakpoint tiếp theo.
+### In gdb, how do `next` and `step` differ?
+- [ ] No difference
+- [x] `next` runs the whole call on the current line as one step; `step` goes inside the function
+- [ ] `step` runs to the next breakpoint
+- [ ] `next` goes back one line
+> `finish` runs until the current function returns; `continue` runs to the next breakpoint.
 
-### Muốn xem trang man của system call `open` (không phải lệnh shell), gõ gì?
+### To read the man page of the system call `open` (not a shell command), you type:
 - [ ] `man open`
 - [x] `man 2 open`
 - [ ] `man 3 open`
 - [ ] `info open`
-> Section 1: lệnh người dùng, 2: system call, 3: hàm thư viện C, 8: lệnh quản trị. Ví dụ `man 3 sleep` là hàm C, còn `man sleep` là lệnh shell.
+> Section 1: user commands, 2: system calls, 3: C library functions, 8: admin commands. E.g. `man 3 sleep` is the C function, `man sleep` the shell command.
 
-### Với `prog -o out.txt in1`, `argc` và `argv[0]` là gì?
-- [ ] 3 và "-o"
-- [x] 4 và "prog" (tên chương trình như khi được gọi)
-- [ ] 3 và "prog"
-- [ ] 4 và "out.txt"
-> argv gồm cả tên chương trình: {"prog", "-o", "out.txt", "in1"}, và `argv[argc]` là NULL.
+### For `prog -o out.txt in1`, what are `argc` and `argv[0]`?
+- [ ] 3 and "-o"
+- [x] 4 and "prog" (the program name as invoked)
+- [ ] 3 and "prog"
+- [ ] 4 and "out.txt"
+> argv includes the program name: {"prog", "-o", "out.txt", "in1"}, and `argv[argc]` is NULL.
 
-### Trong chuỗi short options `"ho:v"` của getopt_long, dấu `:` sau `o` nghĩa là?
-- [ ] `-o` là tùy chọn bắt buộc
-- [x] `-o` cần một đối số, lấy qua biến `optarg`
-- [ ] `-o` có thể lặp lại nhiều lần
-- [ ] `-o` là tùy chọn dài
-> Ví dụ `-o out.txt` hoặc `-oout.txt`. Hai dấu `::` nghĩa là đối số tùy chọn (GNU extension).
+### In getopt_long's short-options string `"ho:v"`, what does the `:` after `o` mean?
+- [ ] `-o` is mandatory
+- [x] `-o` takes an argument, available in `optarg`
+- [ ] `-o` can be repeated
+- [ ] `-o` is a long option
+> E.g. `-o out.txt` or `-oout.txt`. Two colons `::` mean an optional argument (a GNU extension).
 
-### Sau vòng lặp getopt_long (trả về -1), `optind` cho biết gì?
-- [ ] Số tùy chọn đã xử lý
-- [x] Chỉ số trong argv của đối số không phải tùy chọn đầu tiên
-- [ ] Chỉ số của tùy chọn bị lỗi
-- [ ] Luôn bằng argc
-> Duyệt các file đầu vào bằng `for (i = optind; i < argc; ++i)`. GNU getopt đã hoán vị argv để các đối số thường nằm cuối.
+### After the getopt_long loop (returned -1), what does `optind` tell you?
+- [ ] How many options were processed
+- [x] The index in argv of the first non-option argument
+- [ ] The index of the invalid option
+- [ ] It always equals argc
+> Process input files with `for (i = optind; i < argc; ++i)`. GNU getopt has permuted argv so non-options are last.
 
-### getopt_long trả về gì khi gặp tùy chọn không được khai báo?
+### What does getopt_long return for an option that was not declared?
 - [ ] -1
 - [ ] 0
 - [x] `'?'`
-- [ ] Ký tự của tùy chọn đó
-> Ký tự gây lỗi nằm trong `optopt`; getopt in thông báo ra stderr (trừ khi `opterr = 0`). Listing 2.2 khi đó in hướng dẫn ra stderr và thoát với exit code 1.
+- [ ] That option's character
+> The offending character is in `optopt`; getopt prints a message to stderr (unless `opterr = 0`). Listing 2.2 then prints the usage to stderr and exits with code 1.
 
-### Vì sao vòng lặp sau không in mỗi giây một dấu chấm ra terminal?
+### Why does this loop not print one dot per second on a terminal?
 ```c
 while (1) { printf("."); sleep(1); }
 ```
-- [ ] printf bị lỗi khi không có `\n`
-- [x] stdout có buffer, chưa có `\n` nên dấu chấm nằm trong buffer
-- [ ] sleep chặn cả printf
-- [ ] Terminal không hiển thị dấu chấm
-> Dùng `fprintf(stderr, ".")` (stderr không buffer) hoặc gọi `fflush(stdout)` sau mỗi printf.
+- [ ] printf fails without `\n`
+- [x] stdout is buffered and there is no `\n`, so the dots sit in the buffer
+- [ ] sleep blocks printf too
+- [ ] The terminal does not show dots
+> Use `fprintf(stderr, ".")` (stderr is unbuffered) or call `fflush(stdout)` after each printf.
 
-### Lệnh nào gộp cả stdout và stderr của `prog` vào file `out.txt`?
+### Which command sends both stdout and stderr of `prog` to `out.txt`?
 - [ ] `prog 2>&1 > out.txt`
 - [x] `prog > out.txt 2>&1`
 - [ ] `prog > out.txt 1>&2`
 - [ ] `prog | out.txt 2>&1`
-> Redirect được xử lý từ trái sang phải: `> out.txt` trỏ fd 1 vào file rồi `2>&1` cho fd 2 trỏ theo. Viết ngược thì fd 2 vẫn ra terminal. Với pipe: `prog 2>&1 | filter`.
+> Redirections are processed left to right: `> out.txt` points fd 1 at the file, then `2>&1` makes fd 2 follow. The other way round, fd 2 still goes to the terminal. With a pipe: `prog 2>&1 | filter`.
 
-### Chương trình gọi `exit(256)`. `echo $?` in ra?
+### A program calls `exit(256)`. What does `echo $?` print?
 - [ ] 256
 - [x] 0
 - [ ] 1
 - [ ] 255
-> Chỉ 8 bit thấp được giữ: 256 mod 256 = 0, tức là shell hiểu là "thành công". Sách khuyên chỉ dùng exit code 0–127.
+> Only the low 8 bits survive: 256 mod 256 = 0, which the shell reads as "success". The book recommends exit codes 0–127 only.
 
-### Chương trình bị `kill -TERM` (SIGTERM = 15). `echo $?` trong bash in ra?
+### A program is killed with `kill -TERM` (SIGTERM = 15). What does `echo $?` print in bash?
 - [ ] 15
 - [ ] 0
 - [x] 143
 - [ ] 255
-> Bị signal giết thì shell báo 128 + số hiệu signal. Ctrl+C (SIGINT = 2) cho 130.
+> When killed by a signal, the shell reports 128 + the signal number. Ctrl+C (SIGINT = 2) gives 130.
 
-### Process cha gọi `setenv("MODE", "debug", 1)` rồi fork. Điều nào ĐÚNG? (chọn tất cả đáp án đúng)
-- [x] Process con thấy MODE=debug
-- [x] Chương trình con exec (execvp) cũng thấy MODE=debug
-- [ ] Shell đã chạy process cha cũng thấy MODE=debug
-- [ ] Nếu con gọi unsetenv("MODE") thì cha cũng mất biến
-> Môi trường được copy từ cha sang con lúc fork và giữ qua exec. Không process nào đổi được môi trường của process cha hay của process khác.
+### A parent calls `setenv("MODE", "debug", 1)` and then forks. Which are TRUE? (select all that apply)
+- [x] The child sees MODE=debug
+- [x] A program the child execs (execvp) also sees MODE=debug
+- [ ] The shell that started the parent also sees MODE=debug
+- [ ] If the child calls unsetenv("MODE"), the parent loses it too
+> The environment is copied from parent to child at fork and kept across exec. No process can change the environment of its parent or of another process.
 
-### `getenv("SERVER_NAME")` khi biến không tồn tại trả về gì?
-- [ ] Chuỗi rỗng ""
+### What does `getenv("SERVER_NAME")` return when the variable does not exist?
+- [ ] An empty string ""
 - [x] NULL
-- [ ] Ném lỗi, errno = ENOENT
+- [ ] It fails with errno = ENOENT
 - [ ] "SERVER_NAME"
-> Listing 2.4 kiểm tra NULL để dùng giá trị mặc định.
+> Listing 2.4 checks for NULL and falls back to a default.
 
-### Vì sao sách khuyên dùng `mkstemp` thay vì `tmpnam` + `open`?
-- [ ] mkstemp nhanh hơn
-- [x] tmpnam chỉ sinh tên; giữa lúc sinh tên và lúc mở, kẻ tấn công có thể tạo trước file đó (race condition). mkstemp tạo và mở file trong một bước với quyền 0600
-- [ ] tmpnam không còn trong glibc
-- [ ] mkstemp tự xoá file khi chương trình kết thúc
-> mkstemp không tự xoá file; phải unlink. tmpfile thì trả về file đã được unlink sẵn.
+### Why does the book recommend `mkstemp` over `tmpnam` + `open`?
+- [ ] mkstemp is faster
+- [x] tmpnam only generates a name; between generating and opening it an attacker can create that file first (a race condition). mkstemp creates and opens the file in one step with mode 0600
+- [ ] tmpnam was removed from glibc
+- [ ] mkstemp deletes the file automatically when the program exits
+> mkstemp does not delete the file; you must unlink it. tmpfile returns a file that is already unlinked.
 
-### Gọi `unlink` lên file tạm ngay sau khi mkstemp mở nó. Điều gì xảy ra?
-- [ ] Không đọc ghi qua fd được nữa
-- [x] Tên file biến mất nhưng dữ liệu còn đọc ghi được qua fd; file thật sự bị xoá khi fd đóng (kể cả khi chương trình crash)
-- [ ] unlink trả về lỗi EBUSY vì file đang mở
-- [ ] File bị xoá ngay và fd trỏ vào rác
-> File được đếm tham chiếu: chỉ bị huỷ khi không còn tên (link) và không còn fd nào mở.
+### `unlink` is called on a temporary file right after mkstemp opened it. What happens?
+- [ ] The fd can no longer be used
+- [x] The name disappears but the data can still be read/written through the fd; the file is really deleted when the fd is closed (even if the program crashes)
+- [ ] unlink fails with EBUSY because the file is open
+- [ ] The file is deleted immediately and the fd points to garbage
+> Files are reference-counted: they are only destroyed when no name (link) and no open fd remain.
 
-### Đoạn code có vấn đề gì?
+### What is wrong with this line?
 ```c
 assert(do_something() == 0);
 ```
-- [ ] assert không nhận biểu thức so sánh
-- [x] Khi biên dịch với -DNDEBUG, cả lời gọi do_something() bị xoá
-- [ ] assert chỉ dùng trong C++
-- [ ] Không có vấn đề
-> Viết `int status = do_something(); assert(status == 0);`. Biểu thức trong assert không được có tác dụng phụ.
+- [ ] assert does not accept comparisons
+- [x] When compiled with -DNDEBUG, the call to do_something() is removed too
+- [ ] assert only works in C++
+- [ ] Nothing
+> Write `int status = do_something(); assert(status == 0);`. assert expressions must have no side effects.
 
-### Nên dùng assert cho trường hợp nào?
-- [ ] Kiểm tra người dùng nhập số hợp lệ
-- [ ] Kiểm tra file cấu hình tồn tại
-- [x] Kiểm tra con trỏ tham số không phải NULL theo đúng hợp đồng của hàm
-- [ ] Kiểm tra kết nối mạng thành công
-> assert dành cho lỗi lập trình (điều "không bao giờ được xảy ra"). Lỗi input/môi trường phải được xử lý và báo lỗi tử tế, vì assert có thể bị tắt và làm crash chương trình.
+### When should you use assert?
+- [ ] To check that the user typed a valid number
+- [ ] To check that a configuration file exists
+- [x] To check that a pointer parameter is not NULL, as required by the function's contract
+- [ ] To check that a network connection succeeded
+> assert is for programming errors (things that "can never happen"). Input/environment errors must be handled and reported properly, because assert may be disabled and crashes the program.
 
-### Sau lời gọi thất bại `open()` (errno = ENOENT), chương trình gọi tiếp `getpid()` (thành công). errno lúc này là?
+### After a failed `open()` (errno = ENOENT), the program calls `getpid()` (which succeeds). What is errno now?
 - [ ] 0
-- [x] Vẫn là ENOENT
-- [ ] Không xác định
+- [x] Still ENOENT
+- [ ] Undefined
 - [ ] EINVAL
-> Lời gọi thành công không xoá errno. Chỉ đọc errno ngay sau khi hàm báo lỗi, và lưu lại nếu còn gọi hàm khác (kể cả printf).
+> Successful calls do not clear errno. Read errno right after a failure, and save it if you call anything else (even printf).
 
-### Một system call chặn (read, wait) trả về -1 với errno = EINTR. Nghĩa là gì và nên làm gì?
-- [ ] File bị hỏng, phải thoát
-- [x] Lời gọi bị một signal ngắt giữa chừng; thường chỉ cần gọi lại
-- [ ] Không đủ quyền
-- [ ] Tham số sai
-> Mẫu: `do { n = read(fd, buf, len); } while (n == -1 && errno == EINTR);`. Cờ `SA_RESTART` của sigaction giúp nhiều system call tự khởi động lại.
+### A blocking system call (read, wait) returns -1 with errno = EINTR. What does it mean and what should you do?
+- [ ] The file is corrupt, exit
+- [x] A signal interrupted the call; usually just call it again
+- [ ] Permission denied
+- [ ] Invalid argument
+> Pattern: `do { n = read(fd, buf, len); } while (n == -1 && errno == EINTR);`. The `SA_RESTART` flag of sigaction makes many system calls restart automatically.
 
-### errno có an toàn khi dùng trong chương trình nhiều thread không?
-- [ ] Không, mọi thread dùng chung một errno
-- [x] Có, mỗi thread có bản errno riêng
-- [ ] Chỉ khi khoá mutex
-- [ ] Chỉ trong thread chính
-> Trong glibc, errno là macro trỏ tới biến thread-local. Ngược lại, các hàm pthread trả về mã lỗi trực tiếp, không đặt errno.
+### Is errno safe to use in a multithreaded program?
+- [ ] No, all threads share one errno
+- [x] Yes, each thread has its own errno
+- [ ] Only with a mutex
+- [ ] Only in the main thread
+> In glibc, errno is a macro referring to a thread-local variable. In contrast, pthread functions return error codes directly and do not set errno.
 
-### Lệnh nào tạo thư viện tĩnh `libtest.a` từ `test1.o` và `test2.o`?
+### Which command creates the static library `libtest.a` from `test1.o` and `test2.o`?
 - [ ] `gcc -shared -o libtest.a test1.o test2.o`
 - [x] `ar cr libtest.a test1.o test2.o`
 - [ ] `ld -o libtest.a test1.o test2.o`
 - [ ] `gcc -static -o libtest.a test1.o test2.o`
-> `c`: tạo archive nếu chưa có, `r`: thêm hoặc thay các object. Thư viện động tạo bằng `gcc -shared -fPIC`.
+> `c`: create the archive if needed, `r`: insert or replace objects. Shared libraries are created with `gcc -shared -fPIC`.
 
-### Lệnh `gcc -o app -L. -ltest app.o` báo undefined reference tới hàm trong libtest.a, dù hàm có trong thư viện. Vì sao?
-- [ ] Thiếu `-fPIC`
-- [x] Linker xử lý từ trái sang phải; lúc đọc libtest.a chưa có symbol nào cần, nên không lấy object nào. Phải đặt `-ltest` sau `app.o`
-- [ ] Archive không dùng được với -L
-- [ ] Phải dùng `-static`
-> Với archive, linker chỉ lấy các object giải quyết được symbol đang còn thiếu. Thư viện phụ thuộc lẫn nhau có thể phải ghi lại nhiều lần.
+### `gcc -o app -L. -ltest app.o` reports undefined references to functions in libtest.a, even though they are there. Why?
+- [ ] `-fPIC` is missing
+- [x] The linker works left to right; when it reads libtest.a no symbols are needed yet, so it takes no objects. `-ltest` must come after `app.o`
+- [ ] Archives do not work with -L
+- [ ] You must use `-static`
+> From an archive the linker only takes objects that resolve currently missing symbols. Mutually dependent libraries may have to be listed more than once.
 
-### `-fPIC` dùng để làm gì khi tạo thư viện động?
-- [ ] Bật tối ưu
-- [x] Sinh mã độc lập vị trí, để thư viện nạp ở địa chỉ nào cũng chạy được và dùng chung giữa các process
-- [ ] Gắn thông tin debug
-- [ ] Biên dịch tĩnh
-> PIC = Position-Independent Code: truy cập dữ liệu/hàm toàn cục qua bảng (GOT/PLT) thay vì địa chỉ tuyệt đối.
+### What is `-fPIC` for when building a shared library?
+- [ ] Optimization
+- [x] Generating position-independent code, so the library runs at any load address and can be shared between processes
+- [ ] Adding debug info
+- [ ] Static linking
+> PIC = Position-Independent Code: global data/functions are accessed through tables (GOT/PLT) instead of absolute addresses.
 
-### Thư mục có cả `libtest.a` và `libtest.so`. `gcc -o app app.o -L. -ltest` dùng bản nào?
+### A directory contains both `libtest.a` and `libtest.so`. Which does `gcc -o app app.o -L. -ltest` use?
 - [ ] libtest.a
-- [x] libtest.so, trừ khi thêm `-static`
-- [ ] Báo lỗi ambiguous
-- [ ] Bản nào mới hơn
-> Linker ưu tiên shared library. `-static` buộc dùng archive (và link tĩnh cả libc).
+- [x] libtest.so, unless `-static` is given
+- [ ] It reports an ambiguity
+- [ ] Whichever is newer
+> The linker prefers the shared library. `-static` forces the archive (and links libc statically too).
 
-### Chương trình link với `libtest.so` nằm ở `/home/me/lib`. Chạy thì báo "cannot open shared object file". Cách nào giải quyết được? (chọn tất cả đáp án đúng)
-- [x] `export LD_LIBRARY_PATH=/home/me/lib` rồi chạy lại
-- [x] Link lại với `-Wl,-rpath,/home/me/lib`
-- [x] Thêm thư mục vào `/etc/ld.so.conf` rồi chạy `ldconfig` (cần root)
-- [ ] Thêm `-I/home/me/lib` khi biên dịch
-> `-L` chỉ giúp lúc link; lúc chạy dynamic loader có danh sách tìm kiếm riêng. `-I` là thư mục header. `ldd app` cho thấy thư viện nào chưa tìm thấy ("not found").
+### A program linked against `libtest.so` in `/home/me/lib` fails at run time with "cannot open shared object file". Which fixes work? (select all that apply)
+- [x] `export LD_LIBRARY_PATH=/home/me/lib` and run it again
+- [x] Relink with `-Wl,-rpath,/home/me/lib`
+- [x] Add the directory to `/etc/ld.so.conf` and run `ldconfig` (needs root)
+- [ ] Add `-I/home/me/lib` when compiling
+> `-L` only helps at link time; at run time the dynamic loader has its own search list. `-I` is a header directory. `ldd app` shows which libraries are "not found".
 
-### Hàm `sqrt` biên dịch được nhưng link báo `undefined reference to 'sqrt'`. Thiếu gì?
+### `sqrt` compiles but linking fails with `undefined reference to 'sqrt'`. What is missing?
 - [ ] `#include <math.h>`
-- [x] `-lm` khi link
+- [x] `-lm` when linking
 - [ ] `-fPIC`
 - [ ] `-DMATH`
-> Hàm toán nằm trong libm, không tự link như libc. Thiếu `#include` thì là lỗi/cảnh báo lúc biên dịch, không phải lỗi link.
+> Math functions live in libm, which is not linked automatically like libc. A missing `#include` is a compile-time error/warning, not a link error.
 
-### Ưu điểm của thư viện động so với thư viện tĩnh? (chọn tất cả đáp án đúng)
-- [x] File thực thi nhỏ hơn
-- [x] Nhiều process dùng chung một bản trong bộ nhớ
-- [x] Sửa lỗi thư viện không cần link lại các chương trình
-- [ ] Chương trình chạy được trên máy không cài thư viện
-> Chạy độc lập là ưu điểm của link tĩnh. Rủi ro của thư viện động: thiếu hoặc sai phiên bản ở máy đích, và một bản cập nhật lỗi làm hỏng mọi chương trình dùng nó.
+### Advantages of shared libraries over static ones? (select all that apply)
+- [x] Smaller executables
+- [x] Many processes share one copy in memory
+- [x] Fixing a bug in the library does not require relinking programs
+- [ ] The program runs on machines without the library installed
+> Running stand-alone is an advantage of static linking. Shared-library risks: missing or wrong versions on the target, and one bad update breaking every program that uses it.
 
-### Hàm nào lấy địa chỉ của symbol `my_function` sau khi đã `dlopen`?
+### Which function gets the address of the symbol `my_function` after `dlopen`?
 - [ ] `dlopen`
 - [x] `dlsym`
 - [ ] `dlerror`
 - [ ] `dladdr`
-> `void *h = dlopen("libtest.so", RTLD_LAZY); void (*f)() = dlsym(h, "my_function"); (*f)(); dlclose(h);`. Lỗi thì đọc bằng `dlerror()`.
+> `void *h = dlopen("libtest.so", RTLD_LAZY); void (*f)() = dlsym(h, "my_function"); (*f)(); dlclose(h);`. Read errors with `dlerror()`.
 
-### Vì sao hàm C++ muốn lấy bằng dlsym phải khai báo `extern "C"`?
-- [ ] Để chạy nhanh hơn
-- [x] Để tên symbol không bị name mangling, dlsym tìm được đúng chuỗi "my_function"
-- [ ] Vì dlsym chỉ chạy được với C
-- [ ] Để hàm thành static
-> g++ mã hoá kiểu tham số vào tên (ví dụ `_Z11my_functionv`). extern "C" giữ nguyên tên kiểu C.
+### Why must a C++ function you want to look up with dlsym be declared `extern "C"`?
+- [ ] For speed
+- [x] So the symbol name is not mangled and dlsym can find the string "my_function"
+- [ ] Because dlsym only works with C
+- [ ] To make the function static
+> g++ encodes the parameter types into the name (e.g. `_Z11my_functionv`). extern "C" keeps the plain C name.

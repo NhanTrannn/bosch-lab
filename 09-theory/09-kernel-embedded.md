@@ -1,13 +1,13 @@
-# Kernel Linux và embedded
+# Linux kernel and embedded systems
 
-## Lý thuyết
+## Theory
 
-### Kiến trúc
-- **Monolithic kernel** (Linux): scheduler, bộ nhớ, filesystem, driver đều chạy trong kernel space → nhanh, nhưng lỗi driver có thể làm sập cả hệ thống. Linux hỗ trợ **loadable module** để nạp/gỡ lúc chạy.
-- **Microkernel** (QNX, seL4): chỉ giữ phần tối thiểu trong kernel, driver/service chạy ở user space → ổn định, an toàn hơn, chậm hơn do IPC.
-- User space ↔ kernel space qua system call; kernel không dùng được libc (dùng `printk` thay `printf`, `kmalloc` thay `malloc`).
+### Architecture
+- **Monolithic kernel** (Linux): scheduler, memory management, filesystems and drivers all run in kernel space → fast, but a driver bug can bring the whole system down. Linux supports **loadable modules** that are inserted/removed at run time.
+- **Microkernel** (QNX, seL4): keeps only the minimum in the kernel; drivers/services run in user space → more stable and secure, slower because of IPC.
+- User space ↔ kernel space via system calls; the kernel cannot use libc (`printk` instead of `printf`, `kmalloc` instead of `malloc`).
 
-### Kernel module
+### Kernel modules
 ```c
 #include <linux/module.h>
 static int __init hello_init(void) { pr_info("hello\n"); return 0; }
@@ -15,173 +15,173 @@ static void __exit hello_exit(void) { pr_info("bye\n"); }
 module_init(hello_init); module_exit(hello_exit);
 MODULE_LICENSE("GPL");
 ```
-- Build bằng Kbuild (`obj-m += hello.o`, `make -C /lib/modules/$(uname -r)/build M=$PWD modules`) → `hello.ko`.
-- `insmod` nạp (không xử lý phụ thuộc), `modprobe` nạp kèm phụ thuộc, `rmmod` gỡ, `lsmod` liệt kê (= `/proc/modules`), `modinfo` xem thông tin, `dmesg` xem log kernel. Tham số module: `module_param`.
+- Built with Kbuild (`obj-m += hello.o`, `make -C /lib/modules/$(uname -r)/build M=$PWD modules`) → `hello.ko`.
+- `insmod` loads (no dependency handling), `modprobe` loads with dependencies, `rmmod` removes, `lsmod` lists (= `/proc/modules`), `modinfo` shows information, `dmesg` shows the kernel log. Module parameters: `module_param`.
 
-### Device driver
-- **Character device**: truy cập theo luồng byte (serial, cảm biến, `/dev/ttyS0`). **Block device**: truy cập theo khối, có cache (đĩa, `/dev/sda`). **Network device**: không có file trong /dev (`eth0`).
-- File thiết bị có **major number** (chọn driver) và **minor number** (chọn thiết bị cụ thể). `mknod`, `ls -l /dev`.
-- Char driver hiện thực `struct file_operations`: `open`, `release`, `read`, `write`, `unlocked_ioctl`, `mmap`. Copy dữ liệu với user space phải qua `copy_to_user`/`copy_from_user`.
-- Device tree (`.dts` → `.dtb`) mô tả phần cứng cho kernel trên ARM thay vì hard-code.
+### Device drivers
+- **Character device**: byte-stream access (serial ports, sensors, `/dev/ttyS0`). **Block device**: fixed-size block access with caching (disks, `/dev/sda`). **Network device**: no file in /dev (`eth0`).
+- A device file has a **major number** (selects the driver) and a **minor number** (selects the specific device). `mknod`, `ls -l /dev`.
+- A char driver implements `struct file_operations`: `open`, `release`, `read`, `write`, `unlocked_ioctl`, `mmap`. Data exchanged with user space must go through `copy_to_user`/`copy_from_user`.
+- The device tree (`.dts` → `.dtb`) describes the hardware to the kernel on ARM instead of hard-coding it.
 
-### Ngắt (interrupt)
-- ISR phải **ngắn**, không được ngủ (không mutex, không `kmalloc(GFP_KERNEL)`, không `copy_to_user`), không trả giá trị cho ai, không nhận tham số tuỳ ý.
-- Chia **top half** (ISR, xử lý gấp: ack ngắt, lấy dữ liệu) và **bottom half** (xử lý sau: softirq, tasklet, **workqueue** — workqueue chạy ở process context nên được ngủ; threaded IRQ).
-- Polling vs interrupt: polling đơn giản nhưng tốn CPU; interrupt hiệu quả khi sự kiện thưa. DMA: thiết bị chép dữ liệu trực tiếp vào RAM, CPU chỉ nhận ngắt khi xong.
-- Đồng bộ với ISR: tắt ngắt cục bộ, `spin_lock_irqsave`. Biến dùng chung với ISR khai báo `volatile` (trong bare-metal).
+### Interrupts
+- An ISR must be **short**, must not sleep (no mutex, no `kmalloc(GFP_KERNEL)`, no `copy_to_user`), returns nothing to anyone and takes no arbitrary parameters.
+- Split into a **top half** (the ISR, urgent work: acknowledge the interrupt, grab the data) and a **bottom half** (deferred work: softirq, tasklet, **workqueue** — workqueues run in process context and may sleep; threaded IRQs).
+- Polling vs interrupts: polling is simple but wastes CPU; interrupts are efficient when events are rare. DMA: the device copies data straight into RAM and the CPU only gets an interrupt when it is done.
+- Synchronizing with an ISR: disable local interrupts, `spin_lock_irqsave`. Variables shared with an ISR are declared `volatile` (on bare metal).
 
-### Bộ nhớ trong kernel
-- `kmalloc` (liên tục cả vật lý, nhỏ, hợp cho DMA), `vmalloc` (liên tục ảo, không liên tục vật lý, vùng lớn), `GFP_KERNEL` (được ngủ) vs `GFP_ATOMIC` (không ngủ, dùng trong ngắt).
-- Stack kernel nhỏ (thường 8–16 KiB) → không khai báo mảng lớn trên stack.
+### Kernel memory
+- `kmalloc` (physically contiguous, small, suitable for DMA), `vmalloc` (virtually contiguous only, for large areas), `GFP_KERNEL` (may sleep) vs `GFP_ATOMIC` (never sleeps, used in interrupts).
+- The kernel stack is small (usually 8–16 KiB) → never put large arrays on it.
 
-### Embedded và RTOS
-- **Real-time**: đúng **thời hạn** quan trọng như đúng kết quả. Hard real-time (trễ hạn = hỏng, ví dụ túi khí, phanh ABS), soft real-time (trễ hạn giảm chất lượng, ví dụ video). Thước đo: latency, jitter, tính tất định (determinism).
-- RTOS (FreeRTOS, Zephyr, QNX, AUTOSAR OS): scheduler preemptive theo ưu tiên cố định, task, queue, semaphore, mutex có priority inheritance, timer. Linux thường không hard real-time (có bản vá PREEMPT_RT, đã vào mainline từ 6.12).
-- Bare-metal: vòng lặp `while(1)` + ngắt, không OS.
-- Bộ nhớ: Flash (code, hằng), RAM (data, bss, stack, heap). Hạn chế dùng `malloc` động trong hệ thống an toàn (phân mảnh, không tất định).
-- **Watchdog timer**: phải "đá" (reset) định kỳ; nếu phần mềm treo thì watchdog reset hệ thống.
-- Thanh ghi memory-mapped: `#define REG (*(volatile uint32_t *)0x40021000)`.
-- Giao tiếp: **UART** (bất đồng bộ, 2 dây TX/RX, cần cùng baudrate), **SPI** (đồng bộ, full-duplex, 4 dây SCLK/MOSI/MISO/CS, một master nhiều slave qua CS, nhanh), **I2C** (2 dây SDA/SCL, có địa chỉ, nhiều master/slave, chậm hơn, cần điện trở kéo lên), **CAN** (bus vi sai 2 dây CAN_H/CAN_L, multi-master, ưu tiên theo ID — ID nhỏ thắng arbitration, dùng rộng rãi trong ô tô; CAN FD tăng payload lên 64 byte). LIN (rẻ, chậm, một master), FlexRay, Automotive Ethernet.
-- Ô tô: **AUTOSAR** (Classic cho ECU thời gian thực, Adaptive cho máy tính hiệu năng cao trên POSIX), **MISRA C/C++** (bộ quy tắc lập trình an toàn: cấm/hạn chế malloc, đệ quy, goto, chuyển kiểu ngầm...), **ISO 26262** (an toàn chức năng, mức ASIL A–D, D cao nhất).
+### Embedded and RTOS
+- **Real-time**: meeting the **deadline** matters as much as the right result. Hard real-time (a missed deadline = failure, e.g. airbags, ABS brakes), soft real-time (a missed deadline degrades quality, e.g. video). Metrics: latency, jitter, determinism.
+- RTOS (FreeRTOS, Zephyr, QNX, AUTOSAR OS): fixed-priority preemptive scheduler, tasks, queues, semaphores, mutexes with priority inheritance, timers. Linux is usually not hard real-time (the PREEMPT_RT patch set has been in mainline since 6.12).
+- Bare metal: a `while(1)` loop + interrupts, no OS.
+- Memory: Flash (code, constants), RAM (data, bss, stack, heap). Avoid dynamic `malloc` in safety-critical systems (fragmentation, non-deterministic timing).
+- **Watchdog timer**: must be "kicked" (refreshed) periodically; if the software hangs, the watchdog resets the system.
+- Memory-mapped registers: `#define REG (*(volatile uint32_t *)0x40021000)`.
+- Buses: **UART** (asynchronous, 2 wires TX/RX, both sides need the same baud rate), **SPI** (synchronous, full-duplex, 4 wires SCLK/MOSI/MISO/CS, one master and several slaves selected by CS, fast), **I2C** (2 wires SDA/SCL, addressed, multi-master/slave, slower, needs pull-up resistors), **CAN** (2-wire differential bus CAN_H/CAN_L, multi-master, priority by ID — the lowest ID wins arbitration, widely used in cars; CAN FD raises the payload to 64 bytes). LIN (cheap, slow, single master), FlexRay, Automotive Ethernet.
+- Automotive: **AUTOSAR** (Classic for real-time ECUs, Adaptive for high-performance computers on POSIX), **MISRA C/C++** (safe coding rules: ban/restrict malloc, recursion, goto, implicit conversions...), **ISO 26262** (functional safety, ASIL levels A–D, D is the highest).
 
-## Trắc nghiệm
+## Quiz
 
-### Linux là kiểu kernel nào?
+### What kind of kernel is Linux?
 - [ ] Microkernel
-- [x] Monolithic (có hỗ trợ module nạp được lúc chạy)
+- [x] Monolithic (with loadable modules at run time)
 - [ ] Exokernel
-- [ ] Hybrid như Windows NT
-> Driver, filesystem, scheduler cùng chạy trong kernel space. Module chỉ là cách nạp code vào kernel lúc chạy, vẫn chạy trong kernel space.
+- [ ] Hybrid like Windows NT
+> Drivers, filesystems and the scheduler all run in kernel space. Modules are just a way to load code into the kernel at run time; they still run in kernel space.
 
-### Lệnh nào nạp module kèm tự động xử lý module phụ thuộc?
+### Which command loads a module and automatically handles its dependencies?
 - [ ] insmod
 - [x] modprobe
 - [ ] lsmod
 - [ ] depmod -r
-> insmod chỉ nạp đúng file .ko được chỉ định. depmod tạo bảng phụ thuộc mà modprobe dùng.
+> insmod only loads the exact .ko file given. depmod builds the dependency table that modprobe uses.
 
-### Trong kernel module, hàm in log tương ứng với printf là?
+### In a kernel module, what is the logging equivalent of printf?
 - [ ] printf
-- [x] printk (hoặc pr_info, pr_err...)
+- [x] printk (or pr_info, pr_err...)
 - [ ] syslog
 - [ ] fprintf(stderr)
-> Kernel không dùng libc. Xem log bằng dmesg.
+> The kernel does not use libc. Read the log with dmesg.
 
-### Khác biệt giữa character device và block device?
-- [ ] Character device nhanh hơn
-- [x] Character device truy cập theo luồng byte; block device theo khối cố định, có bộ đệm và truy cập ngẫu nhiên
-- [ ] Block device không có file trong /dev
-- [ ] Character device chỉ đọc
-> Ví dụ char: /dev/ttyS0, /dev/null; block: /dev/sda, /dev/mmcblk0.
+### How do character devices and block devices differ?
+- [ ] Character devices are faster
+- [x] A character device is accessed as a byte stream; a block device in fixed-size blocks, with buffering and random access
+- [ ] Block devices have no file in /dev
+- [ ] Character devices are read-only
+> Char examples: /dev/ttyS0, /dev/null; block examples: /dev/sda, /dev/mmcblk0.
 
-### Major number của file thiết bị dùng để?
-- [ ] Xác định kích thước thiết bị
-- [x] Xác định driver xử lý thiết bị
-- [ ] Xác định quyền truy cập
-- [ ] Xác định thứ tự nạp
-> Minor number phân biệt các thiết bị cụ thể cùng dùng driver đó.
+### What is the major number of a device file for?
+- [ ] The device's size
+- [x] Identifying the driver that handles the device
+- [ ] Access permissions
+- [ ] The load order
+> The minor number distinguishes the individual devices handled by that driver.
 
-### Driver chép dữ liệu từ kernel ra buffer của user space bằng hàm nào?
+### Which function does a driver use to copy data from the kernel to a user-space buffer?
 - [ ] memcpy
 - [x] copy_to_user
 - [ ] strcpy
 - [ ] mmap
-> copy_to_user kiểm tra địa chỉ user hợp lệ và xử lý page fault an toàn. Chiều ngược lại là copy_from_user.
+> copy_to_user checks that the user address is valid and handles page faults safely. The other direction is copy_from_user.
 
-### Điều nào KHÔNG được làm trong interrupt handler (ISR)? (chọn tất cả đáp án đúng)
-- [x] Gọi hàm có thể ngủ như mutex_lock
-- [x] Xử lý tính toán dài
-- [ ] Đọc thanh ghi trạng thái và xoá cờ ngắt
-- [x] kmalloc với GFP_KERNEL
-> ISR chạy trong interrupt context, không được ngủ và phải ngắn. Dùng GFP_ATOMIC nếu thật sự phải cấp phát.
+### Which of these must NOT be done in an interrupt handler (ISR)? (select all that apply)
+- [x] Calling a function that may sleep, such as mutex_lock
+- [x] Long computations
+- [ ] Reading the status register and clearing the interrupt flag
+- [x] kmalloc with GFP_KERNEL
+> An ISR runs in interrupt context: it must not sleep and must be short. Use GFP_ATOMIC if you really must allocate.
 
-### Vì sao chia xử lý ngắt thành top half và bottom half?
-- [ ] Để dùng hai CPU
-- [x] Để ISR (top half) xong nhanh, việc nặng được hoãn sang bottom half chạy khi ngắt đã được bật lại
-- [ ] Để tránh dùng volatile
-- [ ] Vì kernel bắt buộc mỗi ngắt có hai hàm
-> Bottom half: softirq, tasklet, workqueue (được ngủ), threaded IRQ.
+### Why split interrupt handling into a top half and a bottom half?
+- [ ] To use two CPUs
+- [x] So the ISR (top half) finishes quickly and heavy work is deferred to a bottom half that runs with interrupts re-enabled
+- [ ] To avoid volatile
+- [ ] Because the kernel requires two functions per interrupt
+> Bottom halves: softirq, tasklet, workqueue (may sleep), threaded IRQ.
 
-### Cơ chế bottom half nào chạy trong process context và được phép ngủ?
+### Which bottom-half mechanism runs in process context and may sleep?
 - [ ] Tasklet
 - [ ] Softirq
 - [x] Workqueue
 - [ ] Top half
-> Tasklet và softirq chạy trong softirq context nên không được ngủ.
+> Tasklets and softirqs run in softirq context and must not sleep.
 
-### Khác biệt giữa kmalloc và vmalloc?
-- [ ] vmalloc nhanh hơn
-- [x] kmalloc cấp vùng liên tục về vật lý; vmalloc chỉ liên tục về địa chỉ ảo, dùng cho vùng lớn
-- [ ] kmalloc dùng cho user space
-- [ ] Không khác nhau
-> Bộ nhớ cho DMA thường cần liên tục vật lý → kmalloc (hoặc dma_alloc_coherent).
+### How do kmalloc and vmalloc differ?
+- [ ] vmalloc is faster
+- [x] kmalloc returns physically contiguous memory; vmalloc is only virtually contiguous and is used for large areas
+- [ ] kmalloc is for user space
+- [ ] They are the same
+> DMA buffers usually need physically contiguous memory → kmalloc (or dma_alloc_coherent).
 
-### Hệ thống hard real-time là hệ thống mà:
-- [ ] Chạy rất nhanh
-- [x] Trễ thời hạn được xem là lỗi hệ thống
-- [ ] Không dùng ngắt
-- [ ] Luôn dùng Linux
-> Ví dụ điều khiển túi khí, phanh. Quan trọng là tính tất định (worst-case), không phải tốc độ trung bình.
+### A hard real-time system is one where:
+- [ ] Everything runs very fast
+- [x] Missing a deadline counts as a system failure
+- [ ] No interrupts are used
+- [ ] Linux is always used
+> E.g. airbag or brake control. Determinism (the worst case) matters, not average speed.
 
-### Watchdog timer dùng để làm gì?
-- [ ] Đo thời gian chạy của task
-- [x] Tự reset hệ thống nếu phần mềm bị treo và không "đá" watchdog kịp thời
-- [ ] Đánh thức CPU khỏi chế độ ngủ
-- [ ] Đồng bộ đồng hồ giữa các ECU
-> Phần mềm phải refresh watchdog định kỳ trong vòng lặp chính/task giám sát.
+### What is a watchdog timer for?
+- [ ] Measuring a task's run time
+- [x] Resetting the system automatically if the software hangs and stops "kicking" the watchdog in time
+- [ ] Waking the CPU from sleep
+- [ ] Synchronizing clocks between ECUs
+> The software must refresh the watchdog periodically from the main loop or a supervisor task.
 
-### Khai báo nào đúng để truy cập thanh ghi 32 bit tại địa chỉ 0x40021000?
+### Which declaration correctly accesses a 32-bit register at address 0x40021000?
 - [ ] `uint32_t *REG = 0x40021000;`
 - [x] `#define REG (*(volatile uint32_t *)0x40021000)`
 - [ ] `const uint32_t REG = 0x40021000;`
 - [ ] `static uint32_t REG @ 0x40021000;`
-> volatile để mọi lần đọc/ghi đều thực sự truy cập phần cứng.
+> volatile makes every read/write really access the hardware.
 
-### Giao thức nào dùng 2 dây (SDA, SCL) và định địa chỉ thiết bị trên bus?
+### Which bus uses 2 wires (SDA, SCL) and addresses devices on the bus?
 - [ ] SPI
 - [x] I2C
 - [ ] UART
 - [ ] CAN
-> SPI dùng 4 dây và chọn slave bằng chân CS; UART 2 dây TX/RX điểm-điểm; CAN dùng cặp vi sai CAN_H/CAN_L.
+> SPI uses 4 wires and selects a slave with a CS pin; UART is point-to-point over TX/RX; CAN uses the differential pair CAN_H/CAN_L.
 
-### Trên bus CAN, khi hai node cùng gửi, node nào thắng arbitration?
-- [ ] Node có ID lớn hơn
-- [x] Node có ID nhỏ hơn (bit 0 là dominant)
-- [ ] Node gửi trước
-- [ ] Ngẫu nhiên
-> Arbitration không phá huỷ: node thua tự dừng và gửi lại sau. ID nhỏ = ưu tiên cao.
+### On a CAN bus, when two nodes transmit at once, which one wins arbitration?
+- [ ] The node with the higher ID
+- [x] The node with the lower ID (a 0 bit is dominant)
+- [ ] The node that started first
+- [ ] Random
+> Arbitration is non-destructive: the losing node backs off and retries later. Lower ID = higher priority.
 
-### SPI có đặc điểm nào? (chọn tất cả đáp án đúng)
-- [x] Đồng bộ, có clock do master tạo
+### Which are properties of SPI? (select all that apply)
+- [x] Synchronous, with a clock generated by the master
 - [x] Full-duplex
-- [ ] Dùng địa chỉ 7 bit để chọn slave
-- [x] Chọn slave bằng chân CS/SS riêng
-> Định địa chỉ 7 bit là đặc điểm của I2C.
+- [ ] Uses a 7-bit address to select a slave
+- [x] Selects a slave with a dedicated CS/SS pin
+> 7-bit addressing is an I2C feature.
 
-### MISRA C là gì?
-- [ ] Một trình biên dịch C cho ô tô
-- [x] Bộ quy tắc lập trình C nhằm tăng an toàn và độ tin cậy trong hệ thống nhúng/ô tô
-- [ ] Một hệ điều hành thời gian thực
-- [ ] Chuẩn giao tiếp giữa các ECU
-> Ví dụ: không dùng cấp phát động, hạn chế đệ quy, không chuyển kiểu ngầm làm mất dữ liệu, mỗi switch phải có default.
+### What is MISRA C?
+- [ ] A C compiler for cars
+- [x] A set of C coding rules that improve safety and reliability in embedded/automotive systems
+- [ ] A real-time operating system
+- [ ] A communication standard between ECUs
+> E.g. no dynamic allocation, restricted recursion, no implicit conversions that lose data, every switch needs a default.
 
-### Mức ASIL cao nhất trong ISO 26262 là?
+### What is the highest ASIL level in ISO 26262?
 - [ ] ASIL A
 - [ ] QM
 - [x] ASIL D
 - [ ] ASIL E
-> QM (quản lý chất lượng thông thường), rồi A (thấp) → D (cao nhất, ví dụ phanh, lái).
+> QM (ordinary quality management), then A (lowest) → D (highest, e.g. braking, steering).
 
-### Vì sao hệ thống nhúng an toàn thường tránh `malloc` sau khi khởi động?
-- [ ] Vì malloc không có trong C99
-- [x] Vì gây phân mảnh bộ nhớ và thời gian cấp phát không tất định
-- [ ] Vì malloc chỉ dùng được với Linux
-- [ ] Vì malloc chậm hơn new
-> Thay bằng bộ nhớ tĩnh hoặc memory pool cấp phát trước.
+### Why do safety-critical embedded systems usually avoid `malloc` after start-up?
+- [ ] malloc does not exist in C99
+- [x] It fragments memory and its allocation time is not deterministic
+- [ ] malloc only works on Linux
+- [ ] malloc is slower than new
+> Use static memory or pre-allocated memory pools instead.
 
-### Thứ tự khởi động thường gặp trên board ARM chạy Linux?
+### What is the usual boot order on an ARM board running Linux?
 - [ ] Kernel → U-Boot → ROM → rootfs
 - [x] ROM bootloader → U-Boot → kernel + device tree → rootfs/init
 - [ ] U-Boot → ROM → init → kernel
 - [ ] GRUB → BIOS → kernel → init
-> U-Boot nạp kernel (zImage/Image) và file .dtb mô tả phần cứng vào RAM rồi chuyển quyền cho kernel.
+> U-Boot loads the kernel (zImage/Image) and the .dtb describing the hardware into RAM, then hands control to the kernel.
