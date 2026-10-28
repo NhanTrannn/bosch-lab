@@ -870,6 +870,472 @@ Fact<5>::v = 120
 
 **Liên hệ đề thi:** Template phải đặt định nghĩa trong header (vì được sinh code lúc dùng). Specialization toàn phần dùng `template <>`; class template có partial specialization, function template thì không.
 
+### 17_types_conversion — Biến, kiểu cơ bản, chia nguyên và chuyển kiểu
+
+**Câu hỏi:** 7/2, 7%2, -7/2, -7%2? avg = (1+2+4)/3 bằng mấy? 'A'+1 in ra gì? unsigned 0 trừ 1? 10/3*3 và 10*3/3?
+
+**Output mong đợi:**
+
+```text
+7/2 = 3, 7%2 = 1, -7/2 = -3, -7%2 = -1
+a/2.0 = 3.5, static_cast<double>(a)/b = 3.5, static_cast<double>(a/b) = 3
+avg = 2
+10/3*3 = 9, 10*3/3 = 10
+int t = 3.99 -> 3, (int)-3.99 = -3
+c + 1 = 66, char(c + 1) = B, 'a' - 'A' = 32
+unsigned 0 - 1 = 4294967295
+bool flag = 42 -> 1, boolalpha: true
+sizeof: char 1, short 2, int 4, long 8, long long 8, float 4, double 8, bool 1
+PI = 3.14159, SIZE = 10, sizeof(arr) = 40
+```
+
+**Giải thích:**
+
+- Chia nguyên cắt về 0 (C++11 trở đi): -7/2 = -3, và dấu của % theo số bị chia: -7 % 2 = -1.
+- `static_cast<double>(a) / b`: ép trước → chia thực 3.5. `static_cast<double>(a / b)`: chia nguyên trước (3) rồi mới ép → 3.
+- `(1 + 2 + 4) / 3` toàn int → 7 / 3 = 2, gán vào double vẫn là 2.
+- `10 / 3 * 3`: tính trái sang phải, (10 / 3) = 3, × 3 = 9. `10 * 3 / 3` = 30 / 3 = 10.
+- Gán double vào int bằng `=` cắt phần thập phân (về phía 0); `int bad{3.99}` báo lỗi narrowing.
+- `c + 1`: char lên int → 66 (in số). Muốn in ký tự phải ép lại `char`.
+- unsigned tràn được định nghĩa: quay vòng modulo 2³² → 4294967295.
+- Mọi giá trị khác 0 chuyển sang bool là `true` (in ra 1, hoặc `true` khi bật boolalpha).
+- sizeof(long) = 8 trên Linux 64-bit (LP64); Windows 64-bit là 4 (LLP64).
+
+**Liên hệ đề thi:** Câu kinh điển "tính trung bình bị sai" do chia nguyên. `const` có thể là hằng lúc chạy; `constexpr` bắt buộc tính được lúc biên dịch nên dùng được làm kích thước mảng.
+
+### 18_operators — Toán tử: ++/--, gán kép, so sánh, logic và short-circuit
+
+**Câu hỏi:** i, j, k sau i++ và ++i? a sau chuỗi gán kép? cnt sau true || inc()? 0.1 + 0.2 == 0.3? 1 < 2 < 3 và 3 > 2 > 1? 5 / 2 * 2.0?
+
+**Output mong đợi:**
+
+```text
+sau j = i++: i = 6, j = 5
+sau k = ++i: i = 7, k = 7
+a = 4
+m *= 2 + 1 -> 9
+(n != 0) && (10 / n > 1) = 0 (không chia cho 0)
+t1 t2 t3 = 101, cnt = 1
+true || false && false = 1
+!0 + 1 = 2, !(0 + 1) = 0
+0.1 + 0.2 == 0.3 ? 0, |diff| < 1e-9 ? 1
+1 < 2 < 3 = 1, 3 > 2 > 1 = 0
+5 / 2 * 2.0 = 4, 5 / 2.0 * 2 = 5
+2 + 3 * 4 = 14, (2 + 3) * 4 = 20, 10 - 4 - 3 = 3
+```
+
+**Giải thích:**
+
+- `j = i++`: j nhận giá trị cũ 5, i thành 6. `k = ++i`: i tăng lên 7 rồi k nhận 7.
+- Chuỗi gán kép: 10 + 10 = 20 → 17 → 34 → 34 / 3 = 11 → 11 % 7 = 4.
+- `m *= 2 + 1` là `m = m * (2 + 1)` = 9 (gán kép có độ ưu tiên thấp nhất), không phải `m * 2 + 1`.
+- `(n != 0) && ...`: vế trái false nên vế phải không chạy, không chia cho 0.
+- `true || inc()` và `false && inc()`: không gọi inc(). Chỉ `false || inc()` gọi → cnt = 1.
+- `&&` ưu tiên hơn `||`: `true || (false && false)` = true.
+- `!0 + 1`: `!` là toán tử một ngôi, ưu tiên cao hơn `+` → (!0) + 1 = 2.
+- 0.1, 0.2, 0.3 không biểu diễn chính xác được trong nhị phân → so sánh bằng epsilon.
+- `3 > 2 > 1` = `(3 > 2) > 1` = `1 > 1` = false.
+- `5 / 2 * 2.0`: chia nguyên trước (2) rồi × 2.0 = 4.
+
+**Liên hệ đề thi:** Trong một biểu thức không được sửa cùng một biến hai lần mà không có điểm sắp xếp thứ tự, ví dụ `i = i++ + ++i` là UB. Short-circuit thường dùng để kiểm tra con trỏ: `if (p && p->x > 0)`.
+
+### 19_control_flow — Điều khiển luồng: range-for copy/ref, do-while, continue/break, dangling else, ?:
+
+**Câu hỏi:** Vector sau vòng for (auto x : v) và for (auto &x : v)? do-while chạy mấy lần khi điều kiện sai ngay? break trong vòng lặp lồng thoát mấy vòng? else thuộc if nào? (true ? 1 : 2.5) / 2?
+
+**Output mong đợi:**
+
+```text
+sau for (auto x : v):  1 2 3 
+sau for (auto &x : v): 10 20 30 
+do-while chay 1 lan
+continue/break: 0 2 4 6 
+break trong vong long: 00 10 20 
+else thuoc if (y)
+score 75: pass
+(true ? 1 : 2.5) / 2 = 0.5
+ngay thuong
+for 2 bien: sum = 25
+```
+
+**Giải thích:**
+
+- `auto x` là bản copy, sửa x không đổi v. `auto &x` là tham chiếu tới phần tử, sửa thẳng vào v.
+- do-while kiểm tra điều kiện ở cuối nên thân chạy ít nhất một lần. while kiểm tra trước nên không chạy lần nào.
+- k lẻ thì `continue` bỏ qua; k = 8 > 6 thì `break` → in 0 2 4 6.
+- `break` chỉ thoát vòng trong (theo c), vòng ngoài (theo r) vẫn chạy đủ 3 lần → 00 10 20.
+- Thụt lề đánh lừa: `else` gắn với `if (y)` gần nhất. x = 1, y = 0 → vào else.
+- Hai nhánh của `?:` là int và double → kiểu chung là double → 1.0 / 2 = 0.5.
+- `for (a = 1, b = 10; a < b; ++a, --b)`: cộng 9 + 7 + 5 + 3 + 1 = 25.
+
+**Liên hệ đề thi:** Đặt `;` ngay sau `for (...)` hoặc `if (...)` làm thân rỗng. `switch` chỉ nhận kiểu số nguyên/enum/char, không nhận string hay double; các case gộp nhiều giá trị bằng cách viết liền không có break.
+
+### 20_strings — C-style string và std::string
+
+**Câu hỏi:** sizeof(s) và strlen(s) của char s[] = "Hello"? s1 == s2 (mảng char) so sánh gì? substr, find, npos? "Zebra" < "apple"? stoi("42abc")? cin >> đọc "Frank Smith" được gì?
+
+**Output mong đợi:**
+
+```text
+sizeof(s1) = 6, strlen(s1) = 5
+s1 == s2 ? 0, strcmp(s1, s2) == 0 ? 1
+buf = Frank Smith, strlen = 11
+string a == b ? 1
+c = Hello World, substr(6, 3) = Wor, find("lo") = 3, find("xyz") == npos ? 1
+e = abcd, size = 4, length = 4
+toupper: ABCD
+insert/erase: >>BCD
+string(3, '*') = ***
+"apple" < "banana" ? 1, "Zebra" < "apple" ? 1
+e.at(10) -> out_of_range
+stoi("42abc") = 42, to_string(3.5) = 3.500000
+isdigit('7') ? 1, isalpha('7') ? 0, isspace(' ') ? 1
+in >> first = [Frank], getline rest = [ Smith], line = [Tom Jones]
+```
+
+**Giải thích:**
+
+- `sizeof` tính cả `'\0'` (6); `strlen` đếm tới trước `'\0'` (5).
+- `s1 == s2` với mảng char: hai mảng decay thành con trỏ → so sánh địa chỉ → false. Phải dùng `strcmp`, nó trả về 0 khi bằng nhau.
+- `strcpy`/`strcat` không kiểm tra kích thước: buf phải đủ chỗ (11 ký tự + `'\0'`).
+- `std::string` so sánh nội dung theo thứ tự từ điển, dựa trên mã ASCII. 'Z' = 90 < 'a' = 97 nên "Zebra" < "apple".
+- `substr(pos, len)`; `find` trả về vị trí đầu tiên hoặc `string::npos` nếu không thấy.
+- `size()` và `length()` giống hệt nhau. `insert(0, ">>")` → ">>ABCD", rồi `erase(2, 1)` xoá 'A'.
+- `at()` kiểm tra biên và ném `out_of_range`; `operator[]` không kiểm tra (vượt biên là UB).
+- `stoi` đọc phần số ở đầu chuỗi và dừng ở ký tự không phải số; chuỗi không bắt đầu bằng số thì ném `invalid_argument`.
+- `>>` bỏ khoảng trắng đầu và dừng ở khoảng trắng → "Frank". `getline` đọc phần còn lại của dòng, kể cả dấu cách → " Smith".
+
+**Liên hệ đề thi:** Bẫy `cin >> n;` rồi `getline(cin, s);`: getline đọc ngay ký tự '\n' còn sót lại và trả về chuỗi rỗng. Cách sửa là gọi `cin.ignore()` hoặc `cin >> ws` trước getline.
+
+### 21_functions — Hàm: tham trị/tham chiếu/con trỏ, tham số mặc định, overload, static local, đệ quy
+
+**Câu hỏi:** x sau by_val/by_ref/by_ptr? print(5.0f), print('a'), print("hi") gọi bản nào? counter() ba lần? fib(5) gọi bao nhiêu lần?
+
+**Output mong đợi:**
+
+```text
+by_val: x = 1
+by_ref: x = 200
+by_ptr: x = 300
+swap_val: 1 2
+swap_ref: 2 1
+overload: int double double char bool bool string 
+Hi Guest 
+Hi Frank 
+Hi Frank Hi Frank 
+counter: 1 2 3
+fib(5) = 5, so lan goi = 15
+factorial(10) = 3628800
+```
+
+**Giải thích:**
+
+- by_val sửa bản copy; by_ref và by_ptr sửa biến gốc. swap_val không đổi được a, b.
+- `print(5.0f)`: không có bản float, float → double là promotion → bản double.
+- `print('a')`: có bản char khớp chính xác.
+- **`print("hi")` gọi bản bool!** `const char*` → `bool` là chuyển đổi chuẩn, được ưu tiên hơn `const char*` → `std::string` (chuyển đổi do người dùng định nghĩa, qua constructor của string).
+- Tham số mặc định được điền từ phải sang trái; không bỏ qua tham số giữa được.
+- `static int c` chỉ khởi tạo ở lần gọi đầu và giữ giá trị giữa các lần gọi → 1 2 3.
+- fib đệ quy ngây thơ: số lần gọi C(n) = C(n-1) + C(n-2) + 1 → C(5) = 15, tăng theo hàm mũ.
+
+**Liên hệ đề thi:** Overload chỉ dựa vào danh sách tham số (số lượng, kiểu, const của tham số tham chiếu/con trỏ), không dựa vào kiểu trả về. `print(5L)` báo lỗi ambiguous vì long → int và long → double cùng hạng. Mỗi lần gọi hàm tạo một stack frame mới; đệ quy quá sâu gây stack overflow (segfault).
+
+### 22_pointers_refs — Con trỏ và tham chiếu
+
+**Câu hỏi:** a, b sau r = b và *p = 99? *(q+2), q[3], *q+1, &arr[3]-q? reset_val có làm p trong main thành nullptr không, còn reset_ref? sizeof(p) và sizeof(r)?
+
+**Output mong đợi:**
+
+```text
+sau r = b: a = 20, b = 20, &r == &a ? 1
+sau r = 30: a = 30, b = 20
+sau p = &b; *p = 99: a = 30, b = 99
+*(q+2) = 30, q[3] = 40, *q+1 = 11, &arr[3]-q = 3
+sau ++q: *q = 20, q[-1] = 10
+reset_val: pa la nullptr ? 0
+reset_ref: pa la nullptr ? 1
+sizeof(p) = 8, sizeof(r) = 4, sizeof(arr) = 16
+*pc = 99, *cp = 1
+*one = 5, many = 777
+ps->size() = 3, (*pv)[1] = Larry, pv->at(0) = Frank
+**pp = 5 -> b = 5
+```
+
+**Giải thích:**
+
+- `r = b` không làm r tham chiếu tới b mà gán giá trị của b (20) cho a. r vẫn là a.
+- Con trỏ trỏ lại được: `p = &b` rồi `*p = 99` sửa b.
+- `*q + 1`: `*` ưu tiên hơn `+` → 10 + 1 = 11. `&arr[3] - q` là số phần tử giữa hai con trỏ (3), không phải số byte.
+- `q[-1]` hợp lệ vì q đang trỏ vào giữa mảng.
+- reset_val nhận bản copy của con trỏ → con trỏ của main không đổi. Muốn đổi phải truyền `int*&` (hoặc `int**`).
+- `sizeof(r)` là sizeof của biến được tham chiếu (int = 4). `sizeof(p)` là kích thước con trỏ (8 trên 64-bit).
+- `const int *pc` cho phép đổi pc nhưng không sửa *pc; `int *const cp` thì ngược lại. pc đang trỏ b = 99, còn `*cp = 1` sửa a.
+- `delete one` sau khi `one = nullptr` không làm gì cả, an toàn.
+- `**pp`: pp trỏ tới p, p đang trỏ b.
+
+**Liên hệ đề thi:** Reference: bắt buộc khởi tạo, không null, không trỏ lại được. Con trỏ: có thể null, trỏ lại được, có pointer arithmetic. Lỗi hay gặp: dùng con trỏ sau khi delete (dangling), delete hai lần, quên delete (leak), dùng `delete` cho vùng cấp bằng `new[]`.
+
+### 23_class_basics — Class: constructor, delegating constructor, copy constructor, const, static, shallow/deep copy
+
+**Câu hỏi:** Player a; in ra những dòng nào và theo thứ tự nào? display(c) gọi copy constructor không? Player::count ở các thời điểm? Thứ tự destructor khi ra khỏi khối? Shallow copy hai con trỏ có cùng địa chỉ không?
+
+**Output mong đợi:**
+
+```text
+Player a:
+  three-args None
+  no-args
+Player b{"Frank"}:
+  three-args Frank
+  one-arg
+Player c{"Hero", 100, 5}:
+  three-args Hero
+count = 3
+display(c):
+  three-args Hero
+  copy Hero
+  display Hero
+  ~Hero
+Player d = c:
+  three-args Hero
+  copy Hero
+count = 4, ra khoi khoi:
+  ~Clone
+  ~Hero
+  ~Frank
+  ~None
+count = 0
+  three-args Villain
+  one-arg
+v.get_name() = Villain
+Shallow: cung dia chi ? 1, *s1.data = 42
+Deep: cung dia chi ? 0, *d1.data = 1
+het main:
+  ~Villain
+```
+
+**Giải thích:**
+
+- Delegating constructor: constructor 3 tham số chạy hết (kể cả thân) rồi mới tới thân của constructor ủy quyền → "three-args" in trước "no-args".
+- `display(Player p)` truyền theo giá trị → gọi copy constructor; bản copy p bị huỷ khi hàm kết thúc (`~Hero` đầu tiên).
+- `Player d = c;` là khởi tạo, không phải gán → gọi copy constructor.
+- Huỷ ngược thứ tự tạo: d (đã đổi tên Clone), c, b, a.
+- static count dùng chung cho mọi object: tăng trong constructor, giảm trong destructor.
+- Object const chỉ gọi được hàm member const.
+- Shallow: copy mặc định copy giá trị con trỏ → s1, s2 cùng trỏ một int; sửa qua s2 thấy ở s1. Nếu cả hai cùng delete thì bị double free.
+- Deep: copy constructor tự viết cấp phát vùng nhớ mới.
+
+**Liên hệ đề thi:** Compiler chỉ sinh default constructor khi class không có constructor nào. Copy constructor được gọi khi: khởi tạo từ object khác, truyền tham trị, trả về theo giá trị (có thể bị bỏ qua nhờ copy elision). Class có con trỏ sở hữu tài nguyên → cần rule of three/five.
+
+### 24_operator_overloading — Operator overloading
+
+**Câu hỏi:** c = a++ thì c và a là gì? Có bao nhiêu dòng [pre++] khi gọi a++? 2 * a gọi được không, a * 2 thì sao? (a += b) += b cho kết quả gì?
+
+**Output mong đợi:**
+
+```text
+a + b = (4,6), -a = (-1,-2)
+a == Vec{1,2} ? 1, a != b ? 1
+[pre++] [post++] 
+c = a++: c = (1,2), a = (2,3)
+[pre++] 
+d = ++a: d = (3,4), a = (3,4)
+2 * a = (6,8)
+a[1] = 9 -> a = (3,9)
+(e += b) += b -> e = (7,9)
+Vec f = 5 -> (5,0), f + 1 = (6,0)
+```
+
+**Giải thích:**
+
+- Postfix `operator++(int)`: lưu bản cũ, gọi prefix (in `[pre++]`), rồi trả về bản cũ → c = (1,2), a = (2,3).
+- Prefix trả về `*this` theo tham chiếu, không tạo bản copy.
+- `2 * a`: vế trái là int nên phải là hàm non-member (ở đây là friend). `a * 2` lỗi vì chưa định nghĩa.
+- `operator[]` trả về `int&` nên gán được `a[1] = 9`.
+- `+=` trả về `Vec&` → `(e += b) += b` cộng b hai lần vào cùng e: (1,1) + (3,4) + (3,4) = (7,9).
+- Constructor không `explicit` cho phép chuyển ngầm: `Vec f = 5` và `f + 1` (1 → Vec(1,0)).
+
+**Liên hệ đề thi:** Không overload được `.` `.*` `::` `?:` `sizeof`. Toán tử bắt buộc là member: `=`, `[]`, `()`, `->`. `<<` và `>>` với stream phải là non-member. Overload không đổi được độ ưu tiên hay số toán hạng.
+
+### 25_inheritance — Kế thừa: constructor lớp cha, redefine và virtual
+
+**Câu hỏi:** Tạo Trust in ra các constructor theo thứ tự nào? Qua Account& gọi withdraw (không virtual) và print (virtual) chạy bản nào? Vòng lặp qua vector<Account*> in gì? Thứ tự destructor khi delete?
+
+**Output mong đợi:**
+
+```text
+Tao Trust t:
+  Account(Tom)
+  Savings(Tom)
+  Trust(Tom)
+ref.withdraw(100):
+  Account::withdraw
+t.withdraw(100):
+  Savings::withdraw
+  Account::withdraw
+ref.print():
+  [Trust Tom: 800]
+Tao vector<Account*>:
+  Account(A)
+  Account(S)
+  Savings(S)
+In qua Account*:
+  [Account A: 10]
+  [Savings S: 20, 3%]
+delete:
+  ~Account(A)
+  ~Savings(S)
+  ~Account(S)
+sh.area() = 9
+het main:
+  ~Trust(Tom)
+  ~Savings(Tom)
+  ~Account(Tom)
+```
+
+**Giải thích:**
+
+- Constructor đi từ lớp gốc xuống: Account → Savings → Trust. Destructor ngược lại.
+- `withdraw` không virtual → static binding: qua `Account&` gọi `Account::withdraw`, qua object Trust gọi `Savings::withdraw` (bản gần nhất trong chuỗi kế thừa).
+- `print` virtual → dynamic binding: qua `Account&` vẫn gọi `Trust::print`. Số dư 800 vì đã rút 2 lần 100.
+- `~Account` là virtual nên `delete` qua `Account*` gọi đủ `~Savings` rồi `~Account`.
+- Lớp có hàm thuần ảo (`= 0`) là abstract, không tạo object được nhưng dùng làm tham chiếu/con trỏ được.
+
+**Liên hệ đề thi:** `public` inheritance giữ nguyên quyền truy cập, `protected` biến public thành protected, `private` biến tất cả thành private; member private của lớp cha không truy cập được từ lớp con. Lớp con không kế thừa constructor, destructor, operator= (trừ khi dùng `using Base::Base`). `override` giúp compiler báo lỗi nếu chữ ký không khớp.
+
+### 26_exceptions — Exception: thứ tự catch, catch(...), rethrow, exception tự định nghĩa
+
+**Câu hỏi:** Mỗi lần gọi test(k) được catch bởi khối nào? Dòng "sau test(k)" in ra với những k nào? Bắt theo giá trị (catch(std::exception e)) thì what() trả về gì? stoi("abc") và v.at(10) ném kiểu gì?
+
+**Output mong đợi:**
+
+```text
+  catch int 42
+  catch string: loi dang string
+  catch InsufficientFunds: Insufficient funds, need = 50
+  catch exception: tham so sai
+  catch (...)
+  k = 5: khong throw
+  sau test(5)
+  rethrow(): bat duoc "tu rethrow", nem lai
+  main bat lai: tu rethrow
+  catch theo gia tri: what() = std::exception
+  stoi("abc") -> invalid_argument
+  v.at(10) -> out_of_range
+```
+
+**Giải thích:**
+
+- Ném được mọi kiểu: int, string, double, class. Khối catch được thử theo thứ tự và không có chuyển đổi kiểu số (3.14 không vào `catch (int)`) → rơi xuống `catch (...)`.
+- `invalid_argument` kế thừa `logic_error` → `exception` → vào `catch (const exception&)`.
+- InsufficientFunds cũng là `exception`, nhưng `catch (const InsufficientFunds&)` đứng trước nên được chọn.
+- Sau `throw`, phần còn lại của khối try bị bỏ qua → "sau test(k)" chỉ in khi k = 5.
+- `throw;` ném lại đúng object gốc (giữ kiểu động), lên khối try bên ngoài.
+- `catch (exception e)` copy phần base → slicing → `what()` của std::exception ("std::exception").
+
+**Liên hệ đề thi:** Ném theo giá trị, bắt theo const reference. Không ném exception từ destructor (trong lúc stack unwinding sẽ gọi `std::terminate`). Exception không được bắt → `std::terminate` → abort.
+
+### 27_streams — I/O stream: iomanip, manipulator dính/không dính, stringstream
+
+**Câu hỏi:** 1234.5678 in mặc định ra gì? setprecision(2) có và không có fixed? setw áp dụng cho mấy lần in? hex có giữ cho lần in sau không? Đọc "12 abc" vào hai biến int thì sao?
+
+**Output mong đợi:**
+
+```text
+mac dinh:            1234.57, 1234567.89 -> 1.23457e+06
+setprecision(2):     1.2e+03
+fixed setprecision(2): 1234.57
+van con fixed:       3.14
+[    42][42]
+[42    ][ab    ]
+[****42][**7]
+ff 10 0xff 255
+10 false 2.00000 2
+doc: Frank | 100 | 1234.5
+"12 abc 34": x = 12, y = 0, z = 0, fail = 1
+sau clear(): skip = abc, z = 34
+ostringstream: [Total:    42!]
+123abc khong phai so nguyen (doc duoc 123)
+```
+
+**Giải thích:**
+
+- Mặc định in 6 chữ số có nghĩa: 1234.5678 → 1234.57; số lớn chuyển sang dạng khoa học 1.23457e+06.
+- `setprecision(2)` không có fixed: 2 chữ số có nghĩa → 1.2e+03. Thêm `fixed`: 2 số sau dấu phẩy → 1234.57.
+- `fixed` và precision giữ nguyên cho các lần in sau (3.14).
+- `setw` chỉ áp dụng cho lần in kế tiếp; mặc định canh phải, `left` canh trái và được giữ lại. `setfill` cũng được giữ lại.
+- `hex` được giữ lại (16 → 10) tới khi gặp `dec`; `showbase` thêm tiền tố 0x. `oct` 8 → 10. `showpoint` in đủ 6 chữ số có nghĩa: 2.00000.
+- Đọc "abc" vào int thất bại: y bị gán 0 (C++11) và stream vào trạng thái fail, z không được đọc. Sau `clear()` mới đọc tiếp được.
+- "123abc": đọc được 123 nhưng chưa tới cuối chuỗi (eof false) → không phải số nguyên hợp lệ.
+
+**Liên hệ đề thi:** Phân cấp: `ios` → `istream`/`ostream` → `iostream`; file dùng `ifstream`/`ofstream`/`fstream`; chuỗi dùng `istringstream`/`ostringstream`/`stringstream`. Mở file luôn kiểm tra `is_open()`. Đọc từng dòng: `while (getline(file, line))`, đừng dùng `while (!file.eof())` vì vòng cuối sẽ bị lặp thừa.
+
+### 28_stl_algorithms — STL: iterator, thuật toán, container adapter
+
+**Câu hỏi:** accumulate(vd, 0) với vector<double>{1.5, 2.5} bằng mấy? Sau remove(…, 3), size còn bao nhiêu? set từ {5,1,3,1,5} in gì? map in theo thứ tự nào? priority_queue.top()? stack/queue lấy phần tử nào trước?
+
+**Output mong đợi:**
+
+```text
+accumulate(vd, 0) = 3, accumulate(vd, 0.0) = 4
+find 5 o vi tri 4, count 3 = 3, count_if chan = 1
+max = 5, find 9 == end ? 1
+sau remove(3): size = 6, phan con lai = 3
+sau erase: 4 1 5 
+sort giam dan: 5 4 1 
+transform x*x: 25 16 1 
+reverse: 1 16 25 
+set: 1 3 5 
+insert 3 lan nua: inserted = 0, *pos = 3
+map: Frank=11 Larry=3 Moe=2 , size = 3, m.count("Joe") = 0
+deque: 1 2 3 4 
+list: 1 2 3 4 
+stack.top = 5, queue.front = 3, queue.back = 5, pq.top = 5
+pq lay ra: 5 4 3 1 1 
+```
+
+**Giải thích:**
+
+- `accumulate(..., 0)`: tổng có kiểu int → 0 + 1.5 → 1, 1 + 2.5 → 3. Với 0.0 thì đúng là 4.
+- `find` trả về iterator; không thấy thì trả về `end()`. `it - v.begin()` là chỉ số.
+- `remove` dồn các phần tử khác 3 lên đầu và trả về "end mới"; size vẫn là 6. Phải `erase(new_end, end())` (erase-remove idiom).
+- `sort` với lambda so sánh `a > b` → giảm dần. `transform` có thể ghi đè lên chính container nguồn.
+- set loại trùng và tự sắp xếp; insert phần tử đã có trả về `{iterator, false}`.
+- map sắp theo key (chuỗi theo thứ tự từ điển); `m["Moe"]` tự thêm key mới; `count` chỉ trả về 0 hoặc 1.
+- stack: LIFO (top = phần tử push cuối, 5). queue: FIFO (front = 3, back = 5). priority_queue: max-heap.
+
+**Liên hệ đề thi:** Ba thành phần của STL: container, iterator, algorithm (thêm functor/lambda). Loại iterator: input, output, forward (`forward_list`), bidirectional (`list`, `map`, `set`), random access (`vector`, `deque`, `array`). `std::sort` cần random access nên `list` phải dùng `list::sort()`.
+
+### 29_lambda_enum — Lambda và enum / enum class
+
+**Câu hỏi:** Gọi by_val() sau khi x = 100 in ra gì, by_ref() thì sao? counter() mutable gọi 3 lần, biến n bên ngoài đổi không? Giá trị của Color::Blue, Status::Error? Red == 0 với enum thường và enum class?
+
+**Output mong đợi:**
+
+```text
+by_val() = 1, by_ref() = 100
+counter mutable: 1 2 3, n ngoai = 0
+copy() = 4, counter() = 4
+total = 21, so phan tu > 3 = 3
+add5(10) = 15, square(3) = 9, square(1.5) = 2.25, IIFE = 42
+Red = 0, Green = 5, Blue = 6, Red == 0 ? 1
+int as_int = Blue -> 6
+Status::Error = E, sizeof(Status) = 1, Color2::Blue = 2
+Error
+```
+
+**Giải thích:**
+
+- `[x]` chụp giá trị 1 lúc tạo lambda; `[&x]` đọc x lúc gọi → 100.
+- `mutable` cho phép sửa bản copy n riêng của lambda; bản copy này giữ trạng thái giữa các lần gọi. Biến n bên ngoài vẫn là 0.
+- `auto copy = counter;` copy cả trạng thái (n = 3) → hai lambda tăng độc lập: cả hai đều trả về 4.
+- `[&total]` cộng dồn vào biến ngoài; `[threshold]` chỉ đọc.
+- `make_adder` trả về lambda chụp n theo giá trị → an toàn sau khi hàm kết thúc. `[](auto a)` là generic lambda (C++14). Lambda gọi ngay khi định nghĩa (IIFE).
+- enum: giá trị bắt đầu từ 0, phần tử không gán thì bằng phần tử trước + 1 → Blue = 6. Enum thường tự chuyển sang int.
+- `enum class Status : char` chọn kiểu nền là char → sizeof = 1. enum class không tự chuyển sang int, phải `static_cast`.
+
+**Liên hệ đề thi:** Cú pháp: `[capture](params) mutable noexcept -> ret { body }`. Lambda không capture gì chuyển được thành con trỏ hàm. enum class tránh trùng tên (hai enum đều có `Red`) và tránh so sánh nhầm giữa hai enum khác nhau.
+
 ## 03-process
 
 ### 01_fork_count — fork() ba lần ⚠️ không cố định
@@ -1854,3 +2320,456 @@ objdump -d m.o | head
 ```
 Thư viện tĩnh `.a` (copy vào file chạy lúc link, `ar rcs`), thư viện động `.so` (nạp lúc chạy, cần `-fPIC -shared`, tìm qua `LD_LIBRARY_PATH`/`ldconfig`).
 
+
+## 10-alp
+
+Các bài theo sách *Advanced Linux Programming* (Mitchell, Oldham, Samuel, 2001), chương 1–5. Tên hàm và ví dụ bám theo listing trong sách.
+
+### 01_getopt_long — getopt_long: tùy chọn ngắn/dài, optarg, optind, "--" và hoán vị argv
+
+**Câu hỏi:** Với mỗi argv mẫu, getopt_long trả về những tùy chọn nào, optarg là gì, optind dừng ở đâu? "-vo x.txt" được hiểu thế nào? Sau "--" thì "-h" còn là tùy chọn không? Gặp "-x" (không khai báo) và "-o" thiếu đối số thì sao?
+
+**Output mong đợi:**
+
+```text
+Mau 1: -v -o out.txt in1 in2
+  -v/--verbose
+  -o/--output, optarg = out.txt
+  optind = 4, doi so con lai: in1 in2
+Mau 2: --output=log.txt --verbose file
+  -o/--output, optarg = log.txt
+  -v/--verbose
+  optind = 3, doi so con lai: file
+Mau 3: -vo x.txt -- -h
+  -v/--verbose
+  -o/--output, optarg = x.txt
+  optind = 4, doi so con lai: -h
+Mau 4: in1 -v in2 --output o.txt
+  -v/--verbose
+  -o/--output, optarg = o.txt
+  optind = 4, doi so con lai: in1 in2
+  argv sau khi hoan vi: -v --output o.txt in1 in2
+Mau 5: -x -o
+prog: invalid option -- 'x'
+  '?' (optopt = 'x')
+prog: option requires an argument -- 'o'
+  '?' (optopt = 'o')
+  optind = 3, doi so con lai:
+```
+
+**Giải thích:**
+
+- `"ho:v"`: `o` có dấu `:` nên cần đối số; đối số có thể là từ tiếp theo (`-o out.txt`) hoặc dính liền (`-oout.txt`). Tùy chọn dài: `--output=log.txt` hoặc `--output log.txt`.
+- `-vo x.txt`: gộp nhiều tùy chọn ngắn; `v` không cần đối số, `o` lấy từ tiếp theo.
+- `--` kết thúc phần tùy chọn: mọi thứ phía sau (kể cả `-h`) là đối số thường.
+- GNU getopt **hoán vị** argv: các đối số thường (`in1`, `in2`) bị dồn xuống cuối, nên sau vòng lặp chỉ cần duyệt từ `optind` tới `argc`.
+- Tùy chọn không khai báo hoặc thiếu đối số → trả về `'?'`, ký tự gây lỗi nằm trong `optopt`, thông báo lỗi in ra **stderr** (tắt bằng `opterr = 0`). Listing 2.2 khi đó gọi `print_usage(stderr, 1)`.
+
+**Liên hệ đề thi:** Quy ước GNU: tùy chọn ngắn `-h`, tùy chọn dài `--help`; mọi chương trình nên có `--help` và `--version`. Mảng `struct option` phải kết thúc bằng phần tử `{NULL, 0, NULL, 0}`. Trường `has_arg` = 0 (không có), 1 (bắt buộc), 2 (tùy chọn).
+
+### 02_env_exit_code — Biến môi trường và exit code, kể cả khi bị signal giết
+
+**Câu hỏi:** setenv(..., 0) có ghi đè không? Process con và chương trình exec sau đó có thấy biến vừa setenv không? system("exit 300") cho WEXITSTATUS bằng mấy? Shell bị SIGTERM thì wait status là gì, và $? mà shell cha thấy là bao nhiêu?
+
+**Output mong đợi:**
+
+```text
+environ co > 0 bien, PATH co
+SERVER_NAME = (NULL) -> dung mac dinh server.my-company.com
+sau setenv: SERVER_NAME = backup.example.net
+process con thay: backup.example.net
+chuong trinh sau exec thay: backup.example.net
+sau unsetenv: NULL
+system("exit 3"): WIFEXITED, WEXITSTATUS = 3
+system("exit 300"): WIFEXITED, WEXITSTATUS = 44
+system("kill -TERM $$"): WIFSIGNALED, WTERMSIG = 15 (Terminated)
+Terminated
+  shell thay $? = 143
+system("sh -c 'kill -TERM $$'; echo "  shell thay \$? = $?"; exit 0"): WIFEXITED, WEXITSTATUS = 0
+system("khong_co_lenh_nay 2>/dev/null"): WIFEXITED, WEXITSTATUS = 127
+```
+
+**Giải thích:**
+
+- `setenv(name, value, 0)`: không ghi đè nếu biến đã có.
+- Môi trường được copy sang process con khi fork và giữ nguyên qua exec (exec không có hậu tố `e`).
+- `getenv` trả về NULL khi không có biến → chương trình dùng giá trị mặc định (listing 2.4).
+- Exit code chỉ giữ 8 bit thấp: 300 mod 256 = 44. Vì vậy sách khuyên chỉ dùng 0–127.
+- Shell bị SIGTERM: wait status là "bị signal 15", không có exit code. Khi đó shell cha báo `$?` = 128 + 15 = 143 và in "Terminated".
+- Không tìm thấy lệnh: shell trả về 127 (126 nếu có file nhưng không chạy được).
+
+**Liên hệ đề thi:** `printenv`, `export VAR=value`, `echo $?`. Biến `environ` (`extern char **environ;`) là mảng `"TEN=giatri"` kết thúc bằng NULL; không sửa trực tiếp mà dùng `setenv`/`unsetenv`. Process con không bao giờ đổi được môi trường của process cha.
+
+### 03_stdio_buffer — Buffer của stdio: full, line, không buffer; exit và _exit
+
+**Câu hỏi:** Với stdout đặt full buffering, các dòng [stdout] và [stderr] hiện theo thứ tự nào? Ở phần hai, chữ A/B/C/D/E hiện theo thứ tự nào? Dòng cuối có hiện ra không?
+
+**Output mong đợi:**
+
+```text
+[stderr 2] [stderr 4]
+[stdout 1] [stdout 3]
+C(none) B(line) D(line)
+E(none)
+A(full)
+```
+
+**Giải thích:**
+
+- stdout full-buffered: `[stdout 1]` và `[stdout 3]` nằm trong buffer tới khi `fflush`. stderr không buffer nên ra trước.
+- Phần hai: `C` (không buffer) ra ngay; `B` nằm trong buffer line-buffered tới khi gặp `'\n'` của `D`; `E` ra ngay; `A` (full) chỉ ra khi `fclose`.
+- Dòng cuối nằm trong buffer của stdout; `_exit` không flush stdio nên dòng đó mất. `exit()` (hoặc return từ main) thì có flush.
+
+**Liên hệ đề thi:** stdout ra terminal là line-buffered, ra file/pipe là full-buffered (vì vậy `./app | cat` có thể đổi thứ tự so với stderr). Ví dụ trong sách: `while (1) { printf("."); sleep(1); }` không in mỗi giây một dấu chấm; đổi sang stderr thì in. Gộp hai luồng: `prog > out.txt 2>&1` (2>&1 đứng **sau** redirect file) và `prog 2>&1 | filter` (đứng **trước** pipe).
+
+### 04_tempfile — File tạm an toàn: mkstemp + unlink ngay, tmpfile
+
+**Câu hỏi:** mkstemp tạo file với quyền gì? Sau unlink, access() thấy file không, còn read qua fd thì sao? st_nlink trước và sau unlink?
+
+**Output mong đợi:**
+
+```text
+ten file: /tmp/alp_temp.<6 ky tu>, con XXXXXX ? khong, do dai = 20
+quyen = 600, st_nlink = 1
+sau unlink: access() = -1 (No such file or directory), st_nlink = 0
+doc lai qua fd: length = 12, data = "du lieu tam"
+tmpfile: doc lai 42 tmpfile, fileno(f) > 2 ? 1
+```
+
+**Giải thích:**
+
+- Mẫu tên phải kết thúc bằng đúng 6 chữ `X`; mkstemp sửa thẳng vào mảng (nên phải là mảng `char[]`, không phải string literal).
+- Quyền 0600: chỉ chủ sở hữu đọc/ghi được.
+- `unlink` xoá tên (link count về 0) nhưng inode còn sống vì fd vẫn mở → vẫn đọc ghi được. Khi đóng fd hoặc process chết thì file mới thật sự bị xoá, nên không để lại rác trong /tmp.
+- Listing 2.5 ghi độ dài trước rồi mới ghi dữ liệu, `lseek` về đầu rồi đọc lại.
+- `tmpfile()` trả về `FILE*` đã được unlink sẵn.
+
+**Liên hệ đề thi:** Ba yêu cầu với file tạm: tên không trùng giữa các instance, quyền không cho người khác sửa, tên không đoán trước được (tránh race giữa lúc kiểm tra và lúc mở). Dùng mkstemp (fd, có thể đưa tên cho chương trình khác) hoặc tmpfile (FILE*, chỉ dùng nội bộ). Không dùng mktemp, tmpnam, tempnam.
+
+### 05_errno_assert — errno, strerror, perror và assert ⚠️ cố ý chết vì SIGABRT
+
+**Câu hỏi:** errno của từng lời gọi lỗi là gì? Sau một lời gọi THÀNH CÔNG, errno có về 0 không? Với NDEBUG, assert(do_something() == 0) gọi hàm mấy lần? Dòng cuối kết thúc chương trình thế nào?
+
+**Output mong đợi:**
+
+```text
+open("/khong/ton/tai")       -> -1, errno =  2 ENOENT  (No such file or directory)
+getpid() (thanh cong)        ->  1, errno =  2 ENOENT  (No such file or directory)
+open("/tmp", O_WRONLY)       -> -1, errno = 21 EISDIR  (Is a directory)
+close(12345)                 -> -1, errno =  9 EBADF   (Bad file descriptor)
+mkdir("/tmp")                -> -1, errno = 17 EEXIST  (File exists)
+lseek(0, 0, 12345)           -> -1, errno = 22 EINVAL  (Invalid argument)
+open("/etc/shadow")          -> -1, errno = 13 EACCES  (Permission denied)
+perror in ra stderr: No such file or directory
+NDEBUG: calls = 0
+khong NDEBUG: calls = 3
+05_errno_assert: 10-alp/05_errno_assert.c:64: main: Assertion `pointer != NULL' failed.
+(shell báo Aborted (core dumped), exit code 134 = 128 + 6)
+```
+
+**Giải thích:**
+
+- System call lỗi trả về -1 và đặt errno. Lời gọi thành công **không** đặt lại errno → getpid xong errno vẫn là ENOENT từ lần trước.
+- Phải lưu errno ngay (`int saved = errno;`), vì printf hay hàm khác có thể đổi nó.
+- `perror("msg")` in `msg: <strerror(errno)>` ra stderr.
+- Với NDEBUG, assert bị preprocessor xoá → `do_something()` không được gọi lần nào. Đó là lý do biểu thức trong assert không được có tác dụng phụ (sách: gán kết quả vào biến trước rồi `assert(status == 0)`).
+- assert sai: in tên chương trình, file, dòng, hàm, biểu thức, rồi `abort()` → SIGABRT.
+
+**Liên hệ đề thi:** Mã lỗi hay gặp: EPERM, ENOENT, EINTR (bị signal ngắt → gọi lại), EBADF, EACCES, EEXIST, ENOTDIR, EISDIR, EINVAL, ENOMEM, EAGAIN. Dùng assert cho kiểm tra **nội bộ** (con trỏ NULL, điều kiện tham số), không dùng để kiểm tra input của người dùng.
+
+### 06_dlopen — Nạp thư viện động lúc chạy: dlopen, dlsym, dlerror, dlclose
+
+**Câu hỏi:** Gọi cos qua con trỏ lấy từ dlsym được không? dlsym một tên không có, hoặc dlopen một thư viện không có thì nhận gì? dlerror() gọi hai lần liên tiếp trả về gì?
+
+**Output mong đợi:**
+
+```text
+cos(0) = 1.0, sqrt(2) = 1.4142
+dlsym ten khong co: (nil)
+dlerror() lan 1: /lib/x86_64-linux-gnu/libm.so.6: undefined symbol: khong_co_ham_nay
+dlerror() lan 2: (NULL)
+dlopen thu vien khong co: (nil), dlerror: libkhongco.so: cannot open shared object file: No such file or directory
+dlclose = 0
+```
+
+**Giải thích:**
+
+- dlsym trả về `void*`, ép sang kiểu con trỏ hàm phù hợp rồi gọi.
+- Lỗi được báo bằng NULL; chi tiết lấy qua `dlerror()`. Sau khi đọc, lỗi bị xoá nên lần gọi thứ hai trả về NULL.
+- dlopen tìm thư viện theo LD_LIBRARY_PATH, cache của ldconfig, /lib, /usr/lib.
+
+**Liên hệ đề thi:** Dùng cho plugin. `RTLD_LAZY` (giải quyết symbol khi gọi lần đầu) và `RTLD_NOW` (giải quyết hết ngay). Hàm trong thư viện C++ phải `extern "C"`. Link bằng `-ldl` (glibc 2.34 trở đi đã gộp vào libc). dlopen cùng một thư viện nhiều lần chỉ tăng bộ đếm tham chiếu.
+
+### 07_fork_exec — system, fork + exec, spawn, nice
+
+**Câu hỏi:** Dòng sau exec có in ra không? execvp một lệnh không tồn tại thì process con làm gì, cha thấy status gì? Biến HOME có trong chương trình chạy bằng execle không? nice(10) trong con làm priority của cha đổi không?
+
+**Output mong đợi:**
+
+```text
+1) system:
+  [sh] $0 = sh
+  system tra ve 0
+2) spawn("echo", ...) bang fork + execvp:
+  [echo] xin chao tu chuong trinh moi
+  [cha] con thoat binh thuong, exit code 0
+3) spawn lenh khong ton tai:
+  [con] execvp loi: No such file or directory
+  [cha] con bi signal 6 (Aborted)
+4) execl (duong dan day du) va dong sau exec:
+  [echo] chay bang execl
+  [cha] con thoat binh thuong, exit code 0
+5) execle voi moi truong tu chon:
+  [sh] GREETING=xin chao, HOME=(khong co)
+  [cha] con thoat binh thuong, exit code 0
+6) nice:
+  [con] nice: 0 -> 10
+  [cha] nice van la 0
+```
+
+**Giải thích:**
+
+- `system()` chạy lệnh qua `/bin/sh -c` → `$0` là `sh`.
+- exec thành công thì không bao giờ quay về; chỉ khi exec lỗi thì code phía sau mới chạy. Trong listing 3.4, con gọi `abort()` sau exec lỗi → cha thấy SIGABRT.
+- execle dùng đúng mảng môi trường được truyền vào: chỉ có GREETING, không có HOME.
+- nice là thuộc tính của từng process; con tăng niceness (giảm ưu tiên) không ảnh hưởng cha. Niceness từ -20 (ưu tiên cao nhất) tới 19; chỉ root mới giảm được.
+
+**Liên hệ đề thi:** Họ exec: `execl`, `execlp`, `execle`, `execv`, `execvp`, `execve` (system call thật). `p`: tìm trong PATH; `v`: argv là mảng; `l`: đối số liệt kê và kết thúc bằng `(char *)NULL`; `e`: truyền môi trường. Sách khuyên dùng fork + exec thay vì system vì system phụ thuộc shell, có lỗ hổng bảo mật và chậm.
+
+### 08_wait_status — wait/waitpid, các macro trạng thái, WNOHANG, zombie
+
+**Câu hỏi:** exit(300) cho WEXITSTATUS bao nhiêu? abort() và kill -9 thì WIFSIGNALED/WTERMSIG là gì? waitpid(..., WNOHANG) trả về gì khi con chưa xong? Con đã thoát nhưng chưa được wait thì trạng thái trong /proc là gì? wait() khi không còn con?
+
+**Output mong đợi:**
+
+```text
+con exit(300):         WIFEXITED   WEXITSTATUS = 44
+con exit(-1):          WIFEXITED   WEXITSTATUS = 255
+con abort():           WIFSIGNALED WTERMSIG = 6 (Aborted)
+con bi kill -9:        WIFSIGNALED WTERMSIG = 9 (Killed)
+WNOHANG khi con chua xong: waitpid = 0
+con da thoat, chua wait: trang thai trong /proc = Z
+WNOHANG lan 2: tra ve dung PID con ? 1
+con exit(7):           WIFEXITED   WEXITSTATUS = 7
+sau khi wait: /proc/<pid> = - (khong con)
+wait() khi khong con con: -1, errno = ECHILD
+```
+
+**Giải thích:**
+
+- Chỉ giữ 8 bit thấp: 300 → 44, -1 → 255.
+- Bị signal giết thì không có exit code; dùng `WTERMSIG` để biết signal nào.
+- `WNOHANG`: trả về 0 nếu chưa có con nào kết thúc, không chặn (dùng để kiểm tra định kỳ).
+- Con đã thoát mà cha chưa wait → **zombie** (`Z` trong ps/proc): chỉ còn giữ PID và trạng thái thoát. Sau khi wait thì entry biến mất hoàn toàn.
+- Không còn con nào → wait trả về -1, errno = ECHILD.
+
+**Liên hệ đề thi:** `wait` chặn tới khi có một con bất kỳ kết thúc; `waitpid(pid, &status, options)` chờ một con cụ thể (pid = -1 là bất kỳ); `wait3`/`wait4` trả thêm thông tin tài nguyên đã dùng. Cha chết trước thì con zombie được init nhận nuôi và dọn. Cách dọn tự động: handler SIGCHLD gọi wait (listing 3.7), hoặc gán SIGCHLD = SIG_IGN.
+
+### 09_thread_return — pthread: truyền dữ liệu, giá trị trả về, pthread_exit, detached ⚠️ không cố định
+
+**Câu hỏi:** Số nguyên tố thứ 1000 mà thread tính được là bao nhiêu? pthread_equal(self, main) trong thread con? Gọi pthread_join lên thread detached thì sao? Hai thread in ký tự dùng chung struct trên stack của main có an toàn không?
+
+**Output mong đợi:**
+
+```text
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxoooooooooooooooooooo     <- 30 x và 20 o, thứ tự xen kẽ có thể khác
+(30 x va 20 o, thu tu xen ke khong co dinh)
+so nguyen to thu 1000 = 7919
+trong thread con: pthread_equal(self, main) = 0
+pthread_exit((void*)7) -> join nhan 7
+pthread_join thread detached: 22 (EINVAL)
+```
+
+**Giải thích:**
+
+- Listing 4.2/4.3: mỗi thread nhận struct riêng qua `void*`. An toàn vì main join cả hai trước khi struct (trên stack của main) hết hạn. Nếu main return trước thì thread đọc vùng nhớ đã bị huỷ (lỗi sách nêu ở listing 4.2).
+- Listing 4.4: giá trị trả về ép thành `void*` và lấy lại qua tham số thứ hai của `pthread_join`.
+- `pthread_exit(v)` tương đương `return v` từ hàm thread.
+- So sánh thread ID bằng `pthread_equal`, không dùng `==` (pthread_t có thể là struct).
+- Thread detached không join được: glibc trả về EINVAL (POSIX coi đây là undefined behavior).
+
+**Liên hệ đề thi:** Biên dịch với `-pthread` (sách dùng `-lpthread`). Hàm pthread trả về **mã lỗi** chứ không đặt errno. Thread joinable mà không ai join thì sẽ thành "zombie thread" cho tới khi được join; thread không cần kết quả thì nên detach (`pthread_detach` hoặc thuộc tính `PTHREAD_CREATE_DETACHED`).
+
+### 10_thread_cancel — Huỷ thread: deferred, vùng không huỷ được, cleanup handler
+
+**Câu hỏi:** Thread A bị huỷ trong lúc sleep: cleanup handler có chạy không, join nhận được gì? Thread B tắt cancel trong lúc "chuyển tiền": bị huỷ ở đâu, dòng "chuyen xong" có in ra không? pthread_cleanup_pop(1) khi không bị huỷ thì sao?
+
+**Output mong đợi:**
+
+```text
+Thread A:
+  [cleanup] free buffer
+  join A: PTHREAD_CANCELED
+Thread B:
+  [B] bat dau chuyen tien (cancel bi tat)
+  [main] pthread_cancel(B) = 0
+  [B] chuyen xong
+  join B: PTHREAD_CANCELED
+Thread C:
+  [C] chay xong binh thuong, pop(1) van goi handler:
+  [cleanup] free buffer
+  join C: 42
+```
+
+**Giải thích:**
+
+- A là deferred cancelable (mặc định): bị huỷ tại `usleep` (cancellation point) → cleanup handler chạy, giải phóng buffer → join nhận `PTHREAD_CANCELED`.
+- B tắt cancel: yêu cầu huỷ bị **giữ lại**; B làm xong việc, bật lại cancel rồi bị huỷ tại `pthread_testcancel()` → không in "khong bao gio toi day". Đây là ý của listing 4.6 (chuyển tiền giữa hai tài khoản không được dừng giữa chừng).
+- `pthread_cleanup_pop(1)` gỡ handler và chạy nó; `pop(0)` chỉ gỡ mà không chạy. push/pop phải đi cặp trong cùng một khối (chúng là macro mở/đóng `{ }`).
+
+**Liên hệ đề thi:** Ba trạng thái: asynchronously cancelable (huỷ bất cứ lúc nào, nguy hiểm), synchronously/deferred cancelable (mặc định, huỷ tại cancellation point), uncancelable. Hàm: `pthread_cancel`, `pthread_setcanceltype`, `pthread_setcancelstate`, `pthread_testcancel`. Trong C++, sách khuyên ném exception để thoát thread, nhờ đó destructor của object local được gọi.
+
+### 11_tsd_mutex — Thread-specific data và các loại mutex, semaphore
+
+**Câu hỏi:** Mỗi thread đọc pthread_getspecific được giá trị của ai? Destructor của key chạy khi nào? Lock lần hai mutex error-checking trả về gì, mutex recursive thì sao? Thread khác unlock mutex error-checking? trylock khi mutex đang bị giữ? sem_trywait khi giá trị là 0?
+
+**Output mong đợi:**
+
+```text
+Thread-specific data:
+  thread1.log -> ghi "Thread starting."
+  [destructor] dong "thread1.log"
+  thread2.log -> ghi "Thread starting."
+  [destructor] dong "thread2.log"
+  thread3.log -> ghi "Thread starting."
+  [destructor] dong "thread3.log"
+  main: pthread_getspecific = NULL
+Mutex:
+  errorcheck lock lan 1: 0
+  errorcheck lock lan 2: EDEADLK
+  thread khac unlock errorcheck: EPERM
+  errorcheck unlock (chu so huu): 0
+  recursive lock, lock: 0 0; unlock x3: 0 0 EPERM
+  fast: trylock trong chinh thread dang giu: EBUSY
+  thread khac trylock mutex dang bi giu: EBUSY
+Semaphore:
+  khoi tao 2, sem_getvalue = 2
+  sau 2 lan sem_wait: sem_trywait = -1, errno = EAGAIN
+  sau sem_post: 1
+```
+
+**Giải thích:**
+
+- Listing 4.7: một key `thread_log_key`, mỗi thread gắn tên file log riêng. Hàm `write_to_thread_log` không cần tham số mà vẫn ghi đúng file của thread đang gọi. Main chưa set gì nên nhận NULL.
+- Destructor của key tự chạy khi thread kết thúc (với giá trị khác NULL), giống listing 4.7 đóng file log.
+- Error-checking: lock lại trong cùng thread → EDEADLK thay vì treo; unlock bởi thread không sở hữu → EPERM.
+- Recursive: lock 2 lần thì phải unlock 2 lần; unlock lần thứ 3 → EPERM.
+- trylock không bao giờ chặn: đang bị giữ (kể cả bởi chính mình) → EBUSY.
+- Semaphore đếm: hai lần wait đưa về 0; `sem_trywait` không chặn mà trả về -1, errno = EAGAIN (semaphore dùng errno, khác với mutex).
+
+**Liên hệ đề thi:** Ba loại mutex trong sách: fast (mặc định, lock lại thì deadlock), recursive, error-checking. `PTHREAD_MUTEX_INITIALIZER` khởi tạo tĩnh. Semaphore cho thread: `sem_init(&s, 0, giá trị)` (tham số 0 = chỉ dùng giữa các thread của một process), `sem_wait`, `sem_post`, `sem_trywait`, `sem_getvalue`, `sem_destroy`. Hàng đợi công việc (job queue) trong sách dùng mutex + semaphore đếm số job.
+
+### 12_sysv_shm_sem — System V shared memory và semaphore
+
+**Câu hỏi:** shm_nattch bằng mấy trước fork, trong lúc con còn sống, sau khi con thoát? Cha đọc được chuỗi con ghi vào vùng nhớ chung không? semop -1 với IPC_NOWAIT khi giá trị là 0? Con tăng semaphore với SEM_UNDO rồi thoát thì giá trị còn lại bao nhiêu?
+
+**Output mong đợi:**
+
+```text
+segment: size = 4096 (= getpagesize()), nattch = 1
+semop -1 IPC_NOWAIT khi = 0: -1, errno = EAGAIN
+  [con] da ghi, nattch = 2
+  [cha] doc duoc: "Hello, world (tu con)"
+sau khi con thoat: nattch = 1
+  [con] +3 voi SEM_UNDO, gia tri = 3
+con thoat, kernel hoan tac: gia tri = 0
+sau shmdt cua cha: nattch = 0
+sau IPC_RMID: shmctl IPC_STAT -> EINVAL/EIDRM (da xoa)
+```
+
+**Giải thích:**
+
+- Kích thước segment nên là bội số của page size (`getpagesize()`, thường 4096).
+- fork làm con kế thừa vùng đã attach → nattch = 2; process thoát thì tự detach.
+- Con ghi, cha đọc được ngay: cùng vùng nhớ vật lý, không có copy. Semaphore đảm bảo cha chỉ đọc sau khi con đã ghi.
+- `IPC_NOWAIT`: semop không chặn mà trả về EAGAIN.
+- `SEM_UNDO`: kernel ghi nhớ thay đổi và hoàn tác khi process kết thúc. Nhờ đó semaphore không bị kẹt nếu process chết giữa chừng.
+- Segment chỉ biến mất sau `IPC_RMID` (và khi nattch về 0).
+
+**Liên hệ đề thi:** Lệnh: `ipcs -m` (shm), `ipcs -s` (semaphore), `ipcrm`. Shared memory là IPC **nhanh nhất** vì không qua kernel khi đọc/ghi, nhưng phải tự đồng bộ. `shmget(key, size, IPC_CREAT | IPC_EXCL | quyền)`, `shmat(id, NULL, 0)`, `shmdt(addr)`, `shmctl(id, IPC_RMID, NULL)`. semop dùng mảng `struct sembuf {sem_num, sem_op, sem_flg}`; semctl cần tự khai báo `union semun`.
+
+### 13_mmap_shared_private — mmap: MAP_SHARED, MAP_PRIVATE, msync, chia sẻ qua fork
+
+**Câu hỏi:** Ghi vào vùng MAP_PRIVATE có làm đổi file không? Vùng MAP_SHARED thấy gì? Sau khi ghi qua MAP_SHARED, đọc file bằng pread thấy gì? Con tăng counter trong vùng MAP_SHARED|MAP_ANONYMOUS, cha thấy bao nhiêu, còn với MAP_PRIVATE?
+
+**Output mong đợi:**
+
+```text
+ban dau: shared = "ban goc", private = "ban goc"
+ghi qua MAP_PRIVATE: private = "sua qua PRIVATE", shared = "ban goc", file = "ban goc"
+msync = 0
+ghi qua MAP_SHARED: shared = "sua qua SHARED", file = "sua qua SHARED", private = "sua qua PRIVATE"
+sau khi con tang 1000 lan: MAP_SHARED = 1000, MAP_PRIVATE = 0
+```
+
+**Giải thích:**
+
+- MAP_PRIVATE là copy-on-write: lần ghi đầu tạo bản copy riêng của trang, file và các mapping khác không thấy.
+- MAP_SHARED ghi thẳng vào page cache của file → `pread` thấy ngay. `msync(MS_SYNC)` chờ ghi xuống đĩa.
+- Trang private đã được copy nên không còn thấy thay đổi của file.
+- Anonymous shared mapping được kế thừa qua fork và dùng chung → cha thấy 1000. Private mapping thì fork copy-on-write → cha vẫn 0.
+
+**Liên hệ đề thi:** `mmap(addr, length, prot, flags, fd, offset)`; prot: `PROT_READ`/`PROT_WRITE`/`PROT_EXEC`; flags: `MAP_SHARED`/`MAP_PRIVATE` (chọn một), `MAP_FIXED`, `MAP_ANONYMOUS`. Lỗi trả về `MAP_FAILED`, không phải NULL. File phải đủ dài trước khi map (sách dùng lseek + write một byte ở cuối). Truy cập vượt cuối file → SIGBUS. Các flag của msync: `MS_ASYNC`, `MS_SYNC`, `MS_INVALIDATE`.
+
+### 14_popen_fdopen — Pipe với FILE*: fdopen, dup2 + exec sort, popen/pclose
+
+**Câu hỏi:** Các dòng gửi cho sort hiện ra lúc nào và theo thứ tự nào? popen("...; exit 3", "r") thì pclose trả về status gì? Process con đọc pipe bằng fgets dừng khi nào?
+
+**Output mong đợi:**
+
+```text
+1) pipe + fdopen:
+  [con] nhan: Hello, world #1
+  [con] nhan: Hello, world #2
+  [con] nhan: Hello, world #3
+  [con] fgets tra ve NULL: EOF vi cha da dong dau ghi
+2) dup2 + execlp("sort"):
+  [cha] da ghi xong 5 dong, sort chua in gi vi chua thay EOF
+  Hello, world.
+  My dog has fleas.
+  One fish, two fish.
+  This is a test.
+  This program is great.
+3) popen("sort", "w"):
+  cam
+  chuoi
+  tao
+  pclose = 0 (WEXITSTATUS 0)
+4) popen(..., "r"):
+  doc duoc "42", pclose -> WEXITSTATUS 3
+```
+
+**Giải thích:**
+
+- fgets trả về NULL khi mọi đầu ghi đã đóng (con đã đóng `fds[1]` của mình, cha thì fclose).
+- sort phải đọc hết input (tới EOF) mới in được → chỉ in sau khi cha `close(fds[1])`.
+- popen "w": ta ghi vào stdin của lệnh; `pclose` đóng pipe (gửi EOF), chờ con và trả về wait status.
+- popen "r": đọc stdout của lệnh; exit code của lệnh lấy từ `WEXITSTATUS(pclose(...))`.
+
+**Liên hệ đề thi:** Pipe một chiều, dữ liệu theo thứ tự FIFO, chỉ dùng giữa các process có quan hệ họ hàng (FIFO có tên `mkfifo` thì không cần). Ghi vào pipe không còn đầu đọc → SIGPIPE/EPIPE. Đọc pipe rỗng khi đầu ghi vẫn mở → chặn. popen có cùng rủi ro bảo mật với system vì chạy qua shell.
+
+### 15_sockets — socketpair, socket Internet qua 127.0.0.1, byte order
+
+**Câu hỏi:** socketpair cho giao tiếp một chiều hay hai chiều? htons(80) trên máy x86 bằng bao nhiêu (hex)? Server bind port 0 thì được port nào? read trả về 0 khi nào?
+
+**Output mong đợi:**
+
+```text
+htons(80) = 0x5000, htonl(0x7f000001) = 0x0100007f, ntohs(htons(8080)) = 8080
+  [con] nhan "ping", tra loi pong
+  [cha] nhan "pong" qua cung socket (hai chieu)
+  [cha] read sau khi con dong socket = 0 (EOF)
+server lang nghe tai 127.0.0.1, port > 1023 ? 1
+  [server] accept tra ve socket moi (khac socket lang nghe ? 1), nhan: GET /
+  [client] nhan: HTTP/1.0 200 OK
+```
+
+**Giải thích:**
+
+- x86 là little-endian, network byte order là big-endian → htons đảo hai byte: 80 = 0x0050 → 0x5000.
+- socketpair là hai chiều: cùng một fd vừa ghi vừa đọc (khác pipe).
+- Bên kia đóng kết nối → read trả về 0 (EOF).
+- Port 0 → kernel cấp một port tạm (ephemeral) còn trống; đọc lại bằng `getsockname`.
+- `accept` trả về một socket **mới** cho kết nối này; socket gốc tiếp tục lắng nghe client khác.
+
+**Liên hệ đề thi:** Ba tham số của socket: namespace (`PF_LOCAL`/`PF_UNIX`, `PF_INET`), style (`SOCK_STREAM`: kết nối, đúng thứ tự, tin cậy; `SOCK_DGRAM`: gói tin, có thể mất/đảo thứ tự), protocol (0 = mặc định). Local socket dùng đường dẫn file (`sockaddr_un.sun_path`) và cần `unlink` sau khi dùng. Port dưới 1024 chỉ root mới bind được. Sách dùng `gethostbyname` để phân giải tên (nay nên dùng `getaddrinfo`).

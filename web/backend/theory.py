@@ -36,7 +36,9 @@ def parse_quiz(stem, text):
 
 def parse_theory():
     topics = []
-    for path in sorted((ROOT / "09-theory").glob("*.md")):
+    # private/: ghi chú riêng (vd. từ khóa học Udemy), không đưa lên git
+    theory_dir = ROOT / "09-theory"
+    for path in sorted(theory_dir.glob("*.md")) + sorted(theory_dir.glob("private/*.md")):
         text = path.read_text(encoding="utf-8")
         m = re.search(r"^# (.+)$", text, re.M)
         theory, _, quiz = text.partition("\n## Trắc nghiệm")

@@ -30,8 +30,8 @@ npm start       # tương đương, nếu đã cài Node/npm
 ```
 Các lệnh npm khác: `npm run build` (= make), `npm run clean`, `npm run lab 03-process/01_fork_count` (= make run T=...).
 - **Bài lab**: đoán output → build & chạy ngay trong trình duyệt (terminal thật: Ctrl+C/Ctrl+Z/stdin/kill/ps) → so sánh dự đoán với output thật → xem đáp án và tự chấm.
-- **Lý thuyết**: tóm tắt theo 9 chủ đề, đọc từ `09-theory/*.md`.
-- **Trắc nghiệm**: 167 câu có giải thích; chọn chủ đề, số câu, chế độ luyện tập/thi thử, làm lại câu sai.
+- **Lý thuyết**: tóm tắt theo 17 chủ đề, đọc từ `09-theory/*.md`.
+- **Trắc nghiệm**: 411 câu có giải thích; chọn chủ đề, số câu, chế độ luyện tập/thi thử, làm lại câu sai.
 - **Terminal 2** (góc dưới phải): bash thật cho các bài cần 2 terminal.
 - Chỉ cần Python 3 có sẵn trên Ubuntu, không cài thêm gì. Tiến độ lưu trong trình duyệt.
 - Cấu trúc frontend/backend và API: xem `web/README.md`.
@@ -42,6 +42,8 @@ Các lệnh npm khác: `npm run build` (= make), `npm run clean`, `npm run lab 0
 - `07-kernel-module` **không** nằm trong `make` ở gốc — xem `07-kernel-module/README.md`.
 - `08-shell/drills.md`: 20 bài lệnh, không cần biên dịch.
 - `04-signal/04_alarm_pause` cố ý chết vì SIGALRM ở cuối ("Alarm clock").
+- `10-alp/05_errno_assert` cố ý chết vì assert sai ở cuối (SIGABRT, "Aborted").
+- Ghi chú riêng (ví dụ chép từ khoá học Udemy): đặt vào `09-theory/private/*.md` cùng định dạng; thư mục này nằm trong `.gitignore`, chỉ hiện trên máy mình.
 - Thêm câu hỏi trắc nghiệm: viết vào phần `## Trắc nghiệm` của file trong `09-theory/` theo mẫu `### câu hỏi` / `- [ ]` sai / `- [x]` đúng / `> giải thích`.
 
 ## Lịch học đề xuất
@@ -89,6 +91,21 @@ Các lệnh npm khác: `npm run build` (= make), `npm run clean`, `npm run lab 0
 - `15_sizeof_class.cpp` — sizeof của class: class rỗng, vptr, padding
 - `16_templates.cpp` — Template: suy luận kiểu, specialization, overload
 
+Theo khoá Udemy *Beginning C++ Programming* (section 6–23):
+- `17_types_conversion.cpp` — Biến, kiểu cơ bản, chia nguyên và chuyển kiểu
+- `18_operators.cpp` — Toán tử: ++/--, gán kép, so sánh, logic và short-circuit
+- `19_control_flow.cpp` — range-for copy/ref, do-while, continue/break, dangling else, ?:
+- `20_strings.cpp` — C-style string và std::string
+- `21_functions.cpp` — Tham trị/tham chiếu/con trỏ, tham số mặc định, overload, static local, đệ quy
+- `22_pointers_refs.cpp` — Con trỏ và tham chiếu
+- `23_class_basics.cpp` — Constructor, delegating constructor, copy constructor, const, static, shallow/deep copy
+- `24_operator_overloading.cpp` — Operator overloading
+- `25_inheritance.cpp` — Kế thừa: constructor lớp cha, redefine và virtual, abstract class
+- `26_exceptions.cpp` — Exception: thứ tự catch, catch(...), rethrow, exception tự định nghĩa
+- `27_streams.cpp` — iomanip, manipulator dính/không dính, stringstream, trạng thái lỗi
+- `28_stl_algorithms.cpp` — Iterator, thuật toán, set/map, stack/queue/priority_queue
+- `29_lambda_enum.cpp` — Lambda và enum / enum class
+
 ### 03-process
 - `01_fork_count.c` — fork() ba lần
 - `02_fork_if.c` — fork() trong if và trong biểu thức logic
@@ -133,5 +150,24 @@ Các lệnh npm khác: `npm run build` (= make), `npm run clean`, `npm run lab 0
 ### 08-shell
 - `drills.md` — 20 bài tập lệnh
 
+### 10-alp (sách *Advanced Linux Programming*, chương 1–5)
+- `01_getopt_long.c` — getopt_long: tùy chọn ngắn/dài, optarg, optind, `--`, hoán vị argv (2.1.3)
+- `02_env_exit_code.c` — getenv/setenv/environ, exit code và 128 + signal (2.1.5, 2.1.6)
+- `03_stdio_buffer.c` — Buffer full/line/none, stderr không buffer, exit và _exit (2.1.4)
+- `04_tempfile.c` — mkstemp + unlink, tmpfile (2.1.7)
+- `05_errno_assert.c` — errno, strerror, perror, assert và NDEBUG (2.2)
+- `06_dlopen.c` — dlopen, dlsym, dlerror (2.3.6)
+- `07_fork_exec.c` — system, fork + họ exec, spawn, nice (3.2)
+- `08_wait_status.c` — wait/waitpid, WIFEXITED/WIFSIGNALED, WNOHANG, zombie (3.4)
+- `09_thread_return.c` — Truyền dữ liệu, join lấy giá trị trả về, pthread_exit, detached (4.1)
+- `10_thread_cancel.c` — Huỷ thread, vùng không huỷ được, cleanup handler (4.2, 4.3)
+- `11_tsd_mutex.c` — Thread-specific data, mutex fast/recursive/error-checking, trylock, semaphore (4.3, 4.4)
+- `12_sysv_shm_sem.c` — System V shared memory và semaphore, SEM_UNDO (5.1, 5.2)
+- `13_mmap_shared_private.c` — mmap MAP_SHARED/MAP_PRIVATE, msync (5.3)
+- `14_popen_fdopen.c` — pipe + fdopen, dup2 + exec sort, popen/pclose (5.4)
+- `15_sockets.c` — socketpair, socket Internet qua 127.0.0.1, byte order (5.5)
+
 ### 09-theory (lý thuyết + trắc nghiệm)
 - `01-c.md` · `02-cpp-oop.md` · `03-cpp-stl-modern.md` · `04-process-memory.md` · `05-signal-ipc.md` · `06-thread-sync.md` · `07-linux-shell-fs.md` · `08-build-debug.md` · `09-kernel-embedded.md`
+- Theo khoá Udemy: `10-cpp-basics.md` · `11-cpp-functions-pointers.md` · `12-cpp-classes-operators.md` · `13-cpp-exceptions-io-stl.md`
+- Theo sách Advanced Linux Programming: `14-alp-ch1-2-gnu-tools.md` · `15-alp-ch3-processes.md` · `16-alp-ch4-threads.md` · `17-alp-ch5-ipc.md`

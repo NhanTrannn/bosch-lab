@@ -10,7 +10,7 @@ CXX      := g++
 CFLAGS   := -Wall -Wextra -g -std=c11
 CXXFLAGS := -Wall -Wextra -g -std=c++17
 
-DIRS     := 01-c 02-cpp 03-process 04-signal 05-thread 06-ipc
+DIRS     := 01-c 02-cpp 03-process 04-signal 05-thread 06-ipc 10-alp
 HELPERS  := 01-c/04_helper.c
 C_SRCS   := $(filter-out $(HELPERS),$(foreach d,$(DIRS),$(wildcard $(d)/*.c)))
 CPP_SRCS := $(foreach d,$(DIRS),$(wildcard $(d)/*.cpp))
@@ -36,6 +36,11 @@ build/05-thread/%: 05-thread/%.cpp
 build/06-ipc/%: 06-ipc/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $< -o $@ -lrt
+
+# Bài theo sách Advanced Linux Programming: thread, dlopen, shm
+build/10-alp/%: 10-alp/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -pthread $< -o $@ -ldl -lrt
 
 build/%: %.c
 	@mkdir -p $(dir $@)

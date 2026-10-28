@@ -28,4 +28,4 @@ const labState = id => (store[id] ||= { pred: "", mark: null, revealed: false })
 let ROOT = "", LABS = [], current = null, filter = "all", fileTab = 0, ignoreNums = false;
 let mode = "lab", TOPICS = [], currentTopic = null, quiz = null;
 const setHash = hsh => { try { history.replaceState(null, "", "#" + hsh); } catch {} };
-const DIR_NAMES = { "01-c": "C", "02-cpp": "C++", "03-process": "Process", "04-signal": "Signal", "05-thread": "Thread", "06-ipc": "IPC", "07-kernel-module": "Kernel module", "08-shell": "Shell" };
+const DIR_NAMES = { "01-c": "C", "02-cpp": "C++", "03-process": "Process", "04-signal": "Signal", "05-thread": "Thread", "06-ipc": "IPC", "07-kernel-module": "Kernel module", "08-shell": "Shell", "10-alp": "Advanced Linux Programming ch.1–5" };

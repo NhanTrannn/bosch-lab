@@ -7,7 +7,7 @@ function counts() {
   const st = id => store[id] || {};
   return { total: ids.length, done: ids.filter(id => st(id).mark).length, right: ids.filter(id => st(id).mark === "right").length, wrong: ids.filter(id => st(id).mark === "wrong").length };
 }
-const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140 };
+const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140, "10-alp": 95 };
 const TOPIC_HUES = [215, 265, 300, 170, 35, 345, 140, 195, 20];
 const topicHue = t => TOPIC_HUES[Math.max(0, TOPICS.indexOf(t)) % TOPIC_HUES.length];
 const hueStyle = hue => `--h:${hue}`;

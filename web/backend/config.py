@@ -6,7 +6,7 @@ BACKEND = Path(__file__).resolve().parent
 FRONTEND = BACKEND.parent / "frontend"
 
 # Giống Makefile ở gốc
-DIRS = ["01-c", "02-cpp", "03-process", "04-signal", "05-thread", "06-ipc"]
+DIRS = ["01-c", "02-cpp", "03-process", "04-signal", "05-thread", "06-ipc", "10-alp"]
 HELPERS = {"01-c/04_helper.c"}
 EXTRA_FILES = {"01-c/04_static_extern": ["01-c/04_helper.c"]}
 READONLY = {
