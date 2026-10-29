@@ -25,6 +25,7 @@ THEORY_GROUPS = [
     ("Advanced Linux (ALP)", ["14-alp-ch1-2-gnu-tools", "15-alp-ch3-processes", "16-alp-ch4-threads", "17-alp-ch5-ipc"]),
     ("Build, debug & kernel", ["08-build-debug", "09-kernel-embedded"]),
     ("Design patterns", ["21-design-patterns"]),
+    ("Tricky questions", ["22-tricky-questions"]),
 ]
 OTHER_GROUP = "Personal notes"
 SHELL_ARGV = ["bash", "--norc", "--noprofile", "--noediting", "-i"]

@@ -28,8 +28,8 @@ npm start       # the same, if Node/npm is installed
 ```
 Other npm commands: `npm run build` (= make), `npm run clean`, `npm run lab 03-process/01_fork_count` (= make run T=...).
 - **Labs**: pick a topic (labs are grouped like the theory and quiz pages), then in each lab predict the output → build & run it right in the browser (a real terminal: Ctrl+C/Ctrl+Z/stdin/kill/ps) → compare your prediction with the real output → read the answer and self-grade.
-- **Theory**: summaries in 18 topics, read from `09-theory/*.md`.
-- **Quiz**: 452 questions with explanations; click a topic to answer all of its questions, mix all topics, or review the ones you got wrong. A 20-question mock exam is on the Overview page.
+- **Theory**: summaries in 19 topics (including a "Tricky questions" trap list), read from `09-theory/*.md`.
+- **Quiz**: 529 questions with explanations; click a topic to answer all of its questions, mix all topics, or review the ones you got wrong. A 20-question mock exam is on the Overview page.
 - **Terminal 2** (bottom right): a real bash for labs that need 2 terminals.
 - Only needs the Python 3 that ships with Ubuntu; nothing else to install. Progress is stored in your browser.
 - Frontend/backend layout and API: see `web/README.md`.
