@@ -52,7 +52,7 @@ function showHome() {
     const done = prog.filter(l => (store[l.id] || {}).mark).length, wrongN = prog.filter(l => (store[l.id] || {}).mark === "wrong").length;
     return h("div", { class: "card tile", style: hueStyle(HUE[dir] ?? 245) },
       h("div", { class: "eyebrow" }, dir),
-      h("div", { class: "t" }, DIR_NAMES[dir] || dir),
+      h("div", { class: "t", style: "cursor:pointer", title: "All labs of this topic", onclick: () => showLabTopic(labTopics().find(t => t.dir === dir)?.id || dir) }, DIR_NAMES[dir] || dir),
       prog.length ? h("div", { class: "bar" }, h("div", { style: `width:${100 * done / prog.length}%` })) : null,
       h("div", { class: "muted" }, prog.length ? `${done}/${prog.length} labs graded` + (wrongN ? ` · ${wrongN} guessed wrong` : "") : "reading / command practice"),
       h("div", { class: "acts" }, h("button", { class: "small", onclick: () => go((prog.find(l => !(store[l.id] || {}).mark) || labs[0]).id) }, prog.length ? "Continue" : "Open")));

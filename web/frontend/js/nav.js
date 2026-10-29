@@ -7,7 +7,7 @@ function counts() {
   const st = id => store[id] || {};
   return { total: ids.length, done: ids.filter(id => st(id).mark).length, right: ids.filter(id => st(id).mark === "right").length, wrong: ids.filter(id => st(id).mark === "wrong").length };
 }
-const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140, "10-alp": 95 };
+const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140, "10-alp": 95, "11-design-patterns": 300 };
 // Topics come from the server already sorted by group (see THEORY_GROUPS in web/backend/config.py)
 const GROUP_HUES = { "C": 215, "C++": 265, "Linux": 170, "Advanced Linux (ALP)": 95, "Build, debug & kernel": 20 };
 const topicHue = t => GROUP_HUES[t.group] ?? 300;
@@ -51,7 +51,7 @@ function renderNav() {
 }
 function switchMode(k) {
   if (k === "home") showHome();
-  else if (k === "lab") go(current?.id || LABS[0].id);
+  else if (k === "lab") showLabIndex();
   else if (k === "theory") showTheoryIndex();
   else showQuiz();
 }
@@ -82,20 +82,32 @@ function renderLabNav() {
     h("button", { class: "small" + (filter === k ? " on" : ""), onclick: () => { filter = k; renderNav(); } }, v)));
   const nav = $("#nav");
   nav.replaceChildren();
-  const groups = {};
-  for (const lab of LABS) {
-    const s = store[lab.id] || {};
-    if (filter === "todo" && (s.mark || lab.kind !== "program")) continue;
-    if (filter === "wrong" && s.mark !== "wrong") continue;
-    (groups[lab.dir] ||= []).push(lab);
-  }
-  for (const [dir, labs] of Object.entries(groups)) {
-    nav.append(h("div", { class: "group", style: hueStyle(HUE[dir] ?? 245) }, h("h2", {}, h("span", { class: "sw" }), `${dir} · ${DIR_NAMES[dir] || ""}`),
-      labs.map(lab => {
+  // On the index page: one row per topic. Inside a topic or a lab: that topic's labs only.
+  const keep = l => {
+    const s = store[l.id] || {};
+    return filter === "all" || (filter === "todo" ? !s.mark && l.kind === "program" : s.mark === "wrong");
+  };
+  const topic = labTopic && labTopicById(labTopic);
+  if (!topic) {
+    for (const g of labGroups())
+      nav.append(h("div", { class: "group", style: hueStyle(HUE[g.topics[0].dir] ?? 245) }, h("h2", {}, h("span", { class: "sw" }), g.name),
+        g.topics.map(t => {
+          const st = labStats(t.labs), shown = t.labs.filter(keep);
+          if (!shown.length) return null;
+          return h("div", { class: "item", style: hueStyle(HUE[t.dir] ?? 245), onclick: () => showLabTopic(t.id) },
+            h("span", { class: "dot " + (st.wrong ? "wrong" : st.prog && st.done === st.prog ? "right" : st.done ? "pred" : "") }),
+            h("span", { class: "nm" }, t.title, h("small", {}, filter === "all" ? `${t.labs.length} labs · ${st.done}/${st.prog} graded` : `${shown.length} ${filter === "todo" ? "to do" : "wrong"}`),
+              h("div", { class: "minibar" }, h("div", { style: `width:${st.prog ? 100 * st.done / st.prog : 0}%` }))));
+        })));
+  } else {
+    nav.append(h("div", { class: "item", onclick: showLabIndex }, h("span", { class: "nm" }, "← All lab topics")));
+    nav.append(h("div", { class: "group", style: hueStyle(HUE[topic.dir] ?? 245) },
+      h("h2", { style: "cursor:pointer", onclick: () => showLabTopic(topic.id) }, h("span", { class: "sw" }), topic.title),
+      topic.labs.filter(keep).map(lab => {
         const s = store[lab.id] || {};
         const dot = s.mark || (s.pred?.trim() ? "pred" : "");
         const running = RUNS[lab.id] && !RUNS[lab.id].done;
-        return h("div", { class: "item" + (current?.id === lab.id ? " active" : ""), onclick: () => go(lab.id) },
+        return h("div", { class: "item" + (current?.id === lab.id && location.hash.startsWith("#lab/") ? " active" : ""), onclick: () => go(lab.id) },
           h("span", { class: "dot " + dot }),
           h("span", { class: "nm" }, lab.name, h("small", {}, lab.title)),
           running ? h("span", { class: "run-badge", title: "running" }, "●") : null);

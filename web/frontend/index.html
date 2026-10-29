@@ -8,12 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="/css/style.css">
+<script>try { const t = localStorage.getItem("bosch-lab:theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
 <div class="app">
   <aside>
     <header>
-      <div class="brand"><div class="logo">bl</div><div><b>bosch-lab</b><small id="brandSub">C++ &amp; Linux System prep</small></div></div>
+      <div class="brand"><div class="logo">bl</div><div><b>bosch-lab</b><small id="brandSub">C++ &amp; Linux System prep</small></div><button class="theme-btn" id="themeBtn" type="button"></button></div>
       <div class="modes" id="modes"></div>
       <div class="progress"><div id="bar"></div></div>
       <div class="stats" id="stats"></div>
@@ -35,6 +36,7 @@
 <script src="/js/nav.js"></script>
 <script src="/js/home.js"></script>
 <script src="/js/lab.js"></script>
+<script src="/js/labindex.js"></script>
 <script src="/js/theory.js"></script>
 <script src="/js/quiz.js"></script>
 <script src="/js/main.js"></script>

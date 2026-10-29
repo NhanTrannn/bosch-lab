@@ -35,6 +35,7 @@ function go(id) {
   if (current?.id !== id) fileTab = 0;
   current = LABS.find(l => l.id === id) || LABS[0];
   mode = "lab";
+  if (!labTopicById(labTopic)?.labs.includes(current)) labTopic = labTopicOf(current)?.id || null;
   setHash("lab/" + current.id);
   renderNav();
   renderLab();
@@ -155,7 +156,7 @@ function renderLab() {
     h("button", { disabled: idx >= LABS.length - 1, onclick: () => go(LABS[idx + 1].id) }, "Next lab →"));
 
   main.replaceChildren(h("div", { class: "page", style: hueStyle(HUE[lab.dir] ?? 245) },
-    h("div", { class: "eyebrow" }, `${lab.dir} · ${DIR_NAMES[lab.dir] || ""}`),
+    h("div", { class: "eyebrow" }, (t => t ? [h("a", { href: "#labs/" + t.id, title: "All labs of this topic" }, `${t.group} · ${t.title}`), ` · lab ${t.labs.indexOf(lab) + 1}/${t.labs.length} · ${lab.dir}`] : `${lab.dir} · ${DIR_NAMES[lab.dir] || ""}`)(labTopicById(labTopic))),
     h("div", { class: "title-row" }, h("h2", {}, lab.title), h("span", { class: "muted" }, lab.id)),
     chips,
     h("div", { class: "grid" },

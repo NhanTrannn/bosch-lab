@@ -10,7 +10,7 @@ CXX      := g++
 CFLAGS   := -Wall -Wextra -g -std=c11
 CXXFLAGS := -Wall -Wextra -g -std=c++17
 
-DIRS     := 01-c 02-cpp 03-process 04-signal 05-thread 06-ipc 10-alp
+DIRS     := 01-c 02-cpp 03-process 04-signal 05-thread 06-ipc 10-alp 11-design-patterns
 HELPERS  := 01-c/04_helper.c
 C_SRCS   := $(filter-out $(HELPERS),$(foreach d,$(DIRS),$(wildcard $(d)/*.c)))
 CPP_SRCS := $(foreach d,$(DIRS),$(wildcard $(d)/*.cpp))
@@ -41,6 +41,11 @@ build/06-ipc/%: 06-ipc/%.c
 build/10-alp/%: 10-alp/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -pthread $< -o $@ -ldl -lrt
+
+# Design pattern labs: the singleton lab starts threads
+build/11-design-patterns/%: 11-design-patterns/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -pthread $< -o $@
 
 build/%: %.c
 	@mkdir -p $(dir $@)

@@ -6,7 +6,7 @@ BACKEND = Path(__file__).resolve().parent
 FRONTEND = BACKEND.parent / "frontend"
 
 # Same as the top-level Makefile
-DIRS = ["01-c", "02-cpp", "03-process", "04-signal", "05-thread", "06-ipc", "10-alp"]
+DIRS = ["01-c", "02-cpp", "03-process", "04-signal", "05-thread", "06-ipc", "10-alp", "11-design-patterns"]
 HELPERS = {"01-c/04_helper.c"}
 EXTRA_FILES = {"01-c/04_static_extern": ["01-c/04_helper.c"]}
 READONLY = {
@@ -24,6 +24,7 @@ THEORY_GROUPS = [
     ("Linux", ["04-process-memory", "05-signal-ipc", "06-thread-sync", "07-linux-shell-fs"]),
     ("Advanced Linux (ALP)", ["14-alp-ch1-2-gnu-tools", "15-alp-ch3-processes", "16-alp-ch4-threads", "17-alp-ch5-ipc"]),
     ("Build, debug & kernel", ["08-build-debug", "09-kernel-embedded"]),
+    ("Design patterns", ["21-design-patterns"]),
 ]
 OTHER_GROUP = "Personal notes"
 SHELL_ARGV = ["bash", "--norc", "--noprofile", "--noediting", "-i"]

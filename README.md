@@ -27,9 +27,9 @@ make web        # then open http://localhost:8000
 npm start       # the same, if Node/npm is installed
 ```
 Other npm commands: `npm run build` (= make), `npm run clean`, `npm run lab 03-process/01_fork_count` (= make run T=...).
-- **Labs**: predict the output → build & run it right in the browser (a real terminal: Ctrl+C/Ctrl+Z/stdin/kill/ps) → compare your prediction with the real output → read the answer and self-grade.
-- **Theory**: summaries in 17 topics, read from `09-theory/*.md`.
-- **Quiz**: 411 questions with explanations; click a topic to answer all of its questions, mix all topics, or review the ones you got wrong. A 20-question mock exam is on the Overview page.
+- **Labs**: pick a topic (labs are grouped like the theory and quiz pages), then in each lab predict the output → build & run it right in the browser (a real terminal: Ctrl+C/Ctrl+Z/stdin/kill/ps) → compare your prediction with the real output → read the answer and self-grade.
+- **Theory**: summaries in 18 topics, read from `09-theory/*.md`.
+- **Quiz**: 452 questions with explanations; click a topic to answer all of its questions, mix all topics, or review the ones you got wrong. A 20-question mock exam is on the Overview page.
 - **Terminal 2** (bottom right): a real bash for labs that need 2 terminals.
 - Only needs the Python 3 that ships with Ubuntu; nothing else to install. Progress is stored in your browser.
 - Frontend/backend layout and API: see `web/README.md`.
@@ -166,7 +166,22 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 ### 08-shell
 - `drills.md` — 20 shell command drills
 
+### 11-design-patterns (following the tutorialspoint Design Patterns tutorial)
+- `01_singleton.cpp` — Singleton: lazy Meyers singleton, deleted copy, thread-safe initialization
+- `02_factory.cpp` — Factory, Factory Method and Abstract Factory
+- `03_builder_prototype.cpp` — Builder and Prototype
+- `04_adapter_bridge.cpp` — Adapter and Bridge
+- `05_composite_decorator.cpp` — Composite and Decorator
+- `06_facade_proxy_flyweight.cpp` — Facade, Proxy and Flyweight
+- `07_observer.cpp` — Observer (publish/subscribe), with detaching and weak_ptr observers
+- `08_strategy_state_template.cpp` — Strategy, State and Template Method
+- `09_command_memento_chain.cpp` — Command (with undo), Memento and Chain of Responsibility
+- `10_iterator_visitor_mediator.cpp` — Iterator, Visitor and Mediator
+- `11_interpreter_filter_null.cpp` — Interpreter, Filter (Criteria) and Null Object
+- `12_j2ee_patterns.cpp` — Enterprise (J2EE) patterns in C++: MVC, DAO + Transfer Object, Business Delegate + Service Locator
+
 ### 09-theory (theory + quizzes)
 - `01-c.md` · `02-cpp-oop.md` · `03-cpp-stl-modern.md` · `04-process-memory.md` · `05-signal-ipc.md` · `06-thread-sync.md` · `07-linux-shell-fs.md` · `08-build-debug.md` · `09-kernel-embedded.md`
 - Following the Udemy course: `10-cpp-basics.md` · `11-cpp-functions-pointers.md` · `12-cpp-classes-operators.md` · `13-cpp-exceptions-io-stl.md`
 - Following the book Advanced Linux Programming: `14-alp-ch1-2-gnu-tools.md` · `15-alp-ch3-processes.md` · `16-alp-ch4-threads.md` · `17-alp-ch5-ipc.md`
+- Design patterns: `21-design-patterns.md`

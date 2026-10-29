@@ -13,6 +13,8 @@ function route() {
   if (hsh === "theory" && TOPICS.length) return showTheoryIndex();
   if (hsh === "quiz" && TOPICS.length) return showQuiz();
   if (!hsh || hsh === "home" || hsh === "theory" || hsh === "quiz") return showHome();
+  if (hsh === "labs") return showLabIndex();
+  if (hsh.startsWith("labs/")) return showLabTopic(hsh.slice(5));
   const id = hsh.replace(/^lab\//, "");
   go(LABS.some(l => l.id === id) ? id : (current?.id || LABS[0].id));
 }
