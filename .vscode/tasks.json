@@ -13,7 +13,7 @@
     {
       "label": "Build current file",
       "type": "shell",
-      "command": "make build/${relativeFileDirname}/${fileBasenameNoExtension}",
+      "command": "make build/${fileDirnameBasename}/${fileBasenameNoExtension}",
       "problemMatcher": [
         "$gcc"
       ]

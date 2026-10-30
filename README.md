@@ -1,7 +1,25 @@
 # bosch-lab — hands-on C/C++ & Linux System labs
 
 Preparation for the **C++ and Linux System Knowledge** assessment (Thursday 29 Oct 2026). Each lab is a short, self-contained program.
-**Predict the output before running it**, then compare with `ANSWERS.md` (or the lab page in the web UI).
+**Predict the output before running it**, then compare with the lab's `ANSWERS.md` (or the lab page in the web UI).
+
+## Repository layout
+```
+bosch-lab/
+├── data/
+│   ├── source/                 content, written by hand (markdown + C/C++) — see data/README.md
+│   │   ├── labs/<dir>/         one directory per lab group: NN_name.c|.cpp + ANSWERS.md
+│   │   └── theory/<group>/     NN-topic.md: theory + quiz (private/ = personal notes, not in git)
+│   ├── migrations/             old id -> new id maps, so renames keep your progress
+│   ├── schema.sql              SQLite tables + full-text index
+│   └── bosch-lab.db            generated from source/ (cache + search, not in git)
+├── tools/                      content.py: make check · make ids — test_frontend.js: make test-web
+├── web/                        study UI: backend/ (Python stdlib + SQLite) + frontend/ (ES modules, no build) — see web/README.md
+├── build/                      compiled labs, build/<dir>/<lab> (generated, not in git)
+├── Makefile  package.json  .vscode/
+```
+A lab is named `<dir>/<lab>` everywhere (`make run T=…`, `build/…`, the web UI): for example
+`linux-process/01_fork_count` = `data/source/labs/linux-process/01_fork_count.c` → `build/linux-process/01_fork_count`.
 
 ## Setup (Ubuntu)
 ```sh
@@ -11,8 +29,11 @@ VS Code: install the **C/C++** extension (Microsoft).
 
 ## Build and run
 ```sh
-make                                  # build everything into build/
-make run T=03-process/01_fork_count   # build and run one lab
+make                                     # build everything into build/
+make run T=linux-process/01_fork_count   # build and run one lab
+make check                               # validate data/source (ids, answers, quiz format)
+make db                                  # rebuild data/bosch-lab.db (the web server also does it on its own)
+make test-web                            # smoke-test the web UI (needs gjs and a running make web)
 make clean
 ```
 - Flags: `-Wall -Wextra -g`, C uses `-std=c11`, C++ uses `-std=c++17`, thread labs add `-pthread`.
@@ -26,34 +47,37 @@ make clean
 make web        # then open http://localhost:8000
 npm start       # the same, if Node/npm is installed
 ```
-Other npm commands: `npm run build` (= make), `npm run clean`, `npm run lab 03-process/01_fork_count` (= make run T=...).
+Other npm commands: `npm run build` (= make), `npm run clean`, `npm run check`, `npm run lab linux-process/01_fork_count` (= make run T=...).
 - **Labs**: pick a topic (labs are grouped like the theory and quiz pages), then in each lab predict the output → build & run it right in the browser (a real terminal: Ctrl+C/Ctrl+Z/stdin/kill/ps) → compare your prediction with the real output → read the answer and self-grade.
-- **Theory**: summaries in 19 topics (including a "Tricky questions" trap list), read from `09-theory/*.md`.
+- **Theory**: summaries in 19 topics (including a "Tricky questions" trap list), read from `data/source/theory/`.
 - **Quiz**: 529 questions with explanations; click a topic to answer all of its questions, mix all topics, or review the ones you got wrong. A 20-question mock exam is on the Overview page.
+- **Search** (box at the top of the sidebar, or press `/`): labs, theory sections and quiz questions at once, filter by kind or tag.
 - **Terminal 2** (bottom right): a real bash for labs that need 2 terminals.
 - Only needs the Python 3 that ships with Ubuntu; nothing else to install. Progress is stored in your browser.
 - Frontend/backend layout and API: see `web/README.md`.
 
 ## Labs to note
-- Need **2 terminals**: `03-process/05_zombie`, `04-signal/03_kill_test`, `06-ipc/03_fifo`.
-- **Hang / run long on purpose** (press **Ctrl+C** to quit): `03-process/05_zombie`, `04-signal/01_sigint_handler`, `04-signal/03_kill_test`, `05-thread/03_deadlock`.
-- `07-kernel-module` is **not** part of the top-level `make` — see `07-kernel-module/README.md`.
-- `08-shell/drills.md`: 20 command drills, nothing to compile.
-- `04-signal/04_alarm_pause` dies on purpose from SIGALRM at the end ("Alarm clock").
-- `10-alp/05_errno_assert` dies on purpose from a failed assert at the end (SIGABRT, "Aborted").
-- Personal notes (e.g. copied from a Udemy course): put them in `09-theory/private/*.md` in the same format; that directory is in `.gitignore` and only shows up on your machine.
-- Adding quiz questions: write them in the `## Quiz` section of a file in `09-theory/` using `### question` / `- [ ]` wrong / `- [x]` right / `> explanation`.
+- Need **2 terminals**: `linux-process/05_zombie`, `linux-signal/03_kill_test`, `linux-ipc/03_fifo`.
+- **Hang / run long on purpose** (press **Ctrl+C** to quit): `linux-process/05_zombie`, `linux-signal/01_sigint_handler`, `linux-signal/03_kill_test`, `linux-thread/03_deadlock`.
+- `kernel-module` is **not** part of the top-level `make` — see `data/source/labs/kernel-module/README.md`.
+- `shell/drills.md`: 20 command drills, nothing to compile.
+- `linux-signal/04_alarm_pause` dies on purpose from SIGALRM at the end ("Alarm clock").
+- `alp/05_errno_assert` dies on purpose from a failed assert at the end (SIGABRT, "Aborted").
+- Personal notes (e.g. copied from a Udemy course): put them in `data/source/theory/private/*.md` in the same format; that directory is in `.gitignore` and only shows up on your machine.
+- Adding content (labs, theory, quiz questions): see `data/README.md`.
 
 ## Suggested schedule
 | Day | Directories |
 | --- | --- |
-| Monday 26 Oct | `01-c`, `02-cpp` |
-| Tuesday 27 Oct | `03-process`, `04-signal`, `08-shell` |
-| Wednesday 28 Oct | `05-thread`, `06-ipc`, `07-kernel-module`, `10-alp` |
-| Thursday 29 Oct (morning) | Only reread `ANSWERS.md` and redo the labs/questions you got wrong |
+| Monday 26 Oct | `c`, `cpp` |
+| Tuesday 27 Oct | `linux-process`, `linux-signal`, `shell` |
+| Wednesday 28 Oct | `linux-thread`, `linux-ipc`, `kernel-module`, `alp` |
+| Thursday 29 Oct (morning) | Only reread the answers and redo the labs/questions you got wrong |
 
 ## Labs
-### 01-c
+All under `data/source/labs/`.
+
+### c
 - `01_sizeof_padding.c` — sizeof and struct padding
 - `02_pointer_array.c` — Pointer arithmetic, arrays and decay
 - `03_const_pointer.c` — The three kinds of const with pointers
@@ -71,7 +95,7 @@ Other npm commands: `npm run build` (= make), `npm run clean`, `npm run lab 03-p
 - `15_float.c` — Floating point: comparison, rounding, integer division
 - `16_scope_storage.c` — Variable scope, shadowing and static inside a loop
 
-### 02-cpp
+### cpp
 - `01_ctor_dtor_order.cpp` — Constructor / destructor order
 - `02_virtual_slicing.cpp` — virtual, calls through an object/pointer/reference, and object slicing
 - `03_virtual_dtor.cpp` — Virtual and non-virtual destructors
@@ -104,7 +128,7 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `28_stl_algorithms.cpp` — STL: iterators, algorithms, accumulate, remove does not erase, map/set, deque, stack/queue/priority_queue
 - `29_lambda_enum.cpp` — Lambdas (captures, mutable, use with algorithms) and enum / enum class
 
-### 03-process
+### linux-process
 - `01_fork_count.c` — fork() three times
 - `02_fork_if.c` — fork() inside if and inside logical expressions
 - `03_fork_buffer.c` — stdio buffers and fork
@@ -115,14 +139,14 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `08_fork_fd_offset.c` — File descriptors after fork(): a shared offset
 - `09_exec_buffer.c` — exec() replaces the program: the PID stays, the stdio buffer is lost
 
-### 04-signal
+### linux-signal
 - `01_sigint_handler.c` — Catching Ctrl+C with sigaction
 - `02_sigchld_reap.c` — Reaping zombies with SIGCHLD
 - `03_kill_test.c` — Sending signals with the kill command
 - `04_alarm_pause.c` — alarm, pause and the default action of SIGALRM
 - `05_sigprocmask.c` — Blocking signals (sigprocmask), pending signals, and why signals are not queued
 
-### 05-thread
+### linux-thread
 - `01_race_condition.c` — A race condition with counter++
 - `02_mutex_fix.c` — Fixing the race with pthread_mutex
 - `03_deadlock.c` — Deadlock from locking in opposite orders
@@ -132,7 +156,7 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `07_thread_arg_bug.c` — Passing &i to threads, and getting results back through pthread_join
 - `08_thread_local.c` — What threads share and what they own: globals, thread-locals, PID/TID
 
-### 06-ipc
+### linux-ipc
 - `01_pipe.c` — pipe: the parent writes, the child reads
 - `02_pipe_dup2.c` — Implementing ls / | wc -l with dup2
 - `03_fifo_reader.c` — A named pipe (FIFO) between 2 programs
@@ -143,7 +167,7 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `07_mqueue.c` — POSIX message queues and priorities
 - `08_sigpipe.c` — Writing to a pipe with no reader: SIGPIPE and EPIPE
 
-### 10-alp (the book *Advanced Linux Programming*, chapters 1–5)
+### alp (the book *Advanced Linux Programming*, chapters 1–5)
 - `01_getopt_long.c` — getopt_long: short/long options, optarg, optind, "--" and argv permutation (ALP 2.1.3)
 - `02_env_exit_code.c` — Environment variables (getenv/setenv/environ) and exit codes, including death by signal (ALP 2.1.5, 2.1.6, 3.4)
 - `03_stdio_buffer.c` — stdio buffering: full, line, unbuffered; stderr is unbuffered; exit vs _exit (ALP 2.1.4)
@@ -160,13 +184,13 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `14_popen_fdopen.c` — Pipes with FILE*: fdopen (listing 5.7), dup2 + exec sort (listing 5.8), popen/pclose (listing 5.9)
 - `15_sockets.c` — Sockets: socketpair, an Internet-domain socket over 127.0.0.1 (server: socket/bind/listen/accept, client: connect), byte order (ALP 5.5)
 
-### 07-kernel-module
+### kernel-module
 - `hello.c + Makefile + README.md` — Hello kernel module
 
-### 08-shell
+### shell
 - `drills.md` — 20 shell command drills
 
-### 11-design-patterns (following the tutorialspoint Design Patterns tutorial)
+### design-patterns (following the tutorialspoint Design Patterns tutorial)
 - `01_singleton.cpp` — Singleton: lazy Meyers singleton, deleted copy, thread-safe initialization
 - `02_factory.cpp` — Factory, Factory Method and Abstract Factory
 - `03_builder_prototype.cpp` — Builder and Prototype
@@ -180,8 +204,11 @@ Following the Udemy course *Beginning C++ Programming* (sections 6–23):
 - `11_interpreter_filter_null.cpp` — Interpreter, Filter (Criteria) and Null Object
 - `12_j2ee_patterns.cpp` — Enterprise (J2EE) patterns in C++: MVC, DAO + Transfer Object, Business Delegate + Service Locator
 
-### 09-theory (theory + quizzes)
-- `01-c.md` · `02-cpp-oop.md` · `03-cpp-stl-modern.md` · `04-process-memory.md` · `05-signal-ipc.md` · `06-thread-sync.md` · `07-linux-shell-fs.md` · `08-build-debug.md` · `09-kernel-embedded.md`
-- Following the Udemy course: `10-cpp-basics.md` · `11-cpp-functions-pointers.md` · `12-cpp-classes-operators.md` · `13-cpp-exceptions-io-stl.md`
-- Following the book Advanced Linux Programming: `14-alp-ch1-2-gnu-tools.md` · `15-alp-ch3-processes.md` · `16-alp-ch4-threads.md` · `17-alp-ch5-ipc.md`
-- Design patterns: `21-design-patterns.md`
+## Theory + quizzes (`data/source/theory/`)
+- `c/` C language
+- `cpp/` basics · functions & pointers · classes & operators · OOP · exceptions, I/O & STL · modern STL (partly following the Udemy course)
+- `linux/` processes & memory · signals & IPC · threads & sync · shell & filesystem
+- `alp/` the book Advanced Linux Programming, chapters 1–2, 3, 4, 5
+- `build-kernel/` build, link & debug · kernel & embedded
+- `design-patterns/` GoF + J2EE patterns
+- `tricky/` short trick questions across C, C++ and Linux

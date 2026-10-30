@@ -1,5 +1,8 @@
 // Quiz: pick a topic, answer (practice / mock exam), results, keyboard shortcuts.
-"use strict";
+import { $, h, mode, quiz, saveStore, set, setHash, store, TOPICS } from "./core.js";
+import { inline, md } from "./render.js";
+import { hueStyle, renderNav, ring, theoryBanner, topicGroups, topicHue } from "./nav.js";
+import { qStats, qStore } from "./theory.js";
 
 // ---------- quiz
 // Default: every question, practice mode. Mock exam only when asked for (the "mock exam" button on the Overview page).
@@ -16,8 +19,8 @@ function buildPool(cfg) {
   return qs;
 }
 
-function showQuiz() {
-  mode = "quiz";
+export function showQuiz() {
+  set({ mode: "quiz" });
   setHash("quiz");
   renderNav();
   if (quiz && !quiz.finished) renderQuestion();
@@ -26,7 +29,7 @@ function showQuiz() {
 }
 
 function renderQuizSetup() {
-  quiz = null;
+  set({ quiz: null });
   const go = over => startQuiz({ count: "all", filter: "all", exam: false, ...over });
   const allIds = TOPICS.map(t => t.id);
   const totalQ = TOPICS.reduce((n, t) => n + t.questions.length, 0);
@@ -70,16 +73,15 @@ function groupSection(g, card) {
     h("div", { class: "topic-cards" }, g.topics.map(card)));
 }
 
-function startQuiz(over) {
+export function startQuiz(over) {
   const cfg = { ...quizCfg, ...over };
   let qs = over.list || shuffle(buildPool(cfg));
   if (!over.list && cfg.count !== "all") qs = qs.slice(0, +cfg.count);
-  if (!qs.length) { quizCfg = { ...quizCfg, ...over }; mode = "quiz"; renderNav(); renderQuizSetup(); return; }
-  quiz = {
+  if (!qs.length) { quizCfg = { ...quizCfg, ...over }; set({ mode: "quiz" }); renderNav(); renderQuizSetup(); return; }
+  set({ mode: "quiz", quiz: {
     cfg, i: 0, finished: false, start: Date.now(),
     items: shuffle([...qs]).map(q => ({ q, order: shuffle(q.options.map((_, i) => i)), picked: new Set(), checked: false })),
-  };
-  mode = "quiz";
+  } });
   setHash("quiz");
   renderNav();
   renderQuestion();
@@ -120,7 +122,7 @@ function quizAction(kind, arg) {
 function exitQuiz() {
   if (quiz && !quiz.finished && quiz.cfg.exam && quiz.items.some(x => x.picked.size)
       && !confirm("Your unsubmitted mock exam will be discarded. Exit anyway?")) return;
-  quiz = null;
+  set({ quiz: null });
   renderNav();
   renderQuizSetup();
 }

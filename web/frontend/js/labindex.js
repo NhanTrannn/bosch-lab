@@ -1,38 +1,40 @@
 // Lab index: lab topics (one per directory) grouped like the theory/quiz pages, and one page per topic.
-"use strict";
+import { $, DIR_NAMES, h, LABS, set, setHash, store } from "./core.js";
+import { HUE, hueStyle, renderNav } from "./nav.js";
+import { go } from "./lab.js";
 
-// Lab topics: each topic picks labs by directory and number (e.g. ["02-cpp", [17, 18]]).
+// Lab topics: each topic picks labs by directory and number (e.g. ["cpp", [17, 18]]).
 // Labs not listed in any topic fall into one "Other <dir>" topic per directory.
 const T = (id, group, title, dir, nums) => ({ id, group, title, dir, nums });
 const LAB_TOPIC_DEFS = [
-  T("c-memory", "C", "Pointers, memory & storage", "01-c", [1, 2, 3, 4, 6, 9, 11, 13, 16]),
-  T("c-operators", "C", "Operators, types, conversions & macros", "01-c", [5, 7, 8, 10, 12, 14, 15]),
-  T("cpp-basics", "C++", "Basics: types, operators, control flow, strings", "02-cpp", [17, 18, 19, 20]),
-  T("cpp-functions", "C++", "Functions, pointers & references", "02-cpp", [21, 22]),
-  T("cpp-classes", "C++", "Classes, special members & operator overloading", "02-cpp", [23, 24, 5, 13, 15]),
-  T("cpp-inheritance", "C++", "Inheritance & polymorphism", "02-cpp", [1, 2, 3, 4, 9, 10, 12, 25]),
-  T("cpp-exceptions", "C++", "Exceptions, streams & templates", "02-cpp", [11, 26, 27, 16]),
-  T("cpp-stl", "C++", "STL, smart pointers, move & lambdas", "02-cpp", [6, 7, 8, 14, 28, 29]),
-  T("dp-creational", "Design patterns", "Creational patterns", "11-design-patterns", [1, 2, 3]),
-  T("dp-structural", "Design patterns", "Structural patterns", "11-design-patterns", [4, 5, 6]),
-  T("dp-behavioral", "Design patterns", "Behavioral patterns", "11-design-patterns", [7, 8, 9, 10, 11]),
-  T("dp-j2ee", "Design patterns", "J2EE patterns", "11-design-patterns", [12]),
-  T("processes", "Linux system programming", "Processes: fork, exec, wait", "03-process", null),
-  T("signals", "Linux system programming", "Signals", "04-signal", null),
-  T("threads", "Linux system programming", "Threads & synchronization", "05-thread", null),
-  T("ipc", "Linux system programming", "IPC: pipes, FIFOs, shm, sockets, queues", "06-ipc", null),
-  T("alp-ch2", "Advanced Linux (ALP)", "Ch.1–2: writing good Linux software", "10-alp", [1, 2, 3, 4, 5, 6]),
-  T("alp-ch3", "Advanced Linux (ALP)", "Ch.3: processes", "10-alp", [7, 8]),
-  T("alp-ch4", "Advanced Linux (ALP)", "Ch.4: threads", "10-alp", [9, 10, 11]),
-  T("alp-ch5", "Advanced Linux (ALP)", "Ch.5: IPC", "10-alp", [12, 13, 14, 15]),
-  T("kernel", "Kernel & shell", "Kernel module", "07-kernel-module", null),
-  T("shell", "Kernel & shell", "Shell command drills", "08-shell", null),
+  T("c-memory", "C", "Pointers, memory & storage", "c", [1, 2, 3, 4, 6, 9, 11, 13, 16]),
+  T("c-operators", "C", "Operators, types, conversions & macros", "c", [5, 7, 8, 10, 12, 14, 15]),
+  T("cpp-basics", "C++", "Basics: types, operators, control flow, strings", "cpp", [17, 18, 19, 20]),
+  T("cpp-functions", "C++", "Functions, pointers & references", "cpp", [21, 22]),
+  T("cpp-classes", "C++", "Classes, special members & operator overloading", "cpp", [23, 24, 5, 13, 15]),
+  T("cpp-inheritance", "C++", "Inheritance & polymorphism", "cpp", [1, 2, 3, 4, 9, 10, 12, 25]),
+  T("cpp-exceptions", "C++", "Exceptions, streams & templates", "cpp", [11, 26, 27, 16]),
+  T("cpp-stl", "C++", "STL, smart pointers, move & lambdas", "cpp", [6, 7, 8, 14, 28, 29]),
+  T("dp-creational", "Design patterns", "Creational patterns", "design-patterns", [1, 2, 3]),
+  T("dp-structural", "Design patterns", "Structural patterns", "design-patterns", [4, 5, 6]),
+  T("dp-behavioral", "Design patterns", "Behavioral patterns", "design-patterns", [7, 8, 9, 10, 11]),
+  T("dp-j2ee", "Design patterns", "J2EE patterns", "design-patterns", [12]),
+  T("processes", "Linux system programming", "Processes: fork, exec, wait", "linux-process", null),
+  T("signals", "Linux system programming", "Signals", "linux-signal", null),
+  T("threads", "Linux system programming", "Threads & synchronization", "linux-thread", null),
+  T("ipc", "Linux system programming", "IPC: pipes, FIFOs, shm, sockets, queues", "linux-ipc", null),
+  T("alp-ch2", "Advanced Linux (ALP)", "Ch.1–2: writing good Linux software", "alp", [1, 2, 3, 4, 5, 6]),
+  T("alp-ch3", "Advanced Linux (ALP)", "Ch.3: processes", "alp", [7, 8]),
+  T("alp-ch4", "Advanced Linux (ALP)", "Ch.4: threads", "alp", [9, 10, 11]),
+  T("alp-ch5", "Advanced Linux (ALP)", "Ch.5: IPC", "alp", [12, 13, 14, 15]),
+  T("kernel", "Kernel & shell", "Kernel module", "kernel-module", null),
+  T("shell", "Kernel & shell", "Shell command drills", "shell", null),
 ];
 const labNum = lab => parseInt(lab.name, 10);
 
 // Built once from LABS: [{id, group, title, dir, labs: [lab...]}]
 let LAB_TOPICS_CACHE = null;
-function labTopics() {
+export function labTopics() {
   if (LAB_TOPICS_CACHE) return LAB_TOPICS_CACHE;
   const used = new Set();
   const topics = LAB_TOPIC_DEFS.map(t => {
@@ -47,15 +49,15 @@ function labTopics() {
   }
   return (LAB_TOPICS_CACHE = topics);
 }
-const labTopicById = id => labTopics().find(t => t.id === id);
-const labTopicOf = lab => labTopics().find(t => t.labs.includes(lab));
-function labGroups() {
+export const labTopicById = id => labTopics().find(t => t.id === id);
+export const labTopicOf = lab => labTopics().find(t => t.labs.includes(lab));
+export function labGroups() {
   const groups = new Map();
   for (const t of labTopics()) { if (!groups.has(t.group)) groups.set(t.group, []); groups.get(t.group).push(t); }
   return [...groups].map(([name, topics]) => ({ name, topics }));
 }
 
-function labStats(labs) {
+export function labStats(labs) {
   const prog = labs.filter(l => l.kind === "program");
   const mark = l => (store[l.id] || {}).mark;
   return { total: labs.length, prog: prog.length, done: prog.filter(mark).length,
@@ -65,9 +67,8 @@ function labStats(labs) {
 
 const onKey = fn => e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } };
 
-function showLabIndex() {
-  mode = "lab";
-  labTopic = null;
+export function showLabIndex() {
+  set({ mode: "lab", labTopic: null });
   setHash("labs");
   renderNav();
   const card = t => {
@@ -94,12 +95,11 @@ function showLabIndex() {
   $("#main").scrollTop = 0;
 }
 
-function showLabTopic(id) {
+export function showLabTopic(id) {
   const t = labTopicById(id) || labTopics().find(x => x.dir === id);   // a directory name also works (old links)
   if (!t) return showLabIndex();
   const labs = t.labs, hue = HUE[t.dir] ?? 245;
-  mode = "lab";
-  labTopic = t.id;
+  set({ mode: "lab", labTopic: t.id });
   setHash("labs/" + t.id);
   renderNav();
   const st = labStats(labs);

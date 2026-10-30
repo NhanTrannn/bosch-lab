@@ -1,5 +1,9 @@
 // Lab page: predict the output -> run -> compare (diff) -> answer.
-"use strict";
+import { $, current, DIR_NAMES, fileTab, h, ignoreNums, LABS, labState, labTopic, ROOT, saveStore, set, setHash } from "./core.js";
+import { highlight, inline, langOf, md } from "./render.js";
+import { openDock, RUNS, runText, startRun, termView, VIEWS } from "./terminal.js";
+import { HUE, hueStyle, renderNav } from "./nav.js";
+import { labTopicById, labTopicOf } from "./labindex.js";
 
 // ---------- compare a prediction with the real output
 function diffLines(a, b) {
@@ -31,11 +35,10 @@ function diffView(want, got, labels) {
 }
 
 // ---------- one lab page
-function go(id) {
-  if (current?.id !== id) fileTab = 0;
-  current = LABS.find(l => l.id === id) || LABS[0];
-  mode = "lab";
-  if (!labTopicById(labTopic)?.labs.includes(current)) labTopic = labTopicOf(current)?.id || null;
+export function go(id) {
+  if (current?.id !== id) set({ fileTab: 0 });
+  set({ mode: "lab", current: LABS.find(l => l.id === id) || LABS[0] });
+  if (!labTopicById(labTopic)?.labs.includes(current)) set({ labTopic: labTopicOf(current)?.id || null });
   setHash("lab/" + current.id);
   renderNav();
   renderLab();
@@ -57,7 +60,7 @@ function renderLab() {
   const codeBody = h("div");
   const tabs = h("div", { class: "tabs" });
   const showFile = k => {
-    fileTab = k;
+    set({ fileTab: k });
     const f = lab.files[k], src = lab.sources[f], lang = langOf(f);
     tabs.replaceChildren(...lab.files.map((name, j) => h("button", { class: j === k ? "on" : "", onclick: () => showFile(j) }, name.split("/").pop())));
     if (lang === "md") { codeBody.className = "bd md"; codeBody.innerHTML = md(src); return; }
@@ -98,14 +101,14 @@ function renderLab() {
         lab.kind === "shell"
           ? h("div", {}, h("p", { style: "margin-top:0" }, "Open a real bash (scratch directory ", h("code", {}, "build/shell"), ") and work through the 20 drills on the left. Type commands in the stdin box."), runBtn)
           : h("div", {}, h("p", { style: "margin-top:0" }, "This lab needs ", h("code", {}, "sudo"), " and linux-headers, so it does not run in the web UI. Follow the README in ", h("b", {}, "Terminal 2"), " (bottom right) or a normal terminal."),
-              h("button", { onclick: () => openDock(`cd 07-kernel-module && make\n`) }, "Open Terminal 2 and build the module"))));
+              h("button", { onclick: () => openDock(`cd data/source/labs/kernel-module && make\n`) }, "Open Terminal 2 and build the module"))));
 
   // --- terminal + compare
   const compareBody = h("div", { class: "bd" });
   const compareCard = h("div", { class: "card", hidden: lab.kind !== "program" },
     h("div", { class: "hd" }, h("span", { class: "step" }, "3"), "Compare", h("span", { class: "sp" }),
       h("label", { class: "muted", title: "Replace every number with # when comparing (PIDs, addresses…)" },
-        h("input", { type: "checkbox", checked: ignoreNums, onchange: e => { ignoreNums = e.target.checked; refreshCompare(); } }), " ignore numbers (PIDs…)")),
+        h("input", { type: "checkbox", checked: ignoreNums, onchange: e => { set({ ignoreNums: e.target.checked }); refreshCompare(); } }), " ignore numbers (PIDs…)")),
     compareBody);
   function refreshCompare() {
     if (lab.kind !== "program") return;

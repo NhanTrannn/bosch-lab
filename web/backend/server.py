@@ -6,6 +6,9 @@
 Serves the frontend (web/frontend) and a JSON API:
   GET  /api/labs                 labs + source code + answers
   GET  /api/theory               theory + quiz questions
+  GET  /api/search?q=…           full-text search (&kind=lab|theory|quiz, &tag=…)
+  GET  /api/tags                 tags with their counts
+  GET  /api/migrations           old id -> new id maps, applied once to the progress saved in the browser
   POST /api/runs                 build & run a lab ({id}) or open bash ({terminal: true})
   GET  /api/runs/<id>?from=N     output starting at chunk N
   POST /api/runs/<id>/<action>   input | key | job | signal | ps | stop
@@ -21,10 +24,10 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from config import BACKEND, FRONTEND, ROOT, SHELL_ARGV, SHELL_LIMIT
-from labs import discover, find_lab
+from config import BACKEND, FRONTEND, MIGRATIONS_DIR, ROOT, SHELL_ARGV, SHELL_LIMIT
+import db
+from labs import find_lab
 from runner import KEYS, RUNS, RUNS_LOCK, SIGNALS, Run, gc_runs, kill_all_runs, start_run
-from theory import parse_theory
 
 STATIC_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
                 ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png"}
@@ -59,13 +62,18 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(url.query)
         if url.path == "/" or url.path.startswith(("/css/", "/js/")):
             return self.static(url.path)
+        # Content comes from data/bosch-lab.db, which db.py rebuilds whenever a file in data/source changes
         if url.path == "/api/labs":
-            labs = discover()
-            for lab in labs:
-                lab["sources"] = {f: (ROOT / f).read_text(encoding="utf-8", errors="replace") for f in lab["files"]}
-            return self.reply({"root": str(ROOT), "labs": labs})
+            return self.reply({"root": str(ROOT), "labs": db.labs()})
         if url.path == "/api/theory":
-            return self.reply({"topics": parse_theory()})
+            return self.reply({"topics": db.topics()})
+        if url.path == "/api/search":
+            arg = lambda k: q.get(k, [None])[0]
+            return self.reply({"results": db.search(arg("q"), kind=arg("kind"), tag=arg("tag"))})
+        if url.path == "/api/tags":
+            return self.reply({"tags": db.all_tags()})
+        if url.path == "/api/migrations":
+            return self.reply({p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(MIGRATIONS_DIR.glob("*.json"))})
         m = re.fullmatch(r"/api/runs/(\w+)", url.path)
         if m and m.group(1) in RUNS:
             return self.reply(RUNS[m.group(1)].snapshot(int(q.get("from", ["0"])[0])))

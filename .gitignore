@@ -1,3 +1,14 @@
 build/
 __pycache__/
-09-theory/private/
+# personal notes (e.g. copied from a course), never committed
+data/source/theory/private/
+# generated from data/source (step 2)
+data/*.db
+data/*.db.tmp
+# kernel module build output
+data/source/labs/kernel-module/*.ko
+data/source/labs/kernel-module/*.o
+data/source/labs/kernel-module/*.mod*
+data/source/labs/kernel-module/.*.cmd
+data/source/labs/kernel-module/Module.symvers
+data/source/labs/kernel-module/modules.order

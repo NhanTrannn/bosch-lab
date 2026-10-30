@@ -1,9 +1,9 @@
-// Syntax highlighting for C/C++/shell and a minimal markdown renderer (enough for ANSWERS.md, 09-theory).
-"use strict";
+// Syntax highlighting for C/C++/shell and a minimal markdown renderer (enough for ANSWERS.md and the theory files).
+import { esc } from "./core.js";
 
 // ---------- code highlighting
 const KW = new Set(("auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while bool true false nullptr class public private protected virtual override final template typename namespace using new delete this operator friend explicit noexcept constexpr try catch throw std size_t uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t pid_t ssize_t mutable static_cast dynamic_cast reinterpret_cast const_cast decltype NULL").split(" "));
-function highlight(code, lang) {
+export function highlight(code, lang) {
   if (lang === "sh" || lang === "make") {
     return code.split("\n").map(l => {
       const i = l.search(/(^|\s)#/);
@@ -24,10 +24,10 @@ function highlight(code, lang) {
   }
   return out + esc(code.slice(last));
 }
-const langOf = f => f.endsWith(".md") ? "md" : f.endsWith("Makefile") ? "make" : "c";
+export const langOf = f => f.endsWith(".md") ? "md" : f.endsWith("Makefile") ? "make" : "c";
 
 // ---------- minimal markdown (enough for ANSWERS.md / drills.md)
-function inline(s) {
+export function inline(s) {
   return s.split(/(`[^`]*`)/).map((part, i) => {
     if (i % 2) return `<code>${esc(part.slice(1, -1))}</code>`;
     return esc(part)
@@ -35,7 +35,7 @@ function inline(s) {
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
   }).join("");
 }
-function md(src) {
+export function md(src) {
   const L = src.split("\n");
   let html = "", i = 0;
   const isBlock = l => /^(```|#{1,6} |\s*[-*] |\d+\. |> |\|)/.test(l);

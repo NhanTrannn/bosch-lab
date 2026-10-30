@@ -1,7 +1,7 @@
-"""Lab list: reads the header comment of each source file and the answers in ANSWERS.md."""
+"""Lab list: reads the header comment of each source file and the answers in <lab dir>/ANSWERS.md."""
 import re
 
-from config import DIRS, EXTRA_FILES, HELPERS, READONLY, ROOT, SHELL_LAB
+from config import DIRS, EXTRA_FILES, HELPERS, LABS_DIR, READONLY, ROOT, SHELL_LAB
 
 HEADER_KEYS = {
     "Lab": "title",
@@ -10,6 +10,7 @@ HEADER_KEYS = {
     "Key idea": "idea",
     "Try next": "try",
     "Intentional compiler warning": "warn_build",
+    "Tags": "tags",
 }
 
 
@@ -34,33 +35,30 @@ def parse_header(text):
     return meta
 
 
-def parse_answers():
-    """ANSWERS.md -> ({dir: {lab name: (title, markdown)}}, {dir: markdown of the whole section})."""
-    path = ROOT / "ANSWERS.md"
-    sections, whole = {}, {}
+def split_tags(s):
+    """"fork, buffering" or "[fork, buffering]" -> ["buffering", "fork"] (lowercase, spaces -> dashes)."""
+    return sorted({re.sub(r"\s+", "-", t.strip().lower()) for t in s.strip("[] ").split(",") if t.strip()})
+
+
+def parse_answers(d):
+    """<d>/ANSWERS.md -> ({lab name: (title, markdown)}, markdown of the whole file without its title)."""
+    path = LABS_DIR / d / "ANSWERS.md"
     if not path.exists():
-        return sections, whole
-    cur_dir, cur_key, fence = None, None, False
+        return {}, ""
+    sections, whole, cur_key, fence = {}, [], None, False
     for line in path.read_text(encoding="utf-8").split("\n"):
         if line.startswith("```"):
             fence = not fence
-        if not fence and line.startswith("## "):
-            cur_dir, cur_key = line[3:].strip(), None
-            sections.setdefault(cur_dir, {})
-            whole[cur_dir] = []
+        if not fence and line.startswith("# "):
             continue
-        if not fence and line.startswith("### ") and cur_dir:
+        if not fence and line.startswith("### "):
             name, _, title = line[4:].partition(" — ")
             cur_key = name.strip()
-            sections[cur_dir][cur_key] = [title.strip(), []]
-            whole[cur_dir].append(line)
-            continue
-        if cur_dir:
-            whole[cur_dir].append(line)
-            if cur_key:
-                sections[cur_dir][cur_key][1].append(line)
-    sections = {d: {k: (t, "\n".join(b).strip()) for k, (t, b) in v.items()} for d, v in sections.items()}
-    return sections, {d: "\n".join(b).strip() for d, b in whole.items()}
+            sections[cur_key] = [title.strip(), []]
+        elif cur_key:
+            sections[cur_key][1].append(line)
+        whole.append(line)
+    return {k: (t, "\n".join(b).strip()) for k, (t, b) in sections.items()}, "\n".join(whole).strip()
 
 
 def expected_output(md):
@@ -74,18 +72,22 @@ def question(md):
 
 
 def discover():
-    answers, whole = parse_answers()
+    answers = {}
     labs = []
 
     def add(lab_id, files, kind):
+        """files: paths relative to data/source/labs; the lab gets them relative to ROOT."""
         d, name = lab_id.split("/", 1)
+        if d not in answers:
+            answers[d] = parse_answers(d)
+        sec, whole = answers[d]
+        files = [str((LABS_DIR / f).relative_to(ROOT)) for f in files]
         src = (ROOT / files[0]).read_text(encoding="utf-8", errors="replace")
         meta = parse_header(src) if files[0].endswith((".c", ".cpp")) else {}
-        sec = answers.get(d, {})
         key = name if name in sec else re.sub(r"_(reader|writer)$", "", name)
         title, md = sec.get(key, ("", ""))
         if kind == "shell":
-            title, md = "20 shell command drills", whole.get(d, "")
+            title, md = "20 shell command drills", whole
         labs.append({
             "id": lab_id, "dir": d, "name": name, "kind": kind, "files": files,
             "title": meta.get("title") or re.sub(r"\s*⚠️.*", "", title) or name,
@@ -93,10 +95,11 @@ def discover():
             "meta": meta, "answer": md,
             "question": question(md) or meta.get("predict"),
             "expected": expected_output(md),
+            "tags": split_tags(meta.get("tags", "")),
         })
 
     for d in DIRS:
-        srcs = sorted(p for ext in ("*.c", "*.cpp") for p in (ROOT / d).glob(ext))
+        srcs = sorted(p for ext in ("*.c", "*.cpp") for p in (LABS_DIR / d).glob(ext))
         for src in srcs:
             rel = f"{d}/{src.name}"
             if rel in HELPERS:
@@ -104,10 +107,10 @@ def discover():
             lab_id = f"{d}/{src.stem}"
             add(lab_id, [rel] + EXTRA_FILES.get(lab_id, []), "program")
     for lab_id, files in READONLY.items():
-        if (ROOT / files[0]).exists():
+        if (LABS_DIR / files[0]).exists():
             add(lab_id, files, "readonly")
-    if (ROOT / "08-shell/drills.md").exists():
-        add(SHELL_LAB, ["08-shell/drills.md"], "shell")
+    if (LABS_DIR / f"{SHELL_LAB}.md").exists():
+        add(SHELL_LAB, [f"{SHELL_LAB}.md"], "shell")
     return labs
 
 

@@ -1,10 +1,11 @@
 // In-browser terminal: runs labs via /api/runs, polls output, Ctrl+C/Z/D, kill, ps; Terminal 2.
-"use strict";
+import { $, api, esc, h } from "./core.js";
+import { renderNav } from "./nav.js";
 
 // ---------- terminal (used by each lab and by Terminal 2)
-const RUNS = {};   // slot -> { rid, chunks, next, state, pid, done, result, log }
+export const RUNS = {};   // slot -> { rid, chunks, next, state, pid, done, result, log }
 const cleanTerm = s => s.replace(/\x1b\[[0-?]*[ -\/]*[@-~]/g, "").replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, "").replace(/\r+\n/g, "\n").replace(/[\r\x07]/g, "");
-const runText = r => r ? cleanTerm(r.chunks.filter(c => c[0] === "out").map(c => c[1]).join("")) : "";
+export const runText = r => r ? cleanTerm(r.chunks.filter(c => c[0] === "out").map(c => c[1]).join("")) : "";
 
 async function poll(slot) {
   const r = RUNS[slot];
@@ -24,10 +25,10 @@ async function poll(slot) {
   renderNav();
 }
 
-const VIEWS = {};  // slot -> redraw function called on new output
+export const VIEWS = {};  // slot -> redraw function called on new output
 function refreshSlot(slot) { VIEWS[slot]?.(); }
 
-function termView(slot, opts) {
+export function termView(slot, opts) {
   const pre = h("pre", { tabindex: 0 });
   const stateEl = h("span", { class: "state" });
   const input = h("input", { class: "mono", placeholder: "type stdin, then Enter (sends the whole line)…", autocomplete: "off", spellcheck: "false" });
@@ -69,7 +70,7 @@ function termView(slot, opts) {
   return { box, stateEl, focus: () => input.focus(), paint };
 }
 
-async function startRun(slot, body) {
+export async function startRun(slot, body) {
   const old = RUNS[slot];
   if (old && !old.done) api(`/api/runs/${old.rid}/stop`, {});
   RUNS[slot] = { rid: null, chunks: [], next: 0, state: "running", log: "building…", done: false };
@@ -89,7 +90,7 @@ async function startRun(slot, body) {
 
 // ---------- Terminal 2
 let dockTerm = null;
-async function openDock(cmd) {
+export async function openDock(cmd) {
   $("#dock").hidden = false;
   $("#dockToggle").hidden = true;
   if (!dockTerm) {

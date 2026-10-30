@@ -15,6 +15,7 @@
   <aside>
     <header>
       <div class="brand"><div class="logo">bl</div><div><b>bosch-lab</b><small id="brandSub">C++ &amp; Linux System prep</small></div><button class="theme-btn" id="themeBtn" type="button"></button></div>
+      <input type="search" class="search-input" id="searchBox" placeholder="Search labs, theory, quiz…   /" autocomplete="off" spellcheck="false" aria-label="Search">
       <div class="modes" id="modes"></div>
       <div class="progress"><div id="bar"></div></div>
       <div class="stats" id="stats"></div>
@@ -30,15 +31,7 @@
   <div class="term" id="dockTerm"></div>
 </div>
 
-<script src="/js/core.js"></script>
-<script src="/js/render.js"></script>
-<script src="/js/terminal.js"></script>
-<script src="/js/nav.js"></script>
-<script src="/js/home.js"></script>
-<script src="/js/lab.js"></script>
-<script src="/js/labindex.js"></script>
-<script src="/js/theory.js"></script>
-<script src="/js/quiz.js"></script>
-<script src="/js/main.js"></script>
+<!-- ES modules: main.js imports the others (see web/README.md) -->
+<script type="module" src="/js/main.js"></script>
 </body>
 </html>

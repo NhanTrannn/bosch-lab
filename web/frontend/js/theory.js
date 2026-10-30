@@ -1,9 +1,12 @@
 // Theory page for one topic, with a table of contents.
-"use strict";
+import { $, h, ROOT, saveStore, set, setHash, store, TOPICS } from "./core.js";
+import { md } from "./render.js";
+import { hueStyle, renderNav, theoryBanner, topicGroups, topicHue } from "./nav.js";
+import { startQuiz } from "./quiz.js";
 
 // ---------- theory
-const qStore = () => (store.__quiz ||= {});
-function qStats(qs) {
+export const qStore = () => (store.__quiz ||= {});
+export function qStats(qs) {
   let done = 0, wrong = 0;
   for (const q of qs) { const s = qStore()[q.id]; if (s) { done++; if (!s.last) wrong++; } }
   return { done, wrong, total: qs.length };
@@ -13,9 +16,8 @@ function qStats(qs) {
 const readStore = () => (store.__read ||= {});
 
 // Theory index: every topic grouped like the quiz page, open any of them in any order
-function showTheoryIndex() {
-  mode = "theory";
-  currentTopic = null;
+export function showTheoryIndex() {
+  set({ mode: "theory", currentTopic: null });
   setHash("theory");
   renderNav();
   if (!TOPICS.length) { $("#main").replaceChildren(h("div", { class: "narrow" }, theoryBanner())); return; }
@@ -53,11 +55,11 @@ function showTheoryIndex() {
   $("#main").scrollTop = 0;
 }
 
-function showTopic(id) {
+// sec: index of a "### " section to scroll to (search results link to sections)
+export function showTopic(id, sec) {
   const t = TOPICS.find(x => x.id === id);
   if (!t) return showTheoryIndex();
-  mode = "theory";
-  currentTopic = t;
+  set({ mode: "theory", currentTopic: t });
   if (!readStore()[t.id]) { readStore()[t.id] = true; saveStore(); }
   setHash("theory/" + t.id);
   renderNav();
@@ -76,7 +78,7 @@ function showTopic(id) {
       h("div", { class: "row", style: "margin-top:12px" },
         h("button", { class: "primary", onclick: () => startQuiz({ topics: [t.id], count: "all", filter: "all" }) }, `▶ Take the ${t.questions.length}-question quiz`),
         st.wrong ? h("button", { onclick: () => startQuiz({ topics: [t.id], count: "all", filter: "wrong" }) }, `Redo ${st.wrong} wrong question(s)`) : null,
-        h("span", { class: "muted" }, `${st.done}/${st.total} questions done · `, h("a", { href: `vscode://file${ROOT}/09-theory/${t.id}.md` }, "edit in VS Code ↗")))),
+        h("span", { class: "muted" }, `${st.done}/${st.total} questions done · `, h("a", { href: `vscode://file${ROOT}/${t.path}` }, "edit in VS Code ↗")))),
     h("div", { class: "theory-layout" },
       h("div", {},
         h("div", { class: "card" }, body),
@@ -86,4 +88,5 @@ function showTopic(id) {
           h("button", { class: "primary", style: "margin-left:auto", onclick: () => startQuiz({ topics: [t.id], count: "all", filter: "all" }) }, "Quiz this topic"))),
       toc)));
   $("#main").scrollTop = 0;
+  if (sec != null) heads[sec]?.scrollIntoView({ block: "start" });
 }

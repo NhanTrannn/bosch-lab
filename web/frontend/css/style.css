@@ -297,3 +297,16 @@ kbd { font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; 
 /* theme switch (auto → light → dark), stored in localStorage */
 .theme-btn { margin-left: auto; padding: 2px 8px; font-size: 15px; line-height: 1.4; background: transparent; color: var(--side-muted); border-color: var(--side-line); }
 .theme-btn:hover:not(:disabled) { color: var(--side-text); border-color: var(--side-muted); }
+
+/* ---------- search (sidebar box + results page) */
+.search-input { width: 100%; margin: 0 0 12px; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--side-line); background: var(--side-2); color: var(--side-text); font: inherit; font-size: 13.5px; outline: none; }
+.search-input::placeholder { color: var(--side-muted); }
+.search-input:focus { border-color: #8b85ff; box-shadow: 0 0 0 3px rgba(139, 133, 255, .25); }
+.search-filters { flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; }
+.search-filters .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 14px; }
+.tag-cloud .tag { color: var(--muted); border-radius: 20px; padding: 1px 9px; font-size: 12px; }
+.search-row { align-items: flex-start; }
+.search-row .kind { font-size: 18px; line-height: 1.3; }
+.search-row .snip { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }

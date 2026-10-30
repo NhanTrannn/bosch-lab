@@ -1,22 +1,28 @@
 // Sidebar: mode tabs, lab / topic lists; topic colors, icons, progress rings.
-"use strict";
+import { $, current, currentTopic, esc, filter, h, LABS, labTopic, mode, set, store, TOPICS } from "./core.js";
+import { RUNS } from "./terminal.js";
+import { daysLeft, showHome } from "./home.js";
+import { go } from "./lab.js";
+import { labGroups, labStats, labTopicById, showLabIndex, showLabTopic } from "./labindex.js";
+import { qStats, showTheoryIndex, showTopic } from "./theory.js";
+import { showQuiz, startQuiz } from "./quiz.js";
 
 // ---------- sidebar
-function counts() {
+export function counts() {
   const ids = LABS.filter(l => l.kind === "program").map(l => l.id);
   const st = id => store[id] || {};
   return { total: ids.length, done: ids.filter(id => st(id).mark).length, right: ids.filter(id => st(id).mark === "right").length, wrong: ids.filter(id => st(id).mark === "wrong").length };
 }
-const HUE = { "01-c": 215, "02-cpp": 265, "03-process": 170, "04-signal": 35, "05-thread": 345, "06-ipc": 195, "07-kernel-module": 20, "08-shell": 140, "10-alp": 95, "11-design-patterns": 300 };
+export const HUE = { "c": 215, "cpp": 265, "linux-process": 170, "linux-signal": 35, "linux-thread": 345, "linux-ipc": 195, "kernel-module": 20, "shell": 140, "alp": 95, "design-patterns": 300 };
 // Topics come from the server already sorted by group (see THEORY_GROUPS in web/backend/config.py)
 const GROUP_HUES = { "C": 215, "C++": 265, "Linux": 170, "Advanced Linux (ALP)": 95, "Build, debug & kernel": 20 };
-const topicHue = t => GROUP_HUES[t.group] ?? 300;
-function topicGroups() {
+export const topicHue = t => GROUP_HUES[t.group] ?? 300;
+export function topicGroups() {
   const groups = new Map();
   for (const t of TOPICS) { const g = t.group || "Other"; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(t); }
   return [...groups].map(([name, topics]) => ({ name, topics }));
 }
-const hueStyle = hue => `--h:${hue}`;
+export const hueStyle = hue => `--h:${hue}`;
 const ICONS = {
   home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   lab: '<path d="M9 3h6M10 3v6l-5.6 9.6A1.6 1.6 0 0 0 5.8 21h12.4a1.6 1.6 0 0 0 1.4-2.4L14 9V3"/><path d="M7.5 15h9"/>',
@@ -28,18 +34,18 @@ function svgIcon(k) {
   t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
   return t.content.firstChild;
 }
-function ring(pct, color, label) {
+export function ring(pct, color, label) {
   const r = 42, c = 2 * Math.PI * r;
   return h("div", { class: "ring", html: `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--line)" stroke-width="10"/>` +
     `<circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${c * Math.min(pct, 100) / 100} ${c}" transform="rotate(-90 50 50)"/>` +
     `<text x="50" y="51" text-anchor="middle" dominant-baseline="middle" font-size="${label.length > 4 ? 18 : 22}" font-weight="700" fill="currentColor">${esc(label)}</text></svg>` });
 }
-function theoryBanner() {
+export function theoryBanner() {
   return TOPICS.length ? null : h("div", { class: "banner", html:
     "<b>Could not load theory/quizzes from the server.</b><br>The running server is an old version: stop it (Ctrl+C in the terminal running <code>make web</code>), run <code>make web</code> again and reload the page." });
 }
 
-function renderNav() {
+export function renderNav() {
   const wrong = qStats(TOPICS.flatMap(t => t.questions)).wrong;
   const M = [["home", "Overview"], ["lab", "Labs"], ["theory", "Theory"], ["quiz", "Quiz"]];
   $("#modes").replaceChildren(...M.map(([k, v]) =>
@@ -79,7 +85,7 @@ function renderLabNav() {
   $("#stats").textContent = `${c.done}/${c.total} labs graded · ${c.right} right · ${c.wrong} wrong`;
   const F = { all: "All", todo: "To do", wrong: "Guessed wrong" };
   $("#filters").replaceChildren(...Object.entries(F).map(([k, v]) =>
-    h("button", { class: "small" + (filter === k ? " on" : ""), onclick: () => { filter = k; renderNav(); } }, v)));
+    h("button", { class: "small" + (filter === k ? " on" : ""), onclick: () => { set({ filter: k }); renderNav(); } }, v)));
   const nav = $("#nav");
   nav.replaceChildren();
   // On the index page: one row per topic. Inside a topic or a lab: that topic's labs only.

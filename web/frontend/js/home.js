@@ -1,17 +1,22 @@
 // Overview page: countdown, study plan, progress, shortcuts.
-"use strict";
+import { $, DIR_NAMES, h, LABS, set, setHash, store, TOPICS } from "./core.js";
+import { counts, HUE, hueStyle, renderNav, ring, theoryBanner, topicHue } from "./nav.js";
+import { go } from "./lab.js";
+import { labTopics, showLabTopic } from "./labindex.js";
+import { qStats, showTopic } from "./theory.js";
+import { startQuiz } from "./quiz.js";
 
 // ---------- overview
 const EXAM = new Date(2026, 9, 29); // Thursday 29 Oct 2026
 const PLAN = [
-  [new Date(2026, 9, 26), "Monday", ["01-c", "02-cpp"], ["01-c", "02-cpp-oop", "03-cpp-stl-modern"]],
-  [new Date(2026, 9, 27), "Tuesday", ["03-process", "04-signal", "08-shell"], ["04-process-memory", "05-signal-ipc", "07-linux-shell-fs"]],
-  [new Date(2026, 9, 28), "Wednesday", ["05-thread", "06-ipc", "07-kernel-module"], ["06-thread-sync", "08-build-debug", "09-kernel-embedded"]],
+  [new Date(2026, 9, 26), "Monday", ["c", "cpp"], ["c/c-language", "cpp/oop", "cpp/stl-modern"]],
+  [new Date(2026, 9, 27), "Tuesday", ["linux-process", "linux-signal", "shell"], ["linux/process-memory", "linux/signal-ipc", "linux/shell-fs"]],
+  [new Date(2026, 9, 28), "Wednesday", ["linux-thread", "linux-ipc", "kernel-module"], ["linux/thread-sync", "build-kernel/build-debug", "build-kernel/kernel-embedded"]],
 ];
-function daysLeft() { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((EXAM - t) / 864e5); }
+export function daysLeft() { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((EXAM - t) / 864e5); }
 
-function showHome() {
-  mode = "home";
+export function showHome() {
+  set({ mode: "home" });
   setHash("home");
   renderNav();
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -29,7 +34,7 @@ function showHome() {
       ...plan[2].filter(firstOf).map(dir => h("span", { class: "pill", onclick: () => go(firstOf(dir).id) }, `🧪 ${dir}`)),
       ...plan[3].map(id => TOPICS.find(t => t.id === id)).filter(Boolean).map(t => h("span", { class: "pill", onclick: () => showTopic(t.id) }, `📘 ${t.title}`)));
   } else if (d === 0) {
-    todayRow.append(h("b", {}, "This morning:"), h("span", {}, " reread ANSWERS.md and redo the questions you got wrong."),
+    todayRow.append(h("b", {}, "This morning:"), h("span", {}, " reread the answers and redo the questions you got wrong."),
       h("span", { class: "pill", onclick: () => startQuiz({ topics: TOPICS.map(t => t.id), count: "all", filter: "wrong", exam: false }) }, "🔁 Review wrong answers"));
   }
 
