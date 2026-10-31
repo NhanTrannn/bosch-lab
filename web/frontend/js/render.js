@@ -27,6 +27,21 @@ export function highlight(code, lang) {
 export const langOf = f => f.endsWith(".md") ? "md" : f.endsWith("Makefile") ? "make" : "c";
 
 // ---------- minimal markdown (enough for ANSWERS.md / drills.md)
+const ITEM = /^\s*([-*]|\d+\.) /;
+const indent = l => l.match(/^\s*/)[0].length;
+// One list block. Items indented deeper than the first one form a nested list inside the item above them;
+// other indented lines continue the item's text.
+function list(lines) {
+  const base = indent(lines[0]), items = [];
+  for (const l of lines) {
+    if (indent(l) <= base && ITEM.test(l)) items.push({ text: l.replace(ITEM, ""), sub: [] });
+    else if (!items.length) continue;
+    else if (ITEM.test(l) || items[items.length - 1].sub.length) items[items.length - 1].sub.push(l);
+    else items[items.length - 1].text += " " + l.trim();
+  }
+  const t = /^\s*\d+\. /.test(lines[0]) ? "ol" : "ul";
+  return `<${t}>${items.map(x => `<li>${inline(x.text)}${x.sub.length ? list(x.sub) : ""}</li>`).join("")}</${t}>`;
+}
 export function inline(s) {
   return s.split(/(`[^`]*`)/).map((part, i) => {
     if (i % 2) return `<code>${esc(part.slice(1, -1))}</code>`;
@@ -50,15 +65,10 @@ export function md(src) {
     } else if (/^#{1,6} /.test(l)) {
       const n = Math.min(l.match(/^#+/)[0].length + 1, 6);
       html += `<h${n}>${inline(l.replace(/^#+ /, ""))}</h${n}>`; i++;
-    } else if (/^\s*([-*]|\d+\.) /.test(l)) {
-      const ordered = /^\s*\d+\. /.test(l), items = [];
-      while (i < L.length && (/^\s*([-*]|\d+\.) /.test(L[i]) || (/^\s{2,}\S/.test(L[i]) && items.length))) {
-        if (/^\s*([-*]|\d+\.) /.test(L[i])) items.push(L[i].replace(/^\s*([-*]|\d+\.) /, ""));
-        else items[items.length - 1] += " " + L[i].trim();
-        i++;
-      }
-      const t = ordered ? "ol" : "ul";
-      html += `<${t}>${items.map(x => `<li>${inline(x)}</li>`).join("")}</${t}>`;
+    } else if (ITEM.test(l)) {
+      const block = [];
+      while (i < L.length && (ITEM.test(L[i]) || (/^\s{2,}\S/.test(L[i]) && block.length))) block.push(L[i++]);
+      html += list(block);
     } else if (l.startsWith(">")) {
       const buf = [];
       while (i < L.length && L[i].startsWith(">")) buf.push(L[i++].replace(/^> ?/, ""));

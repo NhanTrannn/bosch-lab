@@ -55,6 +55,21 @@ export function showTheoryIndex() {
   $("#main").scrollTop = 0;
 }
 
+// Outline numbering (rules in data/README.md): "### " → I, II…; "#### " → 1, 2… inside it;
+// a list right under a "### " counts 1, 2…, a list under a "#### " counts a, b… (nested lists go one level deeper, see CSS)
+const ROMAN = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+const roman = n => ROMAN.reduce((s, [v, r]) => { while (n >= v) { s += r; n -= v; } return s; }, "");
+// The number goes in a badge; "I. Title" is kept for the table of contents
+const label = (el, num) => { el.dataset.toc = `${num}. ${el.textContent}`; el.prepend(h("span", { class: "num" }, num)); };
+function numberOutline(body) {
+  let part = 0, sec = 0;
+  for (const el of body.children) {
+    if (el.tagName === "H4") { part++; sec = 0; label(el, roman(part)); }
+    else if (el.tagName === "H5") { sec++; label(el, String(sec)); }
+    else if (el.tagName === "UL" || el.tagName === "OL") el.classList.add(sec ? "lv-alpha" : "lv-num");
+  }
+}
+
 // sec: index of a "### " section to scroll to (search results link to sections)
 export function showTopic(id, sec) {
   const t = TOPICS.find(x => x.id === id);
@@ -65,10 +80,12 @@ export function showTopic(id, sec) {
   renderNav();
   const st = qStats(t.questions), idx = TOPICS.indexOf(t);
   const body = h("div", { class: "bd md", html: md(t.theory) });
+  numberOutline(body);
   const heads = [...body.querySelectorAll("h4")];
   heads.forEach((el, i) => { el.id = `sec-${i}`; });
   const toc = h("nav", { class: "toc" }, h("b", {}, "On this page"),
-    heads.map(el => h("a", { href: "#", onclick: e => { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); } }, el.textContent)));
+    [...body.querySelectorAll("h4, h5")].map(el => h("a", { href: "#", class: el.tagName === "H5" ? "sub" : null,
+      onclick: e => { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); } }, el.dataset.toc || el.textContent)));
   $("#main").replaceChildren(h("div", { class: "page theory", style: hueStyle(topicHue(t)) },
     h("div", { class: "topic-hero" },
       h("div", { class: "row", style: "margin-bottom:8px" },

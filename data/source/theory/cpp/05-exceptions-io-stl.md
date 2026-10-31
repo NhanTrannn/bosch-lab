@@ -18,13 +18,18 @@ Follows the Udemy course *Beginning C++ Programming*, sections 17–21 and 23. L
 - Rules: prefer `unique_ptr`; use `shared_ptr` only for real shared ownership. Never create two smart pointers from the same raw pointer. A function that only uses an object should take `T&` or `T*`, not a smart pointer.
 
 ### Exceptions (section 18)
+#### Throwing and catching
 - `throw` throws an object (of any type: int, string, a class); `try { } catch (const T &e) { }` catches it.
 - On a throw, **stack unwinding** happens: functions are exited one by one and every local object's destructor runs, until a matching catch is found. No matching catch → `std::terminate()` → abort.
 - catch blocks are tried **in the order written** and the first match wins → put derived classes before base classes. There are no numeric conversions (throw 3.14 does not match `catch (int)`), only Derived → Base. `catch (...)` catches everything and goes last.
 - **Throw by value, catch by const reference** (no copy, no slicing, `what()` stays polymorphic).
+
+#### Rethrowing and exception classes
 - `throw;` (no expression) rethrows the current exception, keeping its real type. `throw e;` throws a copy (may slice).
 - Standard hierarchy (`<stdexcept>`): `std::exception` (`virtual const char *what() const noexcept`) → `logic_error` (`invalid_argument`, `out_of_range`, `length_error`, `domain_error`), `runtime_error` (`overflow_error`, `underflow_error`, `range_error`), `bad_alloc` (new failed), `bad_cast` (dynamic_cast to a reference failed).
 - Custom exception classes: derive from `std::exception` (override `what()`) or from `std::runtime_error` (pass the message to the constructor).
+
+#### noexcept, constructors and limits
 - `noexcept`: the function promises not to throw. If it throws anyway → `std::terminate`. Destructors are noexcept by default. **Never throw from a destructor.** Move constructors should be noexcept so vector uses them when reallocating.
 - An exception in a constructor: the object is considered never created and its destructor does **not** run (but the destructors of fully built members do) → use RAII members.
 - Not exceptions: integer division by zero (UB, usually SIGFPE), out-of-bounds access with `[]`, dereferencing nullptr (SIGSEGV).
@@ -42,14 +47,19 @@ Follows the Udemy course *Beginning C++ Programming*, sections 17–21 and 23. L
 - `stringstream` is used to split strings, convert string ↔ number and validate input (`if (ss >> n && ss.eof())`).
 
 ### STL (section 20)
+#### Parts of the STL and iterators
 - Three parts: **containers** (hold data), **iterators** (walk containers, like generalized pointers), **algorithms** (`<algorithm>`, `<numeric>`, work on iterator ranges `[first, last)`). Plus functors/lambdas as criteria.
 - Templates: `template <typename T> T max(T a, T b)`, class templates `template <typename T> class Item`. Code is generated on use → definitions must live in headers. Non-type parameters: `template <int N>`.
 - `begin()` points to the first element, `end()` points **past** the last one (must not be dereferenced). `cbegin`/`cend` (const), `rbegin`/`rend` (reverse).
 - Iterator categories: input, output, forward (`forward_list`, `unordered_*`), bidirectional (`list`, `set`, `map`), random access (`vector`, `deque`, `array`, `string`). `std::sort` needs random access → use `l.sort()` for `list`.
+
+#### Containers
 - Sequence containers: `array` (fixed, no dynamic allocation), `vector` (fast add/remove at the end), `deque` (fast at both ends, not fully contiguous), `list` (doubly linked, O(1) insert in the middle given an iterator, no `[]`), `forward_list` (singly linked, no `size()`).
 - Associative: `set` (unique keys, ordered), `multiset` (duplicates allowed), `map` (key → value, ordered), `multimap`. Unordered (hashing: `unordered_set`, `unordered_map`): O(1) on average, no order.
 - `map[key]` inserts a default element when missing; `at(key)` throws `out_of_range`; use `find`/`count` to check. `insert` does not overwrite an existing key and returns `pair<iterator, bool>`.
 - Adapters (no iterators): `stack` (LIFO: `push`/`pop`/`top`), `queue` (FIFO: `push`/`pop`/`front`/`back`), `priority_queue` (a heap, **max-heap** by default: `top` is the largest; for a min-heap use `priority_queue<int, vector<int>, greater<int>>`). `pop()` returns nothing.
+
+#### Algorithms and iterator invalidation
 - Common algorithms: `find`, `find_if`, `count`, `count_if`, `sort`, `stable_sort`, `binary_search` (needs sorted input), `min_element`, `max_element`, `for_each`, `transform`, `copy`, `replace`, `reverse`, `unique` (only removes **adjacent** duplicates), `remove`/`remove_if` (does not change the size → needs `erase`), `accumulate` (the result type comes from the initial value: 0 → int).
 - Iterator invalidation: a vector reallocation invalidates every iterator; erase inside a loop with `it = c.erase(it)`.
 

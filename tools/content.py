@@ -30,6 +30,44 @@ def quiz_headings(path):
     return out
 
 
+MAX_POINTS = 9  # a "### " part with more top-level points than this (and no "#### ") should be split
+
+
+def outline_problems(text):
+    """Theory outline rules (data/README.md): numbers are added by the web UI, headings are not empty,
+    long parts are split into "#### " sections. Yields (line number, message, is_error)."""
+    lines, fence = text.split("\n"), False
+    part, points, has_sections = None, 0, False
+
+    def end_part():
+        if part and points > MAX_POINTS and not has_sections:
+            return [(part[0], f"part '{part[1][:40]}' has {points} points: split it into '#### ' sections", False)]
+        return []
+
+    for i, line in enumerate(lines, 1):
+        if line.startswith("```"):
+            fence = not fence
+        if fence:
+            continue
+        if line.startswith("## Quiz"):
+            break
+        m = re.match(r"(#{3,6})\s*(.*)", line)
+        if m and line.startswith("#"):
+            title = m.group(2).strip()
+            if not title:
+                yield i, "empty heading", False
+            elif re.match(r"([IVX]+|\d+|[a-z])[.)]\s", title):
+                yield i, f"heading starts with a number ('{title[:20]}'): the web UI numbers headings by itself", False
+            if len(m.group(1)) == 3:
+                yield from end_part()
+                part, points, has_sections = (i, title), 0, False
+            elif len(m.group(1)) == 4:
+                has_sections = True
+        elif part and re.match(r"[-*] ", line):
+            points += 1
+    yield from end_part()
+
+
 def check():
     errors, warnings = [], []
     err = lambda where, msg: errors.append(f"{where}: {msg}")
@@ -40,6 +78,8 @@ def check():
         text = path.read_text(encoding="utf-8")
         if not re.search(r"^# .+", text, re.M):
             err(rel, "missing the '# Title' line")
+        for line_no, msg, is_error in outline_problems(text):
+            (err if is_error else warn)(f"{rel}:{line_no}", msg)
         if "\n## Quiz" not in text:
             continue
         heads = quiz_headings(path)

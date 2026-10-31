@@ -91,6 +91,36 @@ optional code shown with the question
 > Explanation shown after answering.
 ```
 
+### Outline of the theory part: I → 1 → a
+
+The web UI numbers the theory automatically, so **never type the numbers yourself** (inserting a section later would
+mean renumbering everything by hand):
+
+| You write | Shown as | Use it for |
+| --- | --- | --- |
+| `### Title` | **I.** II. III. | a part of the topic |
+| `#### Title` | **1.** 2. 3. (restarts in every part) | a section, when a part is long |
+| `- point` right under a `###` | 1. 2. 3. | the points of a short part |
+| `- point` under a `####` | a. b. c. | the points of a section |
+| `  - sub-point` (indented 2 spaces) | one level deeper: 1 → a → i | details of a point |
+
+```markdown
+### Threads                         →  I. Threads
+#### Creating threads               →    1. Creating threads
+- pthread_create(...)               →       a. pthread_create(...)
+  - returns 0 or an error code      →          i. returns 0 or an error code
+- pthread_join(...)                 →       b. pthread_join(...)
+#### Cancellation                   →    2. Cancellation
+```
+
+- Start each point with the **key term in bold**, then the explanation: `- **Detached thread**: cleans up by itself…`.
+- Tables and code blocks can go anywhere; they are not numbered.
+- More than about 9 points in one `###` part → split it into `####` sections (`make check` warns).
+- The table of contents on the right lists the `###` parts and their `####` sections.
+- VS Code's preview (Ctrl+Shift+V) shows plain bullets; the numbers only appear in the web UI.
+
+### Other rules
+
 - The `tags:` block at the top is optional; tags apply to the topic, its sections and its questions, and are the
   filter chips on the search page. Use lowercase words joined with `-` (e.g. `smart-pointers`).
 - Options are shuffled, so don't write "both of the above".

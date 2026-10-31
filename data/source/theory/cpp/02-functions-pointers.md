@@ -9,30 +9,46 @@ tags: [cpp, functions, pointers, references]
 Follows the Udemy course *Beginning C++ Programming*, sections 11–12. Labs: `cpp/21_functions`, `cpp/22_pointers_refs`; see also `c/02`, `c/03`, `c/13`.
 
 ### Functions (section 11)
+#### Declaring and calling
 - A **prototype** (declaration) tells the compiler the name, return type and parameter types. The definition must appear exactly once in the whole program (ODR). Prototypes usually go in `.h`, definitions in `.cpp`.
 - Parameters are the variables in the definition; arguments are the values passed in a call.
+
+#### Passing arguments
 - **Pass by value** (default): the function gets a copy; changing it does not affect the original; copying large objects is expensive.
 - **Pass by reference** `T&`: the function works on the original, no copy. Use `const T&` when only reading (cheap, safe, and accepts temporaries).
 - **Pass by pointer** `T*`: passes an address; may be `nullptr`. The pointer itself is still passed by value.
 - `return`: a `void` function may omit it. Never return a reference/pointer to a local variable (dangling).
+
+#### Default arguments and overloading
 - **Default arguments**: written only in the declaration (prototype), not repeated in the definition; must be the **last** parameters: `void f(int a, int b = 1, int c = 2);`.
 - **Overloading**: same name, different parameter lists (count/types/order). You **cannot** overload on the return type alone. Ranking: exact match → promotion (`char/short → int`, `float → double`) → standard conversion (`int → double`, `const char* → bool`) → user-defined conversion (constructors, conversion operators). Two candidates of the same rank → **ambiguous** error.
+
+#### Arrays, scope and the call stack
 - An array passed to a function **decays** to a pointer to its first element: `void f(int a[])` is exactly `void f(int *a)`, so the size is lost → pass it separately. `const int a[]` keeps the function from modifying the array.
 - **Scope**: local (a `{}` block), global, static local (initialized once, lives for the whole program but is visible only in the function).
 - **How calls work**: each call pushes a **stack frame** (activation record) holding the parameters, locals and return address. Returning pops the frame. The stack is limited (8 MB by default on Linux) → too-deep recursion causes a **stack overflow**.
+
+#### inline and recursion
 - `inline`: asks the compiler to insert the function body at the call site to avoid call overhead; the compiler decides. Inline functions may be defined in headers without breaking the ODR.
 - **Recursion**: needs a base case. Examples: factorial, Fibonacci (the naive version is O(2ⁿ)). Any recursion can be rewritten as a loop.
 
 ### Pointers (section 12)
+#### Basics
 - A pointer is a variable holding an **address**. `int *p;` (uninitialized → garbage address). Initialize it right away: `int *p = nullptr;` (C++11, replaces `NULL`/`0`).
 - `&x`: take the address. `*p`: dereference (access the value at that address). `p->m` = `(*p).m`.
 - All data pointers have the same `sizeof` (8 bytes on 64-bit), regardless of the pointed-to type.
 - Pointer types must match: `double *p = &int_var;` is a compile error.
+
+#### Dynamic memory and arrays
 - **Dynamic allocation**: `new T` / `delete p`; `new T[n]` / `delete[] p`. Do not mix `new[]` with `delete`, nor `new` with `free`. The memory lives on the **heap** until it is deleted.
 - **Arrays and pointers**: `a[i]` ≡ `*(a + i)`. `p + 1` advances by `sizeof(*p)` bytes. The difference of two pointers (into the same array) = the number of elements between them (`ptrdiff_t`). `==` on pointers compares addresses.
+
+#### const, parameters and return values
 - **const and pointers**: `const int *p` (pointer to const: cannot modify `*p`), `int *const p` (const pointer: cannot change `p`), `const int *const p` (both). Read right to left.
 - Pass a pointer to a function so it can modify the original (the C way). For a function to change **the pointer itself**, pass `int *&p` or `int **p`.
 - Returning a pointer from a function: fine if it points to memory that is still alive (a pointer parameter, `new`'ed memory, a static variable); **never** the address of a local.
+
+#### Common bugs
 - **Common bugs**: uninitialized (wild) pointers, **dangling pointers** (to deleted memory or a variable out of scope), dereferencing `nullptr` (segfault), **memory leaks** (losing the pointer to undeleted memory), double delete. `delete nullptr` is safe → set `p = nullptr` after deleting.
 
 ### References
